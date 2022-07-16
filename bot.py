@@ -16,8 +16,8 @@ intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
 
-bot = commands.Bot(command_prefix='r!', description=description, intents=intents)
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
+bot = commands.Bot(command_prefix='r!', description=description, intents=intents, activity = activity)
 
 class PlayerSpider(scrapy.Spider):
     name = "PlayerSpider"
