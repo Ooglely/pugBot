@@ -10,8 +10,9 @@ import sys
 import random
 import string
 import requests
+from rcon.source import Client
 
-version = "v0.4.0 | by oog"
+version = "v0.4.1 | by oog"
 
 description = '''An example bot to showcase the discord.ext.commands extension
 module.
@@ -24,6 +25,7 @@ intents.presences = True
 
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', description=description, intents=intents, activity = activity)
+bot.remove_command('help')
 
 class PlayerSpider(scrapy.Spider):
     name = "PlayerSpider"
@@ -101,11 +103,6 @@ async def playerListener(message):
         await message.channel.send(embed=embed)
         open('output.json', 'w').close()
         pass
-
-@bot.command()
-async def add(ctx, left: int, right: int):
-    """Adds two numbers together."""
-    await ctx.send(left + right)
 
 @bot.command()
 async def search(ctx, arg: str):
@@ -286,5 +283,50 @@ async def startserver(ctx):
     
     channel = bot.get_channel(996980099486322798)
     await channel.send(connect)
+    
+@bot.command()
+@commands.has_role('pug runners')
+async def config(ctx, config: str):
+    channel = bot.get_channel(1000161175859900546)
+    rconMessage = await channel.fetch_message(channel.last_message_id)
+    rconCommand = rconMessage.content
+    
+    ip = rconCommand.split(' ')[1].split(':')[0]
+    port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
+    password = rconCommand.split(' ')[3].split('"')[1]
+    
+    with Client(str(ip), int(port), passwd=password) as client:
+        response = client.run('exec', config)
+
+    print(response)
+    
+    await ctx.send("Config executed.")
+
+@bot.command()
+@commands.has_role('pug runners')
+async def map(ctx, map: str):
+    channel = bot.get_channel(1000161175859900546)
+    rconMessage = await channel.fetch_message(channel.last_message_id)
+    rconCommand = rconMessage.content
+    
+    ip = rconCommand.split(' ')[1].split(':')[0]
+    port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
+    password = rconCommand.split(' ')[3].split('"')[1]
+    
+    with Client(str(ip), int(port), passwd=password) as client:
+        response = client.run('changelevel', map)
+
+    print(response)
+    
+    await ctx.send("Changing map to " + map + ".")
+    
+@bot.command()
+async def help(ctx):
+    embed=discord.Embed(title='pugBot', color=0xf0984d)
+    embed.set_thumbnail(url='https://b.catgirlsare.sexy/XoBJQn439QgJ.jpeg')
+    embed.add_field(name="Commands", value='r!search [steam/steamid/rgl] - Finds someones RGL page and team history.', inline=False)
+    embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.', inline=False)
+    embed.set_footer(text=version)
+    await ctx.send(embed=embed)
     
 bot.run('OTg5MjUwMTQ0ODk1NjU1OTY2.G0x6ss.ZYt-cfz_wVzXO6MZJbfAodStbBvrl3JDVU9_Rs')
