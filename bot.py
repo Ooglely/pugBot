@@ -22,7 +22,7 @@ intents.members = True
 intents.messages = True
 intents.presences = True
 
-activity = discord.Activity(name='over my pugs ^_^ | ' + version, type=discord.ActivityType.watching)
+activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', description=description, intents=intents, activity = activity)
 
 class PlayerSpider(scrapy.Spider):
@@ -283,5 +283,8 @@ async def startserver(ctx):
     
     channel = bot.get_channel(1000161175859900546)
     await channel.send(rcon)
+    
+    channel = bot.get_channel(996980099486322798)
+    await channel.send(connect)
     
 bot.run('OTg5MjUwMTQ0ODk1NjU1OTY2.G0x6ss.ZYt-cfz_wVzXO6MZJbfAodStbBvrl3JDVU9_Rs')
