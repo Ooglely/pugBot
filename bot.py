@@ -8,6 +8,10 @@ import json
 import os
 import sys
 import random
+import string
+import requests
+
+version = "v0.4.0 | by oog"
 
 description = '''An example bot to showcase the discord.ext.commands extension
 module.
@@ -93,7 +97,7 @@ async def playerListener(message):
             embed.add_field(name="Highlander", value=hl, inline=False)
         if pl != "":
             embed.add_field(name="Prolander", value=pl, inline=False)
-        embed.set_footer(text="v0.3")
+        embed.set_footer(text=version)
         await message.channel.send(embed=embed)
         open('output.json', 'w').close()
         pass
@@ -157,7 +161,7 @@ async def search(ctx, arg: str):
         embed.add_field(name="Highlander", value=hl, inline=False)
     if pl != "":
         embed.add_field(name="Prolander", value=pl, inline=False)
-    embed.set_footer(text="v0.2")
+    embed.set_footer(text=version)
     await ctx.send(embed=embed)
     open('output.json', 'w').close()
     pass
@@ -240,5 +244,44 @@ async def randomize(ctx, num: int):
                 break
             
         await ctx.send("Players moved.")
+        
+@bot.command()
+@commands.has_role('pug runners')
+async def startserver(ctx):
+    headers = {'Content-type': 'application/json'}
+    stepOne = requests.get('https://na.serveme.tf/api/reservations/new?api_key=da8501910f804b4abebdfe8e8e048c2c', headers=headers)
+    times = stepOne.text
+
+    headers = {'Content-type': 'application/json'}
+    stepTwo = requests.post('https://na.serveme.tf/api/reservations/find_servers?api_key=da8501910f804b4abebdfe8e8e048c2c', data=times, headers=headers)
+
+    for server in stepTwo.json()['servers']:
+        if "chi" in server['ip']:
+            print(server)
+            reserve = server
+            break
+
+    connectPassword = 'andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    rconPassword = 'rcon.andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+
+    reserveString = {"reservation": {"starts_at": stepOne.json()['reservation']['starts_at'], "ends_at": stepOne.json()['reservation']['ends_at'], "rcon": rconPassword, "password": connectPassword, "server_id": reserve['id']}}
+
+    reserveJSON = json.dumps(reserveString)
+
+    stepThree = requests.post('https://na.serveme.tf/api/reservations?api_key=da8501910f804b4abebdfe8e8e048c2c', data=reserveJSON, headers=headers)
+    server = stepThree.json()
+
+    connect = 'connect ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; password "' + server['reservation']['password'] + '"'
+    rcon = 'rcon_address ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; rcon_password "' + server['reservation']['rcon'] + '"'
+    
+    embed=discord.Embed(title='Server started!', color=0xf0984d)
+    embed.add_field(name="Server", value=server['reservation']['server']['name'], inline=False)
+    embed.add_field(name="Connect", value=connect, inline=False)
+    embed.add_field(name="RCON", value='RCON has been sent in the rcon channel.', inline=False)
+    embed.set_footer(text=version)
+    await ctx.send(embed=embed)
+    
+    channel = bot.get_channel(1000161175859900546)
+    await channel.send(rcon)
     
 bot.run('OTg5MjUwMTQ0ODk1NjU1OTY2.G0x6ss.ZYt-cfz_wVzXO6MZJbfAodStbBvrl3JDVU9_Rs')
