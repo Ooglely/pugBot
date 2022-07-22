@@ -22,7 +22,7 @@ intents.members = True
 intents.messages = True
 intents.presences = True
 
-activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
+activity = discord.Activity(name='over my pugs ^_^ | ' + version, type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', description=description, intents=intents, activity = activity)
 
 class PlayerSpider(scrapy.Spider):
