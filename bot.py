@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from soupsieve import select
 from steam import steamid
 from steam.steamid import SteamID
 import scrapy
