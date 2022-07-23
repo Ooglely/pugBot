@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from soupsieve import select
 from steam import steamid
 from steam.steamid import SteamID
 import scrapy
@@ -12,7 +13,18 @@ import string
 import requests
 from rcon.source import Client
 
-version = "v0.4.1 | by oog"
+version = "v0.4.2 | by oog"
+
+roles = [
+    [' (Scout Restriction)', '999191878736039957'],
+    [' (Soldier Restriction)', '999191955831537665'],
+    [' (Pyro Restriction)', '999192009090793492'],
+    [' (Demo Restriction)', '999192084420509787'],
+    [' (Heavy Restriction)', '999192133426749462'],
+    [' (Engi Restriction)', '999192179161436250'],
+    [' (Sniper Restriction)', '999192234509488209'],
+    [' (Spy Restriction)', '999192279870885982']
+]
 
 description = '''An example bot to showcase the discord.ext.commands extension
 module.
@@ -325,8 +337,38 @@ async def help(ctx):
     embed=discord.Embed(title='pugBot', color=0xf0984d)
     embed.set_thumbnail(url='https://b.catgirlsare.sexy/XoBJQn439QgJ.jpeg')
     embed.add_field(name="Commands", value='r!search [steam/steamid/rgl] - Finds someones RGL page and team history.', inline=False)
-    embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.', inline=False)
+    embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.\nr!check - Lists divs of all players in the organizing channel.', inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
+    
+@bot.command()
+async def check(ctx):
+    ncPlayers = ""
+    plusPlayers = ""
+    
+    selectingChannel = bot.get_channel(996567486621306880)
+    
+    for member in selectingChannel.members:
+        playerString = ""
+        playerString += member.display_name
+        for role in member.roles:
+            for num, id in enumerate(roles):
+                if str(role.id) == id[1]:
+                    playerString += id[0]
+        
+        playerString += "\n"
+        
+        for role in member.roles:
+            if role.id == 992286429881303101:
+                ncPlayers += playerString
+            if role.id == 992281832437596180:
+                plusPlayers += playerString
+    
+    embed=discord.Embed(title='Player Check', color=0xf0984d)
+    embed.add_field(name="NC/AM Players", value=ncPlayers, inline=False)
+    embed.add_field(name="AM+ Players", value=plusPlayers, inline=False)
+    embed.set_footer(text=version)
+    await ctx.send(embed=embed)
+    
     
 bot.run('OTg5MjUwMTQ0ODk1NjU1OTY2.G0x6ss.ZYt-cfz_wVzXO6MZJbfAodStbBvrl3JDVU9_Rs')
