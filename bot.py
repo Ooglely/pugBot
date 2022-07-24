@@ -160,6 +160,7 @@ async def randomize(ctx, num: int):
         await ctx.send("Players moved.")
     
     if ctx.channel.id == 997602235208962150: # 6s Channels
+        players = []
         team1Channel = bot.get_channel(997602308525404242)
         team2Channel = bot.get_channel(997602346173464587)
         selectingChannel = bot.get_channel(997602270592118854)
