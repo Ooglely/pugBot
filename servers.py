@@ -52,7 +52,8 @@ class ServerCog(commands.Cog):
                 "first_map": "koth_ashville_rc2d",
                 "server_config_id": 54,
                 "whitelist_id": 22,
-                "custom_whitelist_id": None
+                "custom_whitelist_id": None,
+                "auto_end": True
             }}
 
         reserveJSON = json.dumps(reserveString)
