@@ -9,7 +9,7 @@ class PlayerSpider(scrapy.Spider):
     name = "PlayerSpider"
     
     def __init__(self, input = None):
-        self.input = input  # source file name
+        self.input = input  # steam id
 
     def start_requests(self):
         url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + self.input

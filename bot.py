@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from steam import steamid
 from steam.steamid import SteamID
 import json
@@ -8,14 +8,20 @@ import string
 import requests
 from rcon.source import Client
 from rglSearch import rglSearch
+import time as unixtime
 
 with open("config.json") as config_file:
-    config = json.load(config_file)
+    CONFIG = json.load(config_file)
     
-DISCORD_TOKEN = config["discord"]["token"]
-SERVEME_API_KEY = config["serveme"]["api_key"]
+DISCORD_TOKEN = CONFIG["discord"]["token"]
+SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.4.2 | by oog"
+version = "v0.4.2"
+
+# Setting initial variables
+serverStatus = False
+lastLog = ""
+timestamp = unixtime.time()
 
 roles = [
     [' (Scout Restriction)', '999191878736039957'],
@@ -41,6 +47,7 @@ bot.remove_command('help')
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+    server_status.start(bot)
     
 @bot.listen('on_message')
 async def playerListener(message):
@@ -210,8 +217,10 @@ async def startserver(ctx):
 
     reserveJSON = json.dumps(reserveString)
 
-    stepThree = requests.post('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, data=reserveJSON, headers=headers)
-    server = stepThree.json()
+    sendReservation = requests.post('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, data=reserveJSON, headers=headers)
+    server = sendReservation.json()
+    
+    serverStatus = True
 
     connect = 'connect ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; password "' + server['reservation']['password'] + '"'
     rcon = 'rcon_address ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; rcon_password "' + server['reservation']['rcon'] + '"'
@@ -302,6 +311,21 @@ async def check(ctx):
     embed.add_field(name="AM+ Players", value=plusPlayers, inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
-    
+
+@tasks.loop(seconds=60) # task runs every 60 seconds
+async def server_status(self):
+    print('running task')
+    status = requests.get('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, headers={'Content-type': 'application/json'}).json()
+    if status["reservations"][0]["status"] == "Ended":
+        serverStatus = False
+        
+    if serverStatus == True:
+        logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
+        if timestamp - logs["logs"][0]["date"] < 20000:
+            if logs["logs"][0]["id"] != lastLog:
+                lastLog = logs["logs"][0]["id"]
+                
+                logChannel = self.get_channel(996985303220879390)
+                await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
     
 bot.run(DISCORD_TOKEN)
