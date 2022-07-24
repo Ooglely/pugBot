@@ -272,7 +272,19 @@ async def startserver(ctx):
     connectPassword = 'andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
     rconPassword = 'rcon.andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=20))
 
-    reserveString = {"reservation": {"starts_at": stepOne.json()['reservation']['starts_at'], "ends_at": stepOne.json()['reservation']['ends_at'], "rcon": rconPassword, "password": connectPassword, "server_id": reserve['id']}}
+    reserveString = {
+        "reservation": {
+            "starts_at": stepOne.json()['reservation']['starts_at'], 
+            "ends_at": stepOne.json()['reservation']['ends_at'], 
+            "rcon": rconPassword, "password": connectPassword, 
+            "server_id": reserve['id'],
+            "enable_plugins": True,
+            "enable_demos_tf": True,
+            "first_map": "koth_ashville_rc2d",
+            "server_config_id": 54,
+            "whitelist_id": 22,
+            "custom_whitelist_id": None
+        }}
 
     reserveJSON = json.dumps(reserveString)
 
