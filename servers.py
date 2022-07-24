@@ -123,7 +123,7 @@ class ServerCog(commands.Cog):
             print('Server not up.')
         else:
             logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
-            if timestamp - logs["logs"][0]["date"] < 200000:
+            if timestamp - logs["logs"][0]["date"] < 20000:
                 if logs["logs"][0]["id"] != lastLog:
                     newLog = {"lastLog": logs["logs"][0]["id"]}
                     with open("logs.json", "w") as outfile:
