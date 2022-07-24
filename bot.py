@@ -9,6 +9,7 @@ import requests
 from rcon.source import Client
 from rglSearch import rglSearch
 import time as unixtime
+from servers import ServerCog
 
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
@@ -16,12 +17,10 @@ with open("config.json") as config_file:
 DISCORD_TOKEN = CONFIG["discord"]["token"]
 SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.4.2"
+version = "v0.4.3"
 
 # Setting initial variables
-serverStatus = False
 lastLog = ""
-timestamp = unixtime.time()
 
 roles = [
     [' (Scout Restriction)', '999191878736039957'],
@@ -41,13 +40,14 @@ intents.presences = True
 
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', intents=intents, activity = activity)
+
+bot.add_cog(ServerCog(bot))
 bot.remove_command('help')
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
-    server_status.start(bot)
     
 @bot.listen('on_message')
 async def playerListener(message):
@@ -180,99 +180,6 @@ async def randomize(ctx, num: int):
                 break
             
         await ctx.send("Players moved.")
-        
-@bot.command()
-@commands.has_role('Runners')
-async def startserver(ctx):
-    headers = {'Content-type': 'application/json'}
-    new = requests.get('https://na.serveme.tf/api/reservations/new?api_key=' + SERVEME_API_KEY, headers=headers)
-    times = new.text
-
-    headers = {'Content-type': 'application/json'}
-    find_servers = requests.post('https://na.serveme.tf/api/reservations/find_servers?api_key=' + SERVEME_API_KEY, data=times, headers=headers)
-
-    for server in find_servers.json()['servers']:
-        if "chi" in server['ip']:
-            print(server)
-            reserve = server
-            break
-
-    connectPassword = 'andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    rconPassword = 'rcon.andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=20))
-
-    reserveString = {
-        "reservation": {
-            "starts_at": new.json()['reservation']['starts_at'], 
-            "ends_at": new.json()['reservation']['ends_at'], 
-            "rcon": rconPassword, 
-            "password": connectPassword,
-            "server_id": reserve['id'],
-            "enable_plugins": True,
-            "enable_demos_tf": True,
-            "first_map": "koth_ashville_rc2d",
-            "server_config_id": 54,
-            "whitelist_id": 22,
-            "custom_whitelist_id": None
-        }}
-
-    reserveJSON = json.dumps(reserveString)
-
-    sendReservation = requests.post('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, data=reserveJSON, headers=headers)
-    server = sendReservation.json()
-    
-    serverStatus = True
-
-    connect = 'connect ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; password "' + server['reservation']['password'] + '"'
-    rcon = 'rcon_address ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; rcon_password "' + server['reservation']['rcon'] + '"'
-    
-    embed=discord.Embed(title='Server started!', color=0xf0984d)
-    embed.add_field(name="Server", value=server['reservation']['server']['name'], inline=False)
-    embed.add_field(name="Connect", value=connect, inline=False)
-    embed.add_field(name="RCON", value='RCON has been sent in the rcon channel.', inline=False)
-    embed.set_footer(text=version)
-    await ctx.send(embed=embed)
-    
-    channel = bot.get_channel(1000161175859900546)
-    await channel.send(rcon)
-    
-    channel = bot.get_channel(996980099486322798)
-    await channel.send(connect)
-    
-@bot.command()
-@commands.has_role('Runners')
-async def config(ctx, config: str):
-    channel = bot.get_channel(1000161175859900546)
-    rconMessage = await channel.fetch_message(channel.last_message_id)
-    rconCommand = rconMessage.content
-    
-    ip = rconCommand.split(' ')[1].split(':')[0]
-    port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
-    password = rconCommand.split(' ')[3].split('"')[1]
-    
-    with Client(str(ip), int(port), passwd=password) as client:
-        response = client.run('exec', config)
-
-    print(response)
-    
-    await ctx.send("Config executed.")
-
-@bot.command()
-@commands.has_role('Runners')
-async def map(ctx, map: str):
-    channel = bot.get_channel(1000161175859900546)
-    rconMessage = await channel.fetch_message(channel.last_message_id)
-    rconCommand = rconMessage.content
-    
-    ip = rconCommand.split(' ')[1].split(':')[0]
-    port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
-    password = rconCommand.split(' ')[3].split('"')[1]
-    
-    with Client(str(ip), int(port), passwd=password) as client:
-        response = client.run('changelevel', map)
-
-    print(response)
-    
-    await ctx.send("Changing map to " + map + ".")
     
 @bot.command()
 async def help(ctx):
@@ -312,20 +219,4 @@ async def check(ctx):
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
 
-@tasks.loop(seconds=60) # task runs every 60 seconds
-async def server_status(self):
-    print('running task')
-    status = requests.get('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, headers={'Content-type': 'application/json'}).json()
-    if status["reservations"][0]["status"] == "Ended":
-        serverStatus = False
-        
-    if serverStatus == True:
-        logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
-        if timestamp - logs["logs"][0]["date"] < 20000:
-            if logs["logs"][0]["id"] != lastLog:
-                lastLog = logs["logs"][0]["id"]
-                
-                logChannel = self.get_channel(996985303220879390)
-                await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
-    
 bot.run(DISCORD_TOKEN)
