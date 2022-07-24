@@ -1,0 +1,10 @@
+{
+    "discord":{
+        "token":"discord token here"
+    },
+    
+    "serveme":{
+        "apiKey":"serveme api key here"
+    }
+}
+

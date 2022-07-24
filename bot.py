@@ -2,15 +2,18 @@ import discord
 from discord.ext import commands
 from steam import steamid
 from steam.steamid import SteamID
-import scrapy
-from scrapy.crawler import CrawlerProcess
 import json
-import os
-import sys
 import random
 import string
 import requests
 from rcon.source import Client
+from rglSearch import rglSearch
+
+with open("config.json") as config_file:
+    config = json.load(config_file)
+    
+DISCORD_TOKEN = config["discord"]["token"]
+SERVEME_API_KEY = config["serveme"]["api_key"]
 
 version = "v0.4.2 | by oog"
 
@@ -25,38 +28,14 @@ roles = [
     [' (Spy Restriction)', '999192279870885982']
 ]
 
-description = '''An example bot to showcase the discord.ext.commands extension
-module.
-There are a number of utility commands being showcased here.'''
-
 intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
 intents.presences = True
 
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
-bot = commands.Bot(command_prefix='r!', description=description, intents=intents, activity = activity)
+bot = commands.Bot(command_prefix='r!', intents=intents, activity = activity)
 bot.remove_command('help')
-
-class PlayerSpider(scrapy.Spider):
-    name = "PlayerSpider"
-    
-    def __init__(self, input = None):
-        self.input = input  # source file name
-
-    def start_requests(self):
-        url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + self.input
-        yield scrapy.Request(url=url, callback=self.parse)
-        
-    def parse(self, response):
-        for player in response.css('body'):
-            yield {
-                'name': response.xpath("//*[@id='ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_lblPlayerName']/descendant-or-self::*/text()").get(),
-                'pfp': player.css("img#ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_imgProfileImage").xpath("@src").get(),
-                'seasons': player.css("tr > td > a::text").getall()
-            }
-    
-process = CrawlerProcess(settings={'FEED_FORMAT': 'json', 'FEED_URI': 'output.json'})
 
 @bot.event
 async def on_ready():
@@ -68,48 +47,19 @@ async def playerListener(message):
     if message.content.startswith('https://rgl.gg/Public/PlayerProfile.aspx?'):
         args = message.content.split('=')
         id = args[1].replace('&r', '')
-        process.crawl(PlayerSpider, input = str(id))
-        if "twisted.internet.reactor" in sys.modules:
-            del sys.modules["twisted.internet.reactor"]
-        process.start()
         
-        f = open('output.json')
-        data = json.load(f)
-        
-        number = 0
-        seasons = []
-        for count, i in enumerate(data[0]['seasons']):
-            if i.strip() == "":
-                del data[0]['seasons'][count]
-                
-        for count, i in enumerate(data[0]["seasons"]):
-            if count == number:
-                res = i.strip()
-                seasons.append([data[0]["seasons"][count].strip(), data[0]["seasons"][count + 1].strip(), data[0]["seasons"][count + 2].strip()])
-                number += 3
+        rgl = rglSearch(id)
 
-        sixes = ""
-        hl = ""
-        pl = ""
-        for i in seasons:
-            if i[0].startswith("Sixes S"):
-                sixes += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-            if i[0].startswith("HL Season"):
-                hl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-            if i[0].startswith("P7 Season"):
-                pl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-
-        
         url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(id)
         
-        embed=discord.Embed(title=data[0]['name'], url = url, color=0xf0984d)
-        embed.set_thumbnail(url=data[0]['pfp'])
-        if sixes != "":
-            embed.add_field(name="Sixes", value=sixes, inline=False)
-        if hl != "":
-            embed.add_field(name="Highlander", value=hl, inline=False)
-        if pl != "":
-            embed.add_field(name="Prolander", value=pl, inline=False)
+        embed=discord.Embed(title=rgl[0], url = url, color=0xf0984d)
+        embed.set_thumbnail(url=rgl[1])
+        if rgl[2] != "": # Sixes Data
+            embed.add_field(name="Sixes", value=rgl[2], inline=False)
+        if rgl[3] != "": # HL Data
+            embed.add_field(name="Highlander", value=rgl[3], inline=False)
+        if rgl[4] != "": # PL Data
+            embed.add_field(name="Prolander", value=rgl[4], inline=False)
         embed.set_footer(text=version)
         await message.channel.send(embed=embed)
         open('output.json', 'w').close()
@@ -127,55 +77,26 @@ async def search(ctx, arg: str):
         id = obj.as_64
     if arg.startswith('7656119'):
         id = arg
-    process.crawl(PlayerSpider, input = str(id))
-    if "twisted.internet.reactor" in sys.modules:
-        del sys.modules["twisted.internet.reactor"]
-    process.start()
     
-    f = open('output.json')
-    data = json.load(f)
-    
-    number = 0
-    seasons = []
-    for count, i in enumerate(data[0]['seasons']):
-        if i.strip() == "":
-            del data[0]['seasons'][count]
-            
-    for count, i in enumerate(data[0]["seasons"]):
-        if count == number:
-            res = i.strip()
-            seasons.append([data[0]["seasons"][count].strip(), data[0]["seasons"][count + 1].strip(), data[0]["seasons"][count + 2].strip()])
-            number += 3
-
-    sixes = ""
-    hl = ""
-    pl = ""
-    for i in seasons:
-        if i[0].startswith("Sixes S"):
-            sixes += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-        if i[0].startswith("HL Season"):
-            hl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-        if i[0].startswith("P7 Season"):
-            pl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-
+    rgl = rglSearch(id)
     
     url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(id)
     
-    embed=discord.Embed(title=data[0]['name'], url = url, color=0xf0984d)
-    embed.set_thumbnail(url=data[0]['pfp'])
-    if sixes != "":
-        embed.add_field(name="Sixes", value=sixes, inline=False)
-    if hl != "":
-        embed.add_field(name="Highlander", value=hl, inline=False)
-    if pl != "":
-        embed.add_field(name="Prolander", value=pl, inline=False)
+    embed=discord.Embed(title=rgl[0], url = url, color=0xf0984d)
+    embed.set_thumbnail(url=rgl[1])
+    if rgl[2] != "": # Sixes Data
+        embed.add_field(name="Sixes", value=rgl[2], inline=False)
+    if rgl[3] != "": # HL Data
+        embed.add_field(name="Highlander", value=rgl[3], inline=False)
+    if rgl[4] != "": # PL Data
+        embed.add_field(name="Prolander", value=rgl[4], inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
     open('output.json', 'w').close()
     pass
 
 @bot.command()
-@commands.has_role('pug runners')
+@commands.has_role('Runners')
 async def move(ctx):
     if ctx.channel.id == 996415628007186542: # HL Channels
         team1Channel = bot.get_channel(987171351720771644)
@@ -204,7 +125,7 @@ async def move(ctx):
         await ctx.send("Players moved.")
         
 @bot.command()
-@commands.has_role('pug runners')
+@commands.has_role('Runners')
 async def randomize(ctx, num: int):
     team1Players = 0
     team2Players = 0
@@ -254,16 +175,16 @@ async def randomize(ctx, num: int):
         await ctx.send("Players moved.")
         
 @bot.command()
-@commands.has_role('pug runners')
+@commands.has_role('Runners')
 async def startserver(ctx):
     headers = {'Content-type': 'application/json'}
-    stepOne = requests.get('https://na.serveme.tf/api/reservations/new?api_key=da8501910f804b4abebdfe8e8e048c2c', headers=headers)
-    times = stepOne.text
+    new = requests.get('https://na.serveme.tf/api/reservations/new?api_key=' + SERVEME_API_KEY, headers=headers)
+    times = new.text
 
     headers = {'Content-type': 'application/json'}
-    stepTwo = requests.post('https://na.serveme.tf/api/reservations/find_servers?api_key=da8501910f804b4abebdfe8e8e048c2c', data=times, headers=headers)
+    find_servers = requests.post('https://na.serveme.tf/api/reservations/find_servers?api_key=' + SERVEME_API_KEY, data=times, headers=headers)
 
-    for server in stepTwo.json()['servers']:
+    for server in find_servers.json()['servers']:
         if "chi" in server['ip']:
             print(server)
             reserve = server
@@ -274,9 +195,10 @@ async def startserver(ctx):
 
     reserveString = {
         "reservation": {
-            "starts_at": stepOne.json()['reservation']['starts_at'], 
-            "ends_at": stepOne.json()['reservation']['ends_at'], 
-            "rcon": rconPassword, "password": connectPassword, 
+            "starts_at": new.json()['reservation']['starts_at'], 
+            "ends_at": new.json()['reservation']['ends_at'], 
+            "rcon": rconPassword, 
+            "password": connectPassword,
             "server_id": reserve['id'],
             "enable_plugins": True,
             "enable_demos_tf": True,
@@ -288,7 +210,7 @@ async def startserver(ctx):
 
     reserveJSON = json.dumps(reserveString)
 
-    stepThree = requests.post('https://na.serveme.tf/api/reservations?api_key=da8501910f804b4abebdfe8e8e048c2c', data=reserveJSON, headers=headers)
+    stepThree = requests.post('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, data=reserveJSON, headers=headers)
     server = stepThree.json()
 
     connect = 'connect ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; password "' + server['reservation']['password'] + '"'
@@ -308,7 +230,7 @@ async def startserver(ctx):
     await channel.send(connect)
     
 @bot.command()
-@commands.has_role('pug runners')
+@commands.has_role('Runners')
 async def config(ctx, config: str):
     channel = bot.get_channel(1000161175859900546)
     rconMessage = await channel.fetch_message(channel.last_message_id)
@@ -326,7 +248,7 @@ async def config(ctx, config: str):
     await ctx.send("Config executed.")
 
 @bot.command()
-@commands.has_role('pug runners')
+@commands.has_role('Runners')
 async def map(ctx, map: str):
     channel = bot.get_channel(1000161175859900546)
     rconMessage = await channel.fetch_message(channel.last_message_id)
@@ -363,7 +285,7 @@ async def check(ctx):
         playerString = ""
         playerString += member.display_name
         for role in member.roles:
-            for num, id in enumerate(roles):
+            for id in roles:
                 if str(role.id) == id[1]:
                     playerString += id[0]
         
@@ -382,4 +304,4 @@ async def check(ctx):
     await ctx.send(embed=embed)
     
     
-bot.run('OTg5MjUwMTQ0ODk1NjU1OTY2.G0x6ss.ZYt-cfz_wVzXO6MZJbfAodStbBvrl3JDVU9_Rs')
+bot.run(DISCORD_TOKEN)
