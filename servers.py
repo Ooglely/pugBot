@@ -113,25 +113,22 @@ class ServerCog(commands.Cog):
         
         await ctx.send("Changing map to " + map + ".")
     
-    @tasks.loop(seconds=60) # task runs every 60 seconds
+    @tasks.loop(seconds=30) # task runs every 30 seconds
     async def server_status(self):
         with open("logs.json") as log_file:
             LOGS = json.load(log_file)
         lastLog = LOGS["lastLog"]
             
         status = requests.get('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, headers={'Content-type': 'application/json'}).json()
-        if status["reservations"][0]["status"] == "Ended":
-            print('Server not up.')
-        else:
-            logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
-            if timestamp - logs["logs"][0]["date"] < 20000:
-                if logs["logs"][0]["id"] != lastLog:
-                    newLog = {"lastLog": logs["logs"][0]["id"]}
-                    with open("logs.json", "w") as outfile:
-                        json.dump(newLog, outfile)
-                    
-                    logChannel = self.bot.get_channel(996985303220879390)
-                    await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
+        logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
+        if str(status['reservations'][0]['id']) in logs["logs"][0]["title"]:
+            if logs["logs"][0]["id"] != lastLog:
+                newLog = {"lastLog": logs["logs"][0]["id"]}
+                with open("logs.json", "w") as outfile:
+                    json.dump(newLog, outfile)
+                
+                logChannel = self.bot.get_channel(996985303220879390)
+                await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
     
     @server_status.before_loop
     async def server_status_wait(self):
