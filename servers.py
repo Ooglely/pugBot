@@ -58,7 +58,7 @@ class ServerCog(commands.Cog):
 
         for server in find_servers.json()['servers']:
             if "chi" in server['ip']:
-                if 536 not in server['id']:
+                if 536 != server['id']:
                     print(server)
                     reserve = server
                     break
@@ -156,9 +156,9 @@ class ServerCog(commands.Cog):
             
         with Client(str(ip), int(port), passwd=password) as client:
             response = client.run('exec', config)
-            await ctx.send(response)
+            await ctx.send("Changing config to " + config + ".")
             response = client.run('changelevel', map)
-            await ctx.send(response)
+            await ctx.send("Changing map to " + map + ".")
 
     @commands.command()
     @commands.has_role('Runners')
