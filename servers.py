@@ -11,6 +11,31 @@ version = "v0.4.3"
 timestamp = unixtime.time()
 lastLog = 0
 
+hl_maps = [
+    ['koth_product', 'koth_product_final'],
+    ['pl_upward', 'pl_upward_f9'],
+    ['koth_lakeside', 'koth_lakeside_r2'],
+    ['pl_swiftwater', 'pl_swiftwater_final1'],
+    ['koth_ashville', 'koth_ashville_rc2d'],
+    ['pl_vigil', 'pl_vigil_rc9'],
+    ['cp_steel', 'cp_steel_f10']
+]
+
+sixes_maps = [
+    ['cp_gullywash', 'cp_gullywash_f7'],
+    ['koth_bagel', 'koth_bagel_rc5'],
+    ['cp_metalworks', 'cp_metalworks_f4'],
+    ['cp_snakewater', 'cp_snakewater_final1'],
+    ['koth_product', 'koth_product_final'],
+    ['cp_process', 'cp_process_f11'],
+    ['koth_clearcut', 'koth_clearcut_b15d'],
+    ['cp_granary', 'cp_granary_pro_rc8'], 
+    ['cp_badlands', 'cp_prolands_rc2ta'],
+    ['cp_reckoner', 'cp_reckoner_rc6']
+]
+
+kothmaps = ['koth_product_final', 'koth_lakeside_r2', 'koth_ashville_rc2d', 'koth_cascade']
+
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
 
@@ -33,9 +58,10 @@ class ServerCog(commands.Cog):
 
         for server in find_servers.json()['servers']:
             if "chi" in server['ip']:
-                print(server)
-                reserve = server
-                break
+                if 536 not in server['id']:
+                    print(server)
+                    reserve = server
+                    break
 
         connectPassword = 'andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         rconPassword = 'rcon.andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=20))
@@ -49,7 +75,7 @@ class ServerCog(commands.Cog):
                 "server_id": reserve['id'],
                 "enable_plugins": True,
                 "enable_demos_tf": True,
-                "first_map": "koth_ashville_rc2d",
+                "first_map": random.choice(kothmaps),
                 "server_config_id": 54,
                 "whitelist_id": 22,
                 "custom_whitelist_id": None,
@@ -106,31 +132,100 @@ class ServerCog(commands.Cog):
         port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
         password = rconCommand.split(' ')[3].split('"')[1]
         
-        with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run('changelevel', map)
-
-        print(response)
+        if ctx.channel.id == 996415628007186542: # HL Channels
+            for hlmap in hl_maps:
+                if map == hlmap[0]:
+                    map = hlmap[1]
+                    break
+            if map.startswith('cp_'):
+                config = 'rgl_HL_stopwatch'
+            elif map.startswith('koth_'):
+                config = 'rgl_HL_koth_bo5'
+            elif map.startswith('pl_'):
+                config = 'rgl_HL_stopwatch'
         
-        await ctx.send("Changing map to " + map + ".")
-    
-    @tasks.loop(seconds=30) # task runs every 30 seconds
-    async def server_status(self):
-        with open("logs.json") as log_file:
-            LOGS = json.load(log_file)
-        lastLog = LOGS["lastLog"]
+        elif ctx.channel.id == 997602235208962150: # 6s Channels
+            for sixesmap in sixes_maps:
+                if map == sixesmap[0]:
+                    map = sixesmap[1]
+                    break
+            if map.startswith('cp_'):
+                config = 'rgl_6s_5cp_scrim'
+            elif map.startswith('koth_'):
+                config = 'rgl_6s_koth_bo5'
             
-        status = requests.get('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, headers={'Content-type': 'application/json'}).json()
-        logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
-        if str(status['reservations'][0]['id']) in logs["logs"][0]["title"]:
-            if logs["logs"][0]["id"] != lastLog:
-                newLog = {"lastLog": logs["logs"][0]["id"]}
-                with open("logs.json", "w") as outfile:
-                    json.dump(newLog, outfile)
+        with Client(str(ip), int(port), passwd=password) as client:
+            response = client.run('exec', config)
+            await ctx.send(response)
+            response = client.run('changelevel', map)
+            await ctx.send(response)
+
+    @commands.command()
+    @commands.has_role('Runners')
+    async def randommap(self, ctx):
+        channel = self.bot.get_channel(1000161175859900546)
+        rconMessage = await channel.fetch_message(channel.last_message_id)
+        rconCommand = rconMessage.content
+        
+        ip = rconCommand.split(' ')[1].split(':')[0]
+        port = rconCommand.split(' ')[1].split(':')[1].split(';')[0]
+        password = rconCommand.split(' ')[3].split('"')[1]
+        
+        if ctx.channel.id == 996415628007186542: # HL Channels
+            for hlmap in hl_maps:
+                if map == hlmap[0]:
+                    map = hlmap[1]
+                    break
+            if map.startswith('cp_'):
+                config = 'rgl_HL_stopwatch'
+            elif map.startswith('koth_'):
+                config = 'rgl_HL_koth_bo5'
+            elif map.startswith('pl_'):
+                config = 'rgl_HL_stopwatch'
+        
+        elif ctx.channel.id == 997602235208962150: # 6s Channels
+            for sixesmap in sixes_maps:
+                if map == sixesmap[0]:
+                    map = sixesmap[1]
+                    break
+            if map.startswith('cp_'):
+                config = 'rgl_6s_5cp_scrim'
+            elif map.startswith('koth_'):
+                config = 'rgl_6s_koth_bo5'
+            
+        with Client(str(ip), int(port), passwd=password) as client:
+            response = client.run('exec', config)
+            await ctx.send(response)
+            response = client.run('changelevel', map)
+            await ctx.send(response)
+
+    @tasks.loop(seconds=30, count=None) # task runs every 30 seconds
+    async def server_status(self):
+        players = []
+        guild = self.bot.get_guild(952817189893865482)
+        for channel in guild.voice_channels:
+            for member in channel.members:
+                players.append(member.id)
+        
+        if len(players) > 8:
+            with open("logs.json") as log_file:
+                LOGS = json.load(log_file)
+            lastLog = LOGS["lastLog"]
                 
-                logChannel = self.bot.get_channel(996985303220879390)
-                await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
+            status = requests.get('https://na.serveme.tf/api/reservations?api_key=' + SERVEME_API_KEY, headers={'Content-type': 'application/json'}).json()
+            logs = requests.get("https://logs.tf/api/v1/log?uploader=76561198171178258").json()
+            if str(status['reservations'][0]['id']) in logs["logs"][0]["title"]:
+                if logs["logs"][0]["id"] != lastLog:
+                    newLog = {"lastLog": logs["logs"][0]["id"]}
+                    with open("logs.json", "w") as outfile:
+                        json.dump(newLog, outfile)
+                    
+                    logChannel = self.bot.get_channel(996985303220879390)
+                    await logChannel.send('https://logs.tf/' + str(logs["logs"][0]["id"]))
     
     @server_status.before_loop
     async def server_status_wait(self):
-        print('waiting...')
         await self.bot.wait_until_ready()
+        
+async def setup(bot):
+	await bot.add_cog(ServerCog(bot))

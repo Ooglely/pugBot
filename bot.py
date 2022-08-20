@@ -35,19 +35,20 @@ roles = [
 
 intents = discord.Intents.default()
 intents.members = True
-intents.messages = True
+intents.message_content = True
 intents.presences = True
 
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', intents=intents, activity = activity)
 
-bot.add_cog(ServerCog(bot))
+
 bot.remove_command('help')
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+    await bot.load_extension('servers')
     
 @bot.listen('on_message')
 async def playerListener(message):
