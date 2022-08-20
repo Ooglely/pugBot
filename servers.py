@@ -66,6 +66,12 @@ class ServerCog(commands.Cog):
 
         connectPassword = 'andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         rconPassword = 'rcon.andrew.' + ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+        
+        if ctx.channel.id == 996415628007186542: # HL Channels
+            map = random.choice(kothmaps)
+        
+        elif ctx.channel.id == 997602235208962150: # 6s Channels
+            map = random.choice(sixes_maps)[1]
 
         reserveString = {
             "reservation": {
@@ -76,7 +82,7 @@ class ServerCog(commands.Cog):
                 "server_id": reserve['id'],
                 "enable_plugins": True,
                 "enable_demos_tf": True,
-                "first_map": random.choice(kothmaps),
+                "first_map": map,
                 "server_config_id": 54,
                 "whitelist_id": 22,
                 "custom_whitelist_id": None,
@@ -95,6 +101,7 @@ class ServerCog(commands.Cog):
         embed.add_field(name="Server", value=server['reservation']['server']['name'], inline=False)
         embed.add_field(name="Connect", value=connect, inline=False)
         embed.add_field(name="RCON", value='RCON has been sent in the rcon channel.', inline=False)
+        embed.add_field(name="Map", value=map, inline=False)
         embed.set_footer(text=version)
         await ctx.send(embed=embed)
         
