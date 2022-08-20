@@ -6,6 +6,7 @@ import random
 import string
 from rcon.source import Client
 import time as unixtime
+import asyncio
 
 version = "v0.4.3"
 timestamp = unixtime.time()
@@ -153,12 +154,14 @@ class ServerCog(commands.Cog):
                 config = 'rgl_6s_5cp_scrim'
             elif map.startswith('koth_'):
                 config = 'rgl_6s_koth_bo5'
+        
+        command = 'exec ' + config + '; changelevel ' + map
             
         with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run('exec', config)
+            response = client.run(command)
             await ctx.send("Changing config to " + config + ".")
-            response = client.run('changelevel', map)
             await ctx.send("Changing map to " + map + ".")
+
 
     @commands.command()
     @commands.has_role('Runners')
@@ -172,10 +175,7 @@ class ServerCog(commands.Cog):
         password = rconCommand.split(' ')[3].split('"')[1]
         
         if ctx.channel.id == 996415628007186542: # HL Channels
-            for hlmap in hl_maps:
-                if map == hlmap[0]:
-                    map = hlmap[1]
-                    break
+            map = random.choice(hl_maps)[1]
             if map.startswith('cp_'):
                 config = 'rgl_HL_stopwatch'
             elif map.startswith('koth_'):
@@ -184,20 +184,18 @@ class ServerCog(commands.Cog):
                 config = 'rgl_HL_stopwatch'
         
         elif ctx.channel.id == 997602235208962150: # 6s Channels
-            for sixesmap in sixes_maps:
-                if map == sixesmap[0]:
-                    map = sixesmap[1]
-                    break
+            map = random.choice(sixes_maps)[1]
             if map.startswith('cp_'):
                 config = 'rgl_6s_5cp_scrim'
             elif map.startswith('koth_'):
                 config = 'rgl_6s_koth_bo5'
+                
+        command = 'exec ' + config + '; changelevel ' + map
             
         with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run('exec', config)
-            await ctx.send(response)
-            response = client.run('changelevel', map)
-            await ctx.send(response)
+            response = client.run(command)
+            await ctx.send("Changing config to " + config + ".")
+            await ctx.send("Changing map to " + map + ".")
 
     @tasks.loop(seconds=30, count=None) # task runs every 30 seconds
     async def server_status(self):
