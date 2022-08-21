@@ -72,6 +72,9 @@ class ServerCog(commands.Cog):
         
         elif ctx.channel.id == 997602235208962150: # 6s Channels
             map = random.choice(sixes_maps)[1]
+            
+        else:
+            map = 'koth_product_final'
 
         reserveString = {
             "reservation": {
