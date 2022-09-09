@@ -55,6 +55,8 @@ async def playerListener(message):
     if message.content.startswith('https://rgl.gg/Public/PlayerProfile.aspx?'):
         args = message.content.split('=')
         id = args[1].replace('&r', '')
+
+        open('output.json', 'w').close()
         
         rgl = rglSearch(id)
 

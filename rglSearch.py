@@ -2,6 +2,7 @@ import scrapy
 from scrapy.crawler import CrawlerProcess
 import sys
 import json
+import os
 
 process = CrawlerProcess(settings={'FEED_FORMAT': 'json', 'FEED_URI': 'output.json'})
 
@@ -36,6 +37,8 @@ def rglSearch(id):
     seasons = []
     for count, i in enumerate(data[0]['seasons']):
         if i.strip() == "":
+            del data[0]['seasons'][count]
+        if not "\r\n" in i:
             del data[0]['seasons'][count]
             
     for count, i in enumerate(data[0]["seasons"]):
