@@ -21,6 +21,7 @@ version = "v0.6.0"
 
 # Setting initial variables
 lastLog = ""
+pug_running = False
 
 roles = [
     [' (Scout Restriction)', '999191878736039957'],
@@ -232,5 +233,41 @@ async def check(ctx):
     embed.add_field(name="AM+ Players", value=plusPlayers, inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
+
+@tasks.loop(seconds=5, count=None) # task runs every 30 seconds
+async def fatkid_check(self):
+    sixes_team_1 = bot.get_channel(997602308525404242)
+    sixes_team_2 = bot.get_channel(997602346173464587)
+    hl_team_1 = bot.get_channel(987171351720771644)
+    hl_team_2 = bot.get_channel(994443542707580951)
+    sixes_organizing = bot.get_channel(997602270592118854)
+    hl_organizing = bot.get_channel(996567486621306880)
+    sixes_pug_channel = bot.get_channel(997602176769732740)
+    hl_pug_channel = bot.get_channel(996601879838601329)
+    fatkids = []
+    fk_string = "FKs: "
+    if pug_running == False:
+        if len(sixes_team_1.members) >= 6 and len(sixes_team_2.members) >= 6:
+            print('Pug has been detected as running.')
+            for member in sixes_organizing.members:
+                fatkids.append(member.id)
+                fk_string += f"<@{member.id}> "
+            sixes_pug_channel.send(fk_string)
+            pug_running = True
+        elif len(hl_team_1.members) >= 9 and len(hl_team_2.members) >= 9:
+            print('Pug has been detected as running.')
+            for member in sixes_organizing.members:
+                fatkids.append(member.id)
+                fk_string += f"<@{member.id}> "
+            sixes_pug_channel.send(fk_string)
+            pug_running = True
+    if pug_running:
+        if len(sixes_team_1.members) >= 4 or len(sixes_team_2.members) >= 4 or len(hl_team_1.members) >= 6 or len(hl_team_2.members) >= 6: return
+        elif len(sixes_team_1.members) <= 4 and len(sixes_team_2.members) <= 4:
+            print('Pug has been detected as finished.')
+            pug_running = False
+        elif len(hl_team_1.members) <= 6 and len(hl_team_2.members) <= 6:
+            print('Pug has been detected as finished.')
+            pug_running = False
 
 bot.run(DISCORD_TOKEN)
