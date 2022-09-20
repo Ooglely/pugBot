@@ -1,3 +1,4 @@
+from multiprocessing.connection import wait
 import discord
 from discord.ext import commands, tasks
 import requests
@@ -168,10 +169,15 @@ class ServerCog(commands.Cog):
         command = 'exec ' + config + '; changelevel ' + map
             
         with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run(command)
+            client.run(command)
             await ctx.send("Changing config to " + config + ".")
             await ctx.send("Changing map to " + map + ".")
-
+        
+        if map.startswith('pl_'):
+            await asyncio.sleep(20)
+            with Client(str(ip), int(port), passwd=password) as client:
+                client.run(command)
+                await ctx.send("Reloading map to ensure config executed.")
 
     @commands.command()
     @commands.has_role('Runners')
@@ -203,9 +209,15 @@ class ServerCog(commands.Cog):
         command = 'exec ' + config + '; changelevel ' + map
             
         with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run(command)
+            client.run(command)
             await ctx.send("Changing config to " + config + ".")
             await ctx.send("Changing map to " + map + ".")
+        
+        if map.startswith('pl_'):
+            await asyncio.sleep(20)
+            with Client(str(ip), int(port), passwd=password) as client:
+                client.run(command)
+                await ctx.send("Reloading map to ensure config executed.")
 
     @tasks.loop(seconds=30, count=None) # task runs every 30 seconds
     async def server_status(self):

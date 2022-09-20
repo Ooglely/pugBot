@@ -17,7 +17,7 @@ with open("config.json") as config_file:
 DISCORD_TOKEN = CONFIG["discord"]["token"]
 SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.5.1"
+version = "v0.6.0"
 
 # Setting initial variables
 lastLog = ""
@@ -146,9 +146,14 @@ async def randomize(ctx, num: int):
         selectingChannel = bot.get_channel(996567486621306880)
         
         for member in selectingChannel.members:
-            players.append(member.id)
+            for role in member.roles:
+                if role.id == 992281832437596180:
+                    players[0].append(member.id)
+            else: players[1].append(member.id)
         
-        random.shuffle(players)
+        random.shuffle(players[0])
+        random.shuffle(players[1])
+        players = players[0] + players[1]
         
         for player in players:
             if team1Players < num:
@@ -163,15 +168,20 @@ async def randomize(ctx, num: int):
         await ctx.send("Players moved.")
     
     if ctx.channel.id == 997602235208962150: # 6s Channels
-        players = []
+        players = [[],[]]
         team1Channel = bot.get_channel(997602308525404242)
         team2Channel = bot.get_channel(997602346173464587)
         selectingChannel = bot.get_channel(997602270592118854)
         
         for member in selectingChannel.members:
-            players.append(member.id)
+            for role in member.roles:
+                if role.id == 992281832437596180:
+                    players[0].append(member.id)
+            else: players[1].append(member.id)
         
-        random.shuffle(players)
+        random.shuffle(players[0])
+        random.shuffle(players[1])
+        players = players[0] + players[1]
         
         for player in players:
             if team1Players < num:
