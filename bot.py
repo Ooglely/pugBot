@@ -17,7 +17,7 @@ with open("config.json") as config_file:
 DISCORD_TOKEN = CONFIG["discord"]["token"]
 SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.6.0"
+version = "v0.6.1"
 
 # Setting initial variables
 lastLog = ""
@@ -252,16 +252,18 @@ async def fatkid_check(self):
             for member in sixes_organizing.members:
                 fatkids.append(member.id)
                 fk_string += f"<@{member.id}> "
-            sixes_pug_channel.send(fk_string)
+            if fk_string != "FKs: ":
+                sixes_pug_channel.send(fk_string)
             pug_running = True
         elif len(hl_team_1.members) >= 9 and len(hl_team_2.members) >= 9:
             print('Pug has been detected as running.')
-            for member in sixes_organizing.members:
+            for member in hl_organizing.members:
                 fatkids.append(member.id)
                 fk_string += f"<@{member.id}> "
-            sixes_pug_channel.send(fk_string)
+            if fk_string != "FKs: ":
+                hl_pug_channel.send(fk_string)
             pug_running = True
-    if pug_running:
+    elif pug_running:
         if len(sixes_team_1.members) >= 4 or len(sixes_team_2.members) >= 4 or len(hl_team_1.members) >= 6 or len(hl_team_2.members) >= 6: return
         elif len(sixes_team_1.members) <= 4 and len(sixes_team_2.members) <= 4:
             print('Pug has been detected as finished.')
@@ -269,5 +271,4 @@ async def fatkid_check(self):
         elif len(hl_team_1.members) <= 6 and len(hl_team_2.members) <= 6:
             print('Pug has been detected as finished.')
             pug_running = False
-
 bot.run(DISCORD_TOKEN)

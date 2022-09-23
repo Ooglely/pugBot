@@ -9,22 +9,23 @@ from rcon.source import Client
 import time as unixtime
 import asyncio
 
-version = "v0.5.1"
+version = "v0.6.1"
 timestamp = unixtime.time()
 lastLog = 0
 
 hl_maps = [
     ['koth_product', 'koth_product_final'],
-    ['pl_upward', 'pl_upward_f9'],
+    ['pl_upward', 'pl_upward_f10'],
     ['koth_lakeside', 'koth_lakeside_r2'],
     ['pl_swiftwater', 'pl_swiftwater_final1'],
-    ['koth_ashville', 'koth_ashville_rc2d'],
+    ['koth_ashville', 'koth_ashville_final'],
     ['pl_vigil', 'pl_vigil_rc9'],
-    ['cp_steel', 'cp_steel_f10']
+    ['cp_steel', 'cp_steel_f10'],
+    ['koth_proot', 'koth_proot_b3b']
 ]
 
 sixes_maps = [
-    ['cp_gullywash', 'cp_gullywash_f7'],
+    ['cp_gullywash', 'cp_gullywash_f9'],
     ['koth_bagel', 'koth_bagel_rc5'],
     ['cp_metalworks', 'cp_metalworks_f4'],
     ['cp_snakewater', 'cp_snakewater_final1'],
@@ -36,7 +37,7 @@ sixes_maps = [
     ['cp_reckoner', 'cp_reckoner_rc6']
 ]
 
-kothmaps = ['koth_product_final', 'koth_lakeside_r2', 'koth_ashville_rc2d', 'koth_cascade']
+kothmaps = ['koth_product_final', 'koth_proot_b3b', 'koth_ashville_rc2d', 'koth_cascade']
 
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
