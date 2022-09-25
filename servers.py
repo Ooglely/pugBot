@@ -9,7 +9,7 @@ from rcon.source import Client
 import time as unixtime
 import asyncio
 
-version = "v0.6.1"
+version = "v0.7.0"
 timestamp = unixtime.time()
 lastLog = 0
 
