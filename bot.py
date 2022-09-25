@@ -8,6 +8,7 @@ import string
 import requests
 from rcon.source import Client
 from rglSearch import rglSearch
+from stats import logSearch
 import time as unixtime
 from servers import ServerCog
 
@@ -233,6 +234,33 @@ async def check(ctx):
     embed.add_field(name="AM+ Players", value=plusPlayers, inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
+
+@bot.command()
+async def stats(ctx, id):
+    if str(id).startswith('https://steamcommunity.com/id/'):
+        id = steamid.steam64_from_url(id)
+    if str(id).startswith('[U:1:'):
+        obj = SteamID(id)
+        id = obj.as_64
+    if str(id).startswith('STEAM_'):
+        obj = SteamID(id)
+        id = obj.as_64
+    if str(id).startswith('7656119'):
+        id = id
+
+    #info = rglSearch(int(id))
+    #logString = f"```\n{info[0]}'s pug stats"
+    
+    logString = '```\n  Class |  K  |  D  | DPM | Logs'
+    stats = await logSearch(int(id))
+    for i in stats:
+        if i[1] != 0:
+            dpm = f'{i[3] / (i[4] / 60):.1f}'
+            logString += f'\n{i[0]: >8}|{i[1]: >5}|{i[2]: >5}|{dpm: >5}|{i[5]: >5}'
+    logString += '```'
+    await ctx.send(logString)
+    open('output.json', 'w').close()
+
 
 @tasks.loop(seconds=5, count=None) # task runs every 30 seconds
 async def fatkid_check(self):

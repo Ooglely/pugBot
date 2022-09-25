@@ -1,10 +1,11 @@
 import scrapy
-from scrapy.crawler import CrawlerProcess
+from scrapy.crawler import CrawlerProcess, CrawlerRunner
 import sys
 import json
+from twisted.internet import reactor
 import os
 
-process = CrawlerProcess(settings={'FEED_FORMAT': 'json', 'FEED_URI': 'output.json'})
+#process = CrawlerProcess(settings={'FEED_FORMAT': 'json', 'FEED_URI': 'output.json'})
 
 class PlayerSpider(scrapy.Spider):
     name = "PlayerSpider"
@@ -25,10 +26,15 @@ class PlayerSpider(scrapy.Spider):
             }
 
 def rglSearch(id):
-    process.crawl(PlayerSpider, input = str(id))
+    runner = CrawlerRunner(settings={"FEEDS": {"output.json": {"format": "json"}}})
+    d = runner.crawl(PlayerSpider, input = str(id))
+    d.addBoth(lambda _: reactor.stop())
+    reactor.run()
+
+    """ process.crawl(PlayerSpider, input = str(id))
     if "twisted.internet.reactor" in sys.modules:
         del sys.modules["twisted.internet.reactor"]
-    process.start()
+    process.start() """
     
     f = open('output.json')
     data = json.load(f)
@@ -59,9 +65,8 @@ def rglSearch(id):
             hl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
         if i[0].startswith("P7 Season"):
             pl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-    
-    if "twisted.internet.reactor" in sys.modules:
-        del sys.modules["twisted.internet.reactor"]
+
+    #process.stop()
     
     return [name, pfp, sixes, hl, pl]
 
