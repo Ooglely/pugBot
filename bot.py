@@ -10,8 +10,10 @@ from rcon.source import Client
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
+from database import update_player
 import time as unixtime
 from servers import ServerCog
+import asyncio
 
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
@@ -19,7 +21,7 @@ with open("config.json") as config_file:
 DISCORD_TOKEN = CONFIG["discord"]["token"]
 SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.7.0"
+version = "v0.7.1"
 
 # Setting initial variables
 lastLog = ""
@@ -204,16 +206,6 @@ async def help(ctx):
     embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.\nr!check - Lists divs of all players in the organizing channel.\nr!randommap - Change to a random map based on the gamemode.', inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
-
-@bot.command()
-async def update(ctx):
-    
-    embed=discord.Embed(title='pugBot', color=0xf0984d)
-    embed.set_thumbnail(url='https://b.catgirlsare.sexy/XoBJQn439QgJ.jpeg')
-    embed.add_field(name="Commands", value='r!search [steam/steamid/rgl] - Finds someones RGL page and team history.', inline=False)
-    embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.\nr!check - Lists divs of all players in the organizing channel.\nr!randommap - Change to a random map based on the gamemode.', inline=False)
-    embed.set_footer(text=version)
-    await ctx.send(embed=embed)
     
 @bot.command()
 async def check(ctx):
@@ -261,8 +253,47 @@ async def stats(ctx, arg):
     logString += '```'
     await wait.delete()
     await ctx.send(logString)
-    open('output.json', 'w').close()
 
+@bot.command()
+async def update(ctx, arg):
+    rgl = rglSearch(get_steam64(arg))
+
+    url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(get_steam64(arg))
+    
+    if rgl[5] == '':
+        embedColor = 0xf0984d
+    else: embedColor = 0xff0000
+    
+    embed=discord.Embed(title=rgl[0], url = url, color=embedColor)
+    embed.set_thumbnail(url=rgl[1])
+    if rgl[2] != "": # Sixes Data
+        embed.add_field(name="Sixes", value=rgl[2], inline=False)
+    if rgl[3] != "": # HL Data
+        embed.add_field(name="Highlander", value=rgl[3], inline=False)
+    if rgl[4] != "": # PL Data
+        embed.add_field(name="Prolander", value=rgl[4], inline=False)
+    if rgl[5] != '': # Ban History
+        embed.add_field(name="Ban History", value=rgl[5], inline=False)
+        
+    embed.set_footer(text=version)
+    await ctx.send(embed=embed)
+
+    prompt = await ctx.send('Make sure that this is your RGL profile. React with ✅ to continue.')
+    await prompt.add_reaction('✅')
+    await prompt.add_reaction('❌')
+    
+    def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) == '✅'
+    
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send('❌ Timed out.')
+    else:
+        await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(arg)) + '\nDiscordID: ' + str(ctx.author.id))
+        update_player(rgl[0], int(ctx.author.id), get_steam64(arg))
+        await prompt.delete()
+        await ctx.message.delete()
 
 @tasks.loop(seconds=5, count=None) # task runs every 30 seconds
 async def fatkid_check(self):
