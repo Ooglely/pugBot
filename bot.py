@@ -9,6 +9,7 @@ import requests
 from rcon.source import Client
 from rglSearch import rglSearch
 from stats import logSearch
+from util import get_steam64
 import time as unixtime
 from servers import ServerCog
 
@@ -55,16 +56,16 @@ async def on_ready():
 @bot.listen('on_message')
 async def playerListener(message):
     if message.content.startswith('https://rgl.gg/Public/PlayerProfile.aspx?'):
-        args = message.content.split('=')
-        id = args[1].replace('&r', '')
-
-        open('output.json', 'w').close()
         
-        rgl = rglSearch(id)
+        rgl = rglSearch(get_steam64(message.content))
 
-        url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(id)
+        url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(get_steam64(message.content))
         
-        embed=discord.Embed(title=rgl[0], url = url, color=0xf0984d)
+        if rgl[5] == '':
+            embedColor = 0xf0984d
+        else: embedColor = 0xff0000
+        
+        embed=discord.Embed(title=rgl[0], url = url, color=embedColor)
         embed.set_thumbnail(url=rgl[1])
         if rgl[2] != "": # Sixes Data
             embed.add_field(name="Sixes", value=rgl[2], inline=False)
@@ -72,29 +73,25 @@ async def playerListener(message):
             embed.add_field(name="Highlander", value=rgl[3], inline=False)
         if rgl[4] != "": # PL Data
             embed.add_field(name="Prolander", value=rgl[4], inline=False)
+        if rgl[5] != '': # Ban History
+            embed.add_field(name="Ban History", value=rgl[5], inline=False)
+            
         embed.set_footer(text=version)
         await message.channel.send(embed=embed)
-        open('output.json', 'w').close()
         pass
 
 @bot.command()
 async def search(ctx, arg: str):
-    if arg.startswith('https://steamcommunity.com/id/'):
-        id = steamid.steam64_from_url(arg)
-    if arg.startswith('[U:1:'):
-        obj = SteamID(arg)
-        id = obj.as_64
-    if arg.startswith('STEAM_'):
-        obj = SteamID(arg)
-        id = obj.as_64
-    if arg.startswith('7656119'):
-        id = arg
     
-    rgl = rglSearch(id)
+    rgl = rglSearch(get_steam64(arg))
+
+    url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(get_steam64(arg))
     
-    url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(id)
+    if rgl[5] == '':
+        embedColor = 0xf0984d
+    else: embedColor = 0xff0000
     
-    embed=discord.Embed(title=rgl[0], url = url, color=0xf0984d)
+    embed=discord.Embed(title=rgl[0], url = url, color=embedColor)
     embed.set_thumbnail(url=rgl[1])
     if rgl[2] != "": # Sixes Data
         embed.add_field(name="Sixes", value=rgl[2], inline=False)
@@ -102,9 +99,11 @@ async def search(ctx, arg: str):
         embed.add_field(name="Highlander", value=rgl[3], inline=False)
     if rgl[4] != "": # PL Data
         embed.add_field(name="Prolander", value=rgl[4], inline=False)
+    if rgl[5] != '': # Ban History
+        embed.add_field(name="Ban History", value=rgl[5], inline=False)
+        
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
-    open('output.json', 'w').close()
     pass
 
 @bot.command()
@@ -205,6 +204,16 @@ async def help(ctx):
     embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.\nr!check - Lists divs of all players in the organizing channel.\nr!randommap - Change to a random map based on the gamemode.', inline=False)
     embed.set_footer(text=version)
     await ctx.send(embed=embed)
+
+@bot.command()
+async def update(ctx):
+    
+    embed=discord.Embed(title='pugBot', color=0xf0984d)
+    embed.set_thumbnail(url='https://b.catgirlsare.sexy/XoBJQn439QgJ.jpeg')
+    embed.add_field(name="Commands", value='r!search [steam/steamid/rgl] - Finds someones RGL page and team history.', inline=False)
+    embed.add_field(name="Runners Only", value='r!move - Move all players back to organizing channels.\nr!randomize [num] - Randomly picks teams of [num] size and moves them to the team channels.\nr!startserver - Starts a serveme.tf reservation to be used for pugs.\nr!map - Change map using on last rcon message.\nr!config - Change config using last rcon message.\nr!check - Lists divs of all players in the organizing channel.\nr!randommap - Change to a random map based on the gamemode.', inline=False)
+    embed.set_footer(text=version)
+    await ctx.send(embed=embed)
     
 @bot.command()
 async def check(ctx):
@@ -236,28 +245,21 @@ async def check(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-async def stats(ctx, id):
-    if str(id).startswith('https://steamcommunity.com/id/'):
-        id = steamid.steam64_from_url(id)
-    if str(id).startswith('[U:1:'):
-        obj = SteamID(id)
-        id = obj.as_64
-    if str(id).startswith('STEAM_'):
-        obj = SteamID(id)
-        id = obj.as_64
-    if str(id).startswith('7656119'):
-        id = id
+async def stats(ctx, arg):
+    wait = await ctx.send('Give me a moment, grabbing all logs...')
+    id = get_steam64(arg)
 
-    #info = rglSearch(int(id))
-    #logString = f"```\n{info[0]}'s pug stats"
+    info = rglSearch(int(id))
+    logString = f"```\n{info[0]}'s pug stats"
     
-    logString = '```\n  Class |  K  |  D  | DPM | Logs'
+    logString += '\n  Class |  K  |  D  | DPM | Logs'
     stats = await logSearch(int(id))
     for i in stats:
         if i[1] != 0:
             dpm = f'{i[3] / (i[4] / 60):.1f}'
             logString += f'\n{i[0]: >8}|{i[1]: >5}|{i[2]: >5}|{dpm: >5}|{i[5]: >5}'
     logString += '```'
+    await wait.delete()
     await ctx.send(logString)
     open('output.json', 'w').close()
 

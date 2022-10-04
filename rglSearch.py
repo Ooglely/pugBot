@@ -1,72 +1,60 @@
-import scrapy
-from scrapy.crawler import CrawlerProcess, CrawlerRunner
-import sys
-import json
-from twisted.internet import reactor
-import os
-
-#process = CrawlerProcess(settings={'FEED_FORMAT': 'json', 'FEED_URI': 'output.json'})
-
-class PlayerSpider(scrapy.Spider):
-    name = "PlayerSpider"
-    
-    def __init__(self, input = None):
-        self.input = input  # steam id
-
-    def start_requests(self):
-        url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + self.input
-        yield scrapy.Request(url=url, callback=self.parse)
-        
-    def parse(self, response):
-        for player in response.css('body'):
-            yield {
-                'name': response.xpath("//*[@id='ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_lblPlayerName']/descendant-or-self::*/text()").get(),
-                'pfp': player.css("img#ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_imgProfileImage").xpath("@src").get(),
-                'seasons': player.css("tr > td > a::text").getall()
-            }
+import requests
+from bs4 import BeautifulSoup
 
 def rglSearch(id):
-    runner = CrawlerRunner(settings={"FEEDS": {"output.json": {"format": "json"}}})
-    d = runner.crawl(PlayerSpider, input = str(id))
-    d.addBoth(lambda _: reactor.stop())
-    reactor.run()
+    URL = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(id)
+    page = requests.get(URL)
 
-    """ process.crawl(PlayerSpider, input = str(id))
-    if "twisted.internet.reactor" in sys.modules:
-        del sys.modules["twisted.internet.reactor"]
-    process.start() """
-    
-    f = open('output.json')
-    data = json.load(f)
-    
-    number = 0
+    soup = BeautifulSoup(page.content, "html.parser")
+    name = soup.find(id="ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_lblPlayerName").get_text()
+    pfp = soup.find(id="ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_imgProfileImage").get("src")
+    seasonList = soup.select('tr > td > a')
+    banList = soup.find(id='banhistory').nextSibling.nextSibling.find_all('td')
+
+    bans = []
+    for i in banList:
+        element = i.get_text()
+        if element.strip() != "":
+            bans.append(element.strip())
+
+    num = 0
+    banHistory = []
+    for count, i in enumerate(bans):
+        if count == num:
+            banHistory.append([bans[count].strip(), bans[count + 1].strip(), bans[count + 2].strip()])
+            num += 3
+
     seasons = []
-    for count, i in enumerate(data[0]['seasons']):
+    for i in seasonList:
+        seasons.append(i.get_text())
+
+    num = 0
+    seasonHistory = []
+    for count, i in enumerate(seasons):
         if i.strip() == "":
-            del data[0]['seasons'][count]
+            del seasons[count]
         if not "\r\n" in i:
-            del data[0]['seasons'][count]
+            del seasons[count]
             
-    for count, i in enumerate(data[0]["seasons"]):
-        if count == number:
-            seasons.append([data[0]["seasons"][count].strip(), data[0]["seasons"][count + 1].strip(), data[0]["seasons"][count + 2].strip()])
-            number += 3
-            
-    name = data[0]['name']
-    pfp = data[0]['pfp']
+    for count, i in enumerate(seasons):
+        if count == num:
+            seasonHistory.append([seasons[count].strip(), seasons[count + 1].strip(), seasons[count + 2].strip()])
+            num += 3
             
     sixes = ""
     hl = ""
     pl = ""
-    for i in seasons:
+    for i in seasonHistory:
         if i[0].startswith("Sixes S"):
             sixes += i[0] + " - " + i[1] + " - " + i[2] + "\n"
         if i[0].startswith("HL Season"):
             hl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
         if i[0].startswith("P7 Season"):
             pl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-
-    #process.stop()
     
-    return [name, pfp, sixes, hl, pl]
+    bans = ""
+    for i in banHistory:
+        bans += i[0] + " - " + i[1] + ": " + i[2] + "\n"
+            
+    return [name, pfp, sixes, hl, pl, bans]
 
