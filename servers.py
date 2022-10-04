@@ -156,6 +156,7 @@ class ServerCog(commands.Cog):
                 config = 'rgl_HL_koth_bo5'
             elif map.startswith('pl_'):
                 config = 'rgl_HL_stopwatch'
+            whitelist_command = 'tftrue_whitelist_id 13297'
         
         elif ctx.channel.id == 997602235208962150: # 6s Channels
             for sixesmap in sixes_maps:
@@ -166,6 +167,7 @@ class ServerCog(commands.Cog):
                 config = 'rgl_6s_5cp_scrim'
             elif map.startswith('koth_'):
                 config = 'rgl_6s_koth_bo5'
+            whitelist_command = 'tftrue_whitelist_id 12241'
         
         command = 'exec ' + config + '; changelevel ' + map
             
@@ -174,6 +176,10 @@ class ServerCog(commands.Cog):
             await ctx.send("Changing config to " + config + ".")
             await ctx.send("Changing map to " + map + ".")
         
+        with Client(str(ip), int(port), passwd=password) as client:
+            await asyncio.sleep(10)
+            client.run(whitelist_command)
+
         if map.startswith('pl_'):
             await asyncio.sleep(20)
             with Client(str(ip), int(port), passwd=password) as client:
