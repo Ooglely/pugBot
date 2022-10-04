@@ -1,17 +1,11 @@
 import discord
 from discord.ext import commands, tasks
-from steam import steamid
-from steam.steamid import SteamID
 import json
 import random
-import string
-import requests
-from rcon.source import Client
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
 from database import update_player
-import time as unixtime
 from servers import ServerCog
 import asyncio
 
@@ -46,6 +40,7 @@ intents.presences = True
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', intents=intents, activity = activity)
 
+log_channel = bot.get_channel(1026985050677465148)
 
 bot.remove_command('help')
 
@@ -276,7 +271,7 @@ async def update(ctx, arg):
         embed.add_field(name="Ban History", value=rgl[5], inline=False)
         
     embed.set_footer(text=version)
-    await ctx.send(embed=embed)
+    rglEmbed = await ctx.send(embed=embed)
 
     prompt = await ctx.send('Make sure that this is your RGL profile. React with ✅ to continue.')
     await prompt.add_reaction('✅')
@@ -290,10 +285,22 @@ async def update(ctx, arg):
     except asyncio.TimeoutError:
         await ctx.send('❌ Timed out.')
     else:
-        await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(arg)) + '\nDiscordID: ' + str(ctx.author.id))
+        await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(arg)) + '\nDiscordID: ' + str(ctx.author.id), delete_after=60.0)
         update_player(rgl[0], int(ctx.author.id), get_steam64(arg))
         await prompt.delete()
         await ctx.message.delete()
+        await rglEmbed.delete()
+
+        logEmbed=discord.Embed(title='New Database Registration', url = url, color=0xf0984d)
+        logEmbed.set_thumbnail(url=rgl[1])
+        logEmbed.add_field(name="Name", value=rgl[0], inline=True)
+        logEmbed.add_field(name="SteamID", value=str(get_steam64(arg)), inline=True)
+        logEmbed.add_field(name="DiscordID", value=str(ctx.author.id), inline=True)
+
+        await log_channel.send(embed=logEmbed)
+
+    return
+
 
 @tasks.loop(seconds=5, count=None) # task runs every 30 seconds
 async def fatkid_check(self):
