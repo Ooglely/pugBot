@@ -40,8 +40,6 @@ intents.presences = True
 activity = discord.Activity(name='over my pugs ^_^', type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix='r!', intents=intents, activity = activity)
 
-log_channel = bot.get_channel(1026985050677465148)
-
 bot.remove_command('help')
 
 @bot.event
@@ -285,20 +283,36 @@ async def update(ctx, arg):
     except asyncio.TimeoutError:
         await ctx.send('❌ Timed out.')
     else:
-        await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(arg)) + '\nDiscordID: ' + str(ctx.author.id), delete_after=60.0)
-        update_player(rgl[0], int(ctx.author.id), get_steam64(arg))
+        update = await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(arg)) + '\nDiscordID: ' + str(ctx.author.id) + '\nTop Div: ' + str(rgl[6]))
+        update_player(rgl[0], int(ctx.author.id), get_steam64(arg), rgl[6])
         await prompt.delete()
         await ctx.message.delete()
         await rglEmbed.delete()
+        await asyncio.sleep(10)
+        await update.delete()
 
         logEmbed=discord.Embed(title='New Database Registration', url = url, color=0xf0984d)
         logEmbed.set_thumbnail(url=rgl[1])
         logEmbed.add_field(name="Name", value=rgl[0], inline=True)
         logEmbed.add_field(name="SteamID", value=str(get_steam64(arg)), inline=True)
         logEmbed.add_field(name="DiscordID", value=str(ctx.author.id), inline=True)
+        logEmbed.add_field(name="TopDiv", value=str(rgl[6]), inline=True)
 
+        log_channel = bot.get_channel(1026985050677465148)
         await log_channel.send(embed=logEmbed)
-
+        
+        updated_role = ctx.guild.get_role(1027050043024351253)
+        await ctx.author.add_roles(updated_role)
+        
+        if ctx.author.get_role(992286429881303101) != None:
+            if rgl[6] >= 3:
+                await ctx.author.add_roles(ctx.guild.get_role(992281832437596180))
+                await ctx.author.remove_roles(ctx.guild.get_role(992286429881303101))
+        
+        if ctx.author.get_role(992281832437596180) != None:
+            if rgl[6] < 3:
+                await ctx.author.add_roles(ctx.guild.get_role(992286429881303101))
+                await ctx.author.remove_roles(ctx.guild.get_role(992281832437596180))
     return
 
 

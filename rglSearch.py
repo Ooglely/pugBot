@@ -55,6 +55,25 @@ def rglSearch(id):
     bans = ""
     for i in banHistory:
         bans += i[0] + " - " + i[1] + ": " + i[2] + "\n"
+    
+    divs = {
+        'Newcomer': 1,
+        'Amateur': 2,
+        'Intermediate': 3,
+        'Main': 4,
+        'Advanced': 5,
+        'Invite': 6
+    }
+    divNum = 0
+    for i in seasonHistory:
+        if i[0].startswith("Sixes S"):
+            if i[1] in divs:
+                if divs[i[1]] > divNum:
+                    divNum = divs[i[1]]
+        if i[0].startswith("HL Season"):
+            if i[1] in divs:
+                if divs[i[1]] > divNum:
+                    divNum = divs[i[1]]
             
-    return [name, pfp, sixes, hl, pl, bans]
+    return [name, pfp, sixes, hl, pl, bans, divNum]
 
