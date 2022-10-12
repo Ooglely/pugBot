@@ -20,8 +20,8 @@ hl_maps = [
     ['pl_swiftwater', 'pl_swiftwater_final1'],
     ['koth_ashville', 'koth_ashville_final'],
     ['pl_vigil', 'pl_vigil_rc9'],
-    ['cp_steel', 'cp_steel_f10'],
-    ['koth_proot', 'koth_proot_b3b']
+    ['cp_steel', 'cp_steel_f12'],
+    ['koth_proot', 'koth_proot_b4b']
 ]
 
 sixes_maps = [
