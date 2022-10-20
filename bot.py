@@ -15,7 +15,7 @@ with open("config.json") as config_file:
 DISCORD_TOKEN = CONFIG["discord"]["token"]
 SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
 
-version = "v0.7.1"
+version = "v0.8.1"
 
 # Setting initial variables
 lastLog = ""

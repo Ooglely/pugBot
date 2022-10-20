@@ -9,7 +9,7 @@ from rcon.source import Client
 import time as unixtime
 import asyncio
 
-version = "v0.8.0"
+version = "v0.8.1"
 timestamp = unixtime.time()
 lastLog = 0
 
@@ -119,7 +119,7 @@ class ServerCog(commands.Cog):
         channel = self.bot.get_channel(996980099486322798)
         connectEmbed=discord.Embed(title = connectLink, url = connectLink, color = 0x3dff1f)
         connectEmbed.add_field(name="Command", value=connect, inline=False)
-        await channel.send(connectEmbed)
+        await channel.send(embed=connectEmbed)
         
     @commands.command()
     @commands.has_role('Runners')

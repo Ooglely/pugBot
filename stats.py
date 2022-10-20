@@ -37,4 +37,3 @@ async def logSearch(id):
                     char[4] += int(i['total_time'])
                     char[5] += 1
     return stats
-#logSearch(76561198418622751)
