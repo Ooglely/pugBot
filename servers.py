@@ -101,6 +101,7 @@ class ServerCog(commands.Cog):
 
         connect = 'connect ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; password "' + server['reservation']['password'] + '"'
         rcon = 'rcon_address ' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '; rcon_password "' + server['reservation']['rcon'] + '"'
+        connectLink = 'steam://connect/' + server['reservation']['server']['ip'] + ':' + str(server['reservation']['server']['port']) + '/' + server['reservation']['password']
         
         embed=discord.Embed(title='Server started!', color=0xf0984d)
         embed.add_field(name="Server", value=server['reservation']['server']['name'], inline=False)
@@ -110,11 +111,15 @@ class ServerCog(commands.Cog):
         embed.set_footer(text=version)
         await ctx.send(embed=embed)
         
+        # RCON Message
         channel = self.bot.get_channel(1000161175859900546)
         await channel.send(rcon)
         
+        # Connect Message
         channel = self.bot.get_channel(996980099486322798)
-        await channel.send(connect)
+        connectEmbed=discord.Embed(title = connectLink, url = connectLink, color = 0x3dff1f)
+        connectEmbed.add_field(name="Command", value=connect, inline=False)
+        await channel.send(connectEmbed)
         
     @commands.command()
     @commands.has_role('Runners')
