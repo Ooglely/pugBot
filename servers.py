@@ -37,7 +37,7 @@ sixes_maps = [
     ['cp_reckoner', 'cp_reckoner_rc6']
 ]
 
-kothmaps = ['koth_product_final', 'koth_proot_b3b', 'koth_ashville_rc2d', 'koth_cascade']
+kothmaps = ['koth_product_final', 'koth_proot_b4b', 'koth_ashville_rc2d', 'koth_cascade']
 
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
@@ -117,7 +117,7 @@ class ServerCog(commands.Cog):
         
         # Connect Message
         channel = self.bot.get_channel(996980099486322798)
-        connectEmbed=discord.Embed(title = connectLink, url = connectLink, color = 0x3dff1f)
+        connectEmbed=discord.Embed(title = connectLink, color = 0x3dff1f)
         connectEmbed.add_field(name="Command", value=connect, inline=False)
         await channel.send(embed=connectEmbed)
         
