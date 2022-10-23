@@ -7,6 +7,7 @@ from stats import logSearch
 from util import get_steam64
 from database import update_player
 from servers import ServerCog
+from matchStatus import MatchCog
 import asyncio
 
 with open("config.json") as config_file:
