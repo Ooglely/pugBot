@@ -315,6 +315,76 @@ async def update(ctx, arg):
                 await ctx.author.remove_roles(ctx.guild.get_role(992281832437596180))
     return
 
+@bot.command()
+@commands.has_role('Runners')
+async def forceupdate(ctx, steam, discordID):
+    rgl = rglSearch(get_steam64(steam))
+
+    url = 'https://rgl.gg/Public/PlayerProfile.aspx?p=' + str(get_steam64(steam))
+    
+    if rgl[5] == '':
+        embedColor = 0xf0984d
+    else: embedColor = 0xff0000
+    
+    embed=discord.Embed(title=rgl[0], url = url, color=embedColor)
+    embed.set_thumbnail(url=rgl[1])
+    if rgl[2] != "": # Sixes Data
+        embed.add_field(name="Sixes", value=rgl[2], inline=False)
+    if rgl[3] != "": # HL Data
+        embed.add_field(name="Highlander", value=rgl[3], inline=False)
+    if rgl[4] != "": # PL Data
+        embed.add_field(name="Prolander", value=rgl[4], inline=False)
+    if rgl[5] != '': # Ban History
+        embed.add_field(name="Ban History", value=rgl[5], inline=False)
+        
+    embed.set_footer(text=version)
+    rglEmbed = await ctx.send(embed=embed)
+
+    prompt = await ctx.send('Make sure that this is your RGL profile. React with ✅ to continue.')
+    await prompt.add_reaction('✅')
+    await prompt.add_reaction('❌')
+    
+    def check(reaction, user):
+            return user == ctx.author and str(reaction.emoji) == '✅'
+    
+    try:
+        reaction, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send('❌ Timed out.')
+    else:
+        update = await ctx.send('✅ Updating database...\nName: ' + rgl[0] + '\nSteamID: ' + str(get_steam64(steam)) + '\nDiscordID: ' + str(discordID) + '\nTop Div: ' + str(rgl[6]))
+        update_player(rgl[0], discordID, get_steam64(steam), rgl[6])
+        await prompt.delete()
+        await ctx.message.delete()
+        await rglEmbed.delete()
+        await asyncio.sleep(10)
+        await update.delete()
+
+        logEmbed=discord.Embed(title='New Database Registration', url = url, color=0xf0984d)
+        logEmbed.set_thumbnail(url=rgl[1])
+        logEmbed.add_field(name="Name", value=rgl[0], inline=True)
+        logEmbed.add_field(name="SteamID", value=str(get_steam64(steam)), inline=True)
+        logEmbed.add_field(name="DiscordID", value=str(discordID), inline=True)
+        logEmbed.add_field(name="TopDiv", value=str(rgl[6]), inline=True)
+
+        log_channel = bot.get_channel(1026985050677465148)
+        await log_channel.send(embed=logEmbed)
+        
+        updated_user = ctx.guild.get_member(int(discordID))
+        
+        updated_role = ctx.guild.get_role(1027050043024351253)
+        await updated_user.add_roles(updated_role)
+        
+        if ctx.author.get_role(992286429881303101) != None:
+            if rgl[6] >= 3:
+                await ctx.author.add_roles(ctx.guild.get_role(992281832437596180))
+                await ctx.author.remove_roles(ctx.guild.get_role(992286429881303101))
+        
+        if ctx.author.get_role(992281832437596180) != None:
+            if rgl[6] < 3:
+                await ctx.author.add_roles(ctx.guild.get_role(992286429881303101))
+                await ctx.author.remove_roles(ctx.guild.get_role(992281832437596180))
+    return
 
 @tasks.loop(seconds=5, count=None) # task runs every 30 seconds
 async def fatkid_check(self):
