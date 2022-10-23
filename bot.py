@@ -47,6 +47,7 @@ async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
     await bot.load_extension('servers')
+    fatkid_check.start()
     
 @bot.listen('on_message')
 async def playerListener(message):
@@ -416,11 +417,12 @@ async def fatkid_check(self):
                 hl_pug_channel.send(fk_string)
             pug_running = True
     elif pug_running:
-        if len(sixes_team_1.members) >= 4 or len(sixes_team_2.members) >= 4 or len(hl_team_1.members) >= 6 or len(hl_team_2.members) >= 6: return
-        elif len(sixes_team_1.members) <= 4 and len(sixes_team_2.members) <= 4:
+        if len(sixes_team_1.members) <= 4 and len(sixes_team_2.members) <= 4:
             print('Pug has been detected as finished.')
             pug_running = False
         elif len(hl_team_1.members) <= 6 and len(hl_team_2.members) <= 6:
             print('Pug has been detected as finished.')
             pug_running = False
+            
+
 bot.run(DISCORD_TOKEN)
