@@ -2,10 +2,11 @@ import discord
 from discord.ext import commands, tasks
 import json
 import random
+
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import update_player
+from database import update_player, get_server_status, update_server_status
 from servers import ServerCog
 import asyncio
 
@@ -441,7 +442,8 @@ async def forceupdate(ctx, steam, discordID):
 
 
 @tasks.loop(seconds=5, count=None)  # task runs every 30 seconds
-async def fatkid_check(self):
+async def fatkid_check():
+    pug_running = get_server_status()
     sixes_team_1 = bot.get_channel(997602308525404242)
     sixes_team_2 = bot.get_channel(997602346173464587)
     hl_team_1 = bot.get_channel(987171351720771644)
@@ -460,7 +462,7 @@ async def fatkid_check(self):
                 fk_string += f"<@{member.id}> "
             if fk_string != "FKs: ":
                 sixes_pug_channel.send(fk_string)
-            pug_running = True
+            update_server_status(True)
         elif len(hl_team_1.members) >= 9 and len(hl_team_2.members) >= 9:
             print("Pug has been detected as running.")
             for member in hl_organizing.members:
@@ -468,14 +470,14 @@ async def fatkid_check(self):
                 fk_string += f"<@{member.id}> "
             if fk_string != "FKs: ":
                 hl_pug_channel.send(fk_string)
-            pug_running = True
+            update_server_status(True)
     elif pug_running:
         if len(sixes_team_1.members) <= 4 and len(sixes_team_2.members) <= 4:
             print("Pug has been detected as finished.")
-            pug_running = False
+            update_server_status(False)
         elif len(hl_team_1.members) <= 6 and len(hl_team_2.members) <= 6:
             print("Pug has been detected as finished.")
-            pug_running = False
+            update_server_status(False)
 
 
 bot.run(DISCORD_TOKEN)

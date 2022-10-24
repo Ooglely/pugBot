@@ -20,5 +20,16 @@ def update_player(name, discord, id, div):
         },
         upsert=True,
     )
-
     return
+
+
+def update_server_status(status):
+    db = client.servers
+    db["pug_status"].update_one(
+        {"name": "server"}, {"$set": {"status": status}}, upsert=True
+    )
+
+
+def get_server_status():
+    db = client.servers
+    return db["pug_status"].find_one({"name": "server"})["status"]
