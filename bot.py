@@ -115,9 +115,13 @@ async def search(ctx, arg: str):
 @commands.has_role("Runners")
 async def move(ctx):
     if ctx.channel.id == 996415628007186542:  # HL Channels
+        nextPugChannel = bot.get_channel(1009978053528670371)
         team1Channel = bot.get_channel(987171351720771644)
         team2Channel = bot.get_channel(994443542707580951)
         selectingChannel = bot.get_channel(996567486621306880)
+
+        for member in selectingChannel.members:
+            await member.move_to(nextPugChannel)
 
         for member in team1Channel.members:
             await member.move_to(selectingChannel)
