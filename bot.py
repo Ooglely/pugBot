@@ -6,7 +6,7 @@ import random
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import update_player, get_server_status, update_server_status
+from database import update_player, get_server_status, update_server_status, get_steam_from_discord
 from servers import ServerCog
 import asyncio
 
@@ -258,9 +258,11 @@ async def check(ctx):
 
 
 @bot.command()
-async def stats(ctx, arg):
+async def stats(ctx, *args):
     wait = await ctx.send("Give me a moment, grabbing all logs...")
-    id = get_steam64(arg)
+    if args == []:
+        id = get_steam_from_discord(ctx.author.id)
+    id = get_steam64(args[0])
 
     info = rglSearch(int(id))
     logString = f"```\n{info[0]}'s pug stats"
