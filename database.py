@@ -22,6 +22,10 @@ def update_player(name, discord, id, div):
     )
     return
 
+def get_steam_from_discord(discord):
+    db = client.players
+    return db["data"].find_one({"discord": discord})["steam64"]
+
 
 def update_server_status(status):
     db = client.servers
