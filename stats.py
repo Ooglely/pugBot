@@ -32,7 +32,9 @@ async def logSearch(id):
         # print(log['players'][steam3])
         for i in log["players"][steam3]["class_stats"]:
             for char in stats:
-                if i["type"] == char[0]:
+                player_class = i["type"]
+                if i["type"] == "heavyweapons": player_class = "heavy"
+                if player_class == char[0]:
                     char[1] += int(i["kills"])
                     char[2] += int(i["deaths"])
                     char[3] += int(i["dmg"])
