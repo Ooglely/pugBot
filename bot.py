@@ -150,23 +150,17 @@ async def move(ctx):
 async def randomize(ctx, num: int):
     team1Players = 0
     team2Players = 0
-    if ctx.channel.id == 996415628007186542:  # HL Channels
+    if ctx.channel.id == 996415628007186542: # HL Channels
         players = []
         team1Channel = bot.get_channel(987171351720771644)
         team2Channel = bot.get_channel(994443542707580951)
         selectingChannel = bot.get_channel(996567486621306880)
-
+        
         for member in selectingChannel.members:
-            for role in member.roles:
-                if role.id == 992281832437596180:
-                    players[0].append(member.id)
-            else:
-                players[1].append(member.id)
-
-        random.shuffle(players[0])
-        random.shuffle(players[1])
-        players = players[0] + players[1]
-
+            players.append(member.id)
+        
+        random.shuffle(players)
+        
         for player in players:
             if team1Players < num:
                 await ctx.message.guild.get_member(player).move_to(team1Channel)
@@ -176,26 +170,20 @@ async def randomize(ctx, num: int):
                 team2Players += 1
             else:
                 break
-
+            
         await ctx.send("Players moved.")
-
-    if ctx.channel.id == 997602235208962150:  # 6s Channels
-        players = [[], []]
+    
+    if ctx.channel.id == 997602235208962150: # 6s Channels
+        players = []
         team1Channel = bot.get_channel(997602308525404242)
         team2Channel = bot.get_channel(997602346173464587)
         selectingChannel = bot.get_channel(997602270592118854)
-
+        
         for member in selectingChannel.members:
-            for role in member.roles:
-                if role.id == 992281832437596180:
-                    players[0].append(member.id)
-            else:
-                players[1].append(member.id)
-
-        random.shuffle(players[0])
-        random.shuffle(players[1])
-        players = players[0] + players[1]
-
+            players.append(member.id)
+        
+        random.shuffle(players)
+        
         for player in players:
             if team1Players < num:
                 await ctx.message.guild.get_member(player).move_to(team1Channel)
@@ -205,7 +193,7 @@ async def randomize(ctx, num: int):
                 team2Players += 1
             else:
                 break
-
+            
         await ctx.send("Players moved.")
 
 
