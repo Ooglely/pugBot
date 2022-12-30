@@ -6,9 +6,6 @@ import asyncio
 from pydantic import BaseModel
 import os
 
-with open("config.json") as config_file:
-    CONFIG = json.load(config_file)
-
 API_PASSWORD = os.environ["webapi_password"]
 
 app = FastAPI()
