@@ -1,8 +1,4 @@
-import scrapy
-from scrapy.crawler import CrawlerProcess
-import sys
 import requests
-import json
 from steam import steamid
 from steam.steamid import SteamID
 
@@ -33,7 +29,8 @@ async def logSearch(id):
         for i in log["players"][steam3]["class_stats"]:
             for char in stats:
                 player_class = i["type"]
-                if i["type"] == "heavyweapons": player_class = "heavy"
+                if i["type"] == "heavyweapons":
+                    player_class = "heavy"
                 if player_class == char[0]:
                     char[1] += int(i["kills"])
                     char[2] += int(i["deaths"])
