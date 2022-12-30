@@ -7,6 +7,7 @@ import string
 from rcon.source import Client
 import time as unixtime
 import asyncio
+import os
 
 version = "v0.8.1"
 timestamp = unixtime.time()
@@ -43,10 +44,7 @@ kothmaps = [
     "koth_cascade",
 ]
 
-with open("config.json") as config_file:
-    CONFIG = json.load(config_file)
-
-SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
+SERVEME_API_KEY = os.environ["serveme_key"]
 
 
 class ServerCog(commands.Cog):
