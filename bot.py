@@ -6,8 +6,14 @@ import random
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import update_player, get_server_status, update_server_status, get_steam_from_discord
+from database import (
+    update_player,
+    get_server_status,
+    update_server_status,
+    get_steam_from_discord,
+)
 from servers import ServerCog
+from webserver import WebserverCog
 import asyncio
 
 with open("config.json") as config_file:
@@ -48,8 +54,9 @@ bot.remove_command("help")
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("------")
-    await bot.load_extension("servers")
-    fatkid_check.start()
+    await bot.add_cog(ServerCog(bot))
+    await bot.add_cog(WebserverCog(bot))
+    # fatkid_check.start()
 
 
 @bot.listen("on_message")
@@ -150,17 +157,17 @@ async def move(ctx):
 async def randomize(ctx, num: int):
     team1Players = 0
     team2Players = 0
-    if ctx.channel.id == 996415628007186542: # HL Channels
+    if ctx.channel.id == 996415628007186542:  # HL Channels
         players = []
         team1Channel = bot.get_channel(987171351720771644)
         team2Channel = bot.get_channel(994443542707580951)
         selectingChannel = bot.get_channel(996567486621306880)
-        
+
         for member in selectingChannel.members:
             players.append(member.id)
-        
+
         random.shuffle(players)
-        
+
         for player in players:
             if team1Players < num:
                 await ctx.message.guild.get_member(player).move_to(team1Channel)
@@ -170,20 +177,20 @@ async def randomize(ctx, num: int):
                 team2Players += 1
             else:
                 break
-            
+
         await ctx.send("Players moved.")
-    
-    if ctx.channel.id == 997602235208962150: # 6s Channels
+
+    if ctx.channel.id == 997602235208962150:  # 6s Channels
         players = []
         team1Channel = bot.get_channel(997602308525404242)
         team2Channel = bot.get_channel(997602346173464587)
         selectingChannel = bot.get_channel(997602270592118854)
-        
+
         for member in selectingChannel.members:
             players.append(member.id)
-        
+
         random.shuffle(players)
-        
+
         for player in players:
             if team1Players < num:
                 await ctx.message.guild.get_member(player).move_to(team1Channel)
@@ -193,7 +200,7 @@ async def randomize(ctx, num: int):
                 team2Players += 1
             else:
                 break
-            
+
         await ctx.send("Players moved.")
 
 
