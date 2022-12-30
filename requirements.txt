@@ -6,3 +6,4 @@ uvicorn==0.20.0
 discord.py==2.0.0
 requests==2.26.0
 beautifulsoup4==4.11.1
+dnspython==2.2.1

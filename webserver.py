@@ -4,11 +4,12 @@ from fastapi import FastAPI, Request
 import uvicorn
 import asyncio
 from pydantic import BaseModel
+import os
 
 with open("config.json") as config_file:
     CONFIG = json.load(config_file)
 
-API_PASSWORD = CONFIG["webserver"]["password"]
+API_PASSWORD = os.environ["webapi_password"]
 
 app = FastAPI()
 

@@ -3,6 +3,8 @@ from discord.ext import commands, tasks
 import json
 import random
 
+import os
+
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
@@ -16,11 +18,8 @@ from servers import ServerCog
 from webserver import WebserverCog
 import asyncio
 
-with open("config.json") as config_file:
-    CONFIG = json.load(config_file)
-
-DISCORD_TOKEN = CONFIG["discord"]["token"]
-SERVEME_API_KEY = CONFIG["serveme"]["api_key"]
+DISCORD_TOKEN = os.environ["discord_token"]
+SERVEME_API_KEY = os.environ["serveme_key"]
 
 version = "v0.8.1"
 
