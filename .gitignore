@@ -1,6 +1,5 @@
 bot.txt
 config.json
 output.json
-logs.json
 __pycache__
 sender.py
