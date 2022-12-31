@@ -59,7 +59,7 @@ async def on_ready():
     # fatkid_check.start()
 
     startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
-    startEmbed.add_field(name="Ban History", value=NEW_COMMIT_NAME, inline=False)
+    startEmbed.add_field(name="Latest Commit", value=NEW_COMMIT_NAME, inline=False)
     debug_channel = bot.get_channel(1026985050677465148)
     await debug_channel.send(embed=startEmbed)
 
