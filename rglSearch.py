@@ -89,3 +89,74 @@ def rglSearch(id):
                     divNum = divs[i[1]]
 
     return [name, pfp, sixes, hl, pl, bans, divNum]
+
+
+class rglAPI:
+    def __init__(self):
+        self.apiURL = "https://api.rgl.gg/v0/"
+
+    def get_player(self, steamid: int):
+        player = requests.get(self.apiURL + "profile/" + str(steamid)).json()
+        if "statusCode" in player:
+            raise LookupError("Player does not exist in RGL")
+        else:
+            return player
+
+    def get_all_teams(self, steamid: int):
+        return requests.get(self.apiURL + "profile/" + str(steamid) + "/teams").json()
+
+    def get_core_teams(self, steamid: int):
+        all_teams = self.get_all_teams(steamid)
+        core_seasons = {}
+        sixes_teams = []
+        hl_teams = []
+        for season in all_teams:
+            if season["formatId"] == 3:  # 6s format
+                if season["regionId"] == 40:  # NA Sixes region code
+                    sixes_teams.append(season)
+            elif season["formatId"] == 2:  # HL format
+                if season["regionId"] == 24:  # NA HL region code
+                    hl_teams.append(season)
+        core_seasons["sixes"] = sixes_teams
+        core_seasons["hl"] = hl_teams
+        return core_seasons
+
+    def check_banned(self, steamid: int):
+        player = self.get_player(steamid)
+        if player["status"]["isBanned"] or player["status"]["isOnProbation"]:
+            return True
+        else:
+            return False
+
+    def get_top_div(self, steamid: int):
+        player = self.get_core_teams(steamid)
+        divs = {
+            "Newcomer": 1,
+            "Amateur": 2,
+            "Intermediate": 3,
+            "Main": 4,
+            "Advanced": 5,
+            "Advanced-1": 6,
+            "Advanced-2": 5,
+            "Invite": 7,
+            "Admin Placement": 0,
+        }
+        sixesdiv = [0, 0]
+        hldiv = [0, 0]
+        for season in player["sixes"]:
+            if divs[season["divisionName"]] > sixesdiv[0]:
+                sixesdiv[0] = divs[season["divisionName"]]
+                sixesdiv[1] = 1
+            elif divs[season["divisionName"]] == sixesdiv[0]:
+                sixesdiv[1] += 1
+        for season in player["hl"]:
+            if divs[season["divisionName"]] > hldiv[0]:
+                hldiv[0] = divs[season["divisionName"]]
+                hldiv[1] = 1
+            elif divs[season["divisionName"]] == hldiv[0]:
+                hldiv[1] += 1
+        return [sixesdiv, hldiv]
+
+
+if __name__ == "__main__":
+    print(rglAPI().get_top_div(76561198171178258))

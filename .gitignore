@@ -3,3 +3,4 @@ config.json
 output.json
 __pycache__
 sender.py
+test_run.bat
