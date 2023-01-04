@@ -159,4 +159,6 @@ class rglAPI:
 
 
 if __name__ == "__main__":
-    print(rglAPI().get_top_div(76561198171178258))
+    sixes, hl = rglAPI().get_top_div(76561198171178258)
+    print(sixes)
+    print(hl)

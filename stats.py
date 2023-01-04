@@ -38,3 +38,10 @@ async def logSearch(id):
                     char[4] += int(i["total_time"])
                     char[5] += 1
     return stats
+
+
+async def get_total_logs(steamID):
+    player_lookup = requests.get(
+        "https://logs.tf/api/v1/log?player=" + str(steamID)
+    ).json()
+    return player_lookup["results"]

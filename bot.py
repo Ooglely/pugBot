@@ -44,7 +44,7 @@ intents.members = True
 intents.message_content = True
 intents.presences = True
 
-activity = discord.Activity(name="over my pugs ^_^", type=discord.ActivityType.watching)
+activity = discord.Activity(name="tf.oog.pw", type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix="r!", intents=intents, activity=activity)
 
 bot.remove_command("help")
