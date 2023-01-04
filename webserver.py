@@ -9,25 +9,35 @@ from rglSearch import rglAPI
 from stats import get_total_logs
 import discord
 
-API_PASSWORD = os.environ["webapi_password"]
+API_PASSWORD = os.environ["BOT_API_PASSWORD"]
+PORT = os.environ["PORT"]
 
 app = FastAPI()
+rglAPI = rglAPI()
+
+
+class NewUser(BaseModel):
+    steam: str
+    discord: str
 
 
 class WebserverCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        asyncio.create_task(start_server())
+        asyncio.create_task(self.start_server())
 
-    @commands.command()
-    async def test_registration(self, ctx, discord, steam):
-        self.check_new_register_ping(self, discord, steam)
+    @commands.command(pass_context=False)
+    async def test_registration(self, discord, steam):
+        print(discord)
+        print(steam)
+        await self.check_new_register_ping(self, int(discord), int(steam))
 
+    @commands.command(pass_context=False)
     async def check_new_register_ping(self, discordID: int, steamID: int):
         # Registered Role ID: 1059583976039252108
         user = self.bot.get_guild(952817189893865482).get_member(discordID)
         if user.get_role(1059583976039252108) == None:
-            self.register_new_user(self, discordID, steamID)
+            await self.register_new_user(discordID, steamID)
 
     async def register_new_user(self, discordID: int, steamID: int):
         agg_server = self.bot.get_guild(952817189893865482)
@@ -41,6 +51,8 @@ class WebserverCog(commands.Cog):
         sixes_role = agg_server.get_role(997600373399359608)
         hl_role = agg_server.get_role(997600342306988112)
         new_regs_channel = agg_server.get_channel(1060014665129791528)
+        registration_channel = agg_server.get_channel(996607763159457812)
+        registered_role = agg_server.get_role(1059583976039252108)
         # Setup an embed to send to the new-registrations channel:
         registrationEmbed = discord.Embed(
             title="New Registration",
@@ -56,7 +68,7 @@ class WebserverCog(commands.Cog):
 
         # We want to check some things to allow a player in automatically:
         # 1. They have at least 50 logs.
-        logNum = get_total_logs(steamID)
+        logNum = await get_total_logs(steamID)
         if logNum >= 50:
             checks_field += "✅ Logs: " + str(logNum)
         else:
@@ -67,7 +79,11 @@ class WebserverCog(commands.Cog):
             player_data = rglAPI.get_player(steamID)
         except LookupError:
             checks_field += "\n❌ RGL Profile does not exist"
-            print("put error embed here")
+            registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
+            await new_regs_channel.send(embed=registrationEmbed)
+            await registration_channel.send(
+                f"<@{discordID}> - Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
+            )
             return
 
         registrationEmbed.set_thumbnail(url=player_data["avatar"])
@@ -77,6 +93,9 @@ class WebserverCog(commands.Cog):
         sixes_top, hl_top = rglAPI.get_top_div(steamID)
         if sixes_top[0] == 0 and hl_top[0] == 0:
             checks_field += "\n❌ No RGL team history"
+            await registration_channel.send(
+                f"<@{discordID}> - Your registration is being looked over."
+            )
             return
         else:
             checks_field += "\n✅ RGL team history exists"
@@ -84,61 +103,65 @@ class WebserverCog(commands.Cog):
         # 4. If they have an RGL history, they are not banned.
         if rglAPI.check_banned(steamID):
             checks_field += "\n❌ Currently banned from RGL"
-            print("put banned embed here")
+            registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
+            await new_regs_channel.send(embed=registrationEmbed)
+            await registration_channel.send(
+                f"<@{discordID}> - You are currently banned from RGL. We do not let banned players into pugs. Come back after your ban expires."
+            )
             return
         else:
             checks_field += "\n✅ Not banned from RGL"
 
         # 5. If they are ADV/INV, they get the div ban role. Else, give them the right div role.
-        if sixes_top >= 5:
-            discord_user.add_roles(SixBanRole)
-        if hl_top >= 5:
-            discord_user.add_roles(HLBanRole)
-        if sixes_top >= 5 or hl_top >= 5:
-            discord_user.add_roles(ADINrole)
-            div_appeal_channel.send(
-                f"<@{discordID}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (with restrictions), please let us know the classes you played in Adv/Inv."
-            )
-        elif sixes_top >= 3 or hl_top >= 3:
-            discord_user.add_roles(IMMArole)
+        await discord_user.remove_roles(NCAMrole, IMMArole)
+        if discord_user.get_role(1060036280970395730) == None:
+            if sixes_top[0] >= 5:
+                await discord_user.add_roles(SixBanRole)
+            if hl_top[0] >= 5:
+                await discord_user.add_roles(HLBanRole)
+            if sixes_top[0] >= 5 or hl_top[0] >= 5:
+                await div_appeal_channel.send(
+                    f"<@{discordID}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (with restrictions), please let us know the classes you played in Adv/Inv."
+                )
+        if sixes_top[0] >= 5 or hl_top[0] >= 5:
+            await discord_user.add_roles(ADINrole)
+        elif sixes_top[0] >= 3 or hl_top[0] >= 3:
+            await discord_user.add_roles(IMMArole)
         else:
-            discord_user.add_roles(NCAMrole)
+            await discord_user.add_roles(NCAMrole)
 
-        discord_user.add_roles(sixes_role, hl_role)
+        await discord_user.add_roles(sixes_role, hl_role, registered_role)
 
         # Send the final registration embed to the new-registrations channel.
         registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
         await new_regs_channel.send(embed=registrationEmbed)
 
+    async def start_server(self):
+        config = uvicorn.Config(
+            "webserver:app",
+            host="0.0.0.0",
+            port=PORT,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+        app.bot = self
+        # server.serve()
+        await server.serve()
 
-class NewUser(BaseModel):
-    steam: str
-    discord: str
+    @app.get("/")
+    async def hello_world():
+        return {"message": "Hello world"}
 
-
-async def start_server():
-    config = uvicorn.Config(
-        "webserver:app", host="0.0.0.0", port=1496, log_level="info"
-    )
-    server = uvicorn.Server(config)
-    # server.serve()
-    await server.serve()
-
-
-@app.get("/")
-async def hello_world():
-    return {"message": "Hello world"}
-
-
-@app.post("/api/register")
-async def register(registration: NewUser, request: Request):
-    if "password" in request.headers:
-        if request.headers["password"] == API_PASSWORD:
-            print(registration.steam)
-            print(registration.discord)
-            WebserverCog.check_new_register_ping(
-                registration.discord, registration.steam
-            )
-            return {"message": "Hello world"}
-        else:
-            return {"message": "Wrong password"}
+    @app.post("/api/register")
+    async def register(registration: NewUser, request: Request):
+        print(registration)
+        if "password" in request.headers:
+            if request.headers["password"] == API_PASSWORD:
+                print(registration.steam)
+                print(registration.discord)
+                await app.bot.check_new_register_ping(
+                    int(registration.discord), int(registration.steam)
+                )
+                return {"message": "Hello world"}
+            else:
+                return {"message": "Wrong password"}

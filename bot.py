@@ -20,9 +20,9 @@ import asyncio
 
 DISCORD_TOKEN = os.environ["discord_token"]
 SERVEME_API_KEY = os.environ["serveme_key"]
-NEW_COMMIT_NAME = os.environ["RAILWAY_GIT_COMMIT_SHA"]
+# NEW_COMMIT_NAME = os.environ["RAILWAY_GIT_COMMIT_SHA"]
 
-version = "v0.8.1"
+version = "v0.9.0"
 
 # Setting initial variables
 lastLog = ""
@@ -58,10 +58,10 @@ async def on_ready():
     await bot.add_cog(WebserverCog(bot))
     # fatkid_check.start()
 
-    startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
-    startEmbed.add_field(name="Latest Commit", value=NEW_COMMIT_NAME, inline=False)
-    debug_channel = bot.get_channel(1026985050677465148)
-    await debug_channel.send(embed=startEmbed)
+    # startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
+    # startEmbed.add_field(name="Latest Commit", value=NEW_COMMIT_NAME, inline=False)
+    # debug_channel = bot.get_channel(1026985050677465148)
+    # await debug_channel.send(embed=startEmbed)
 
 
 @bot.listen("on_message")
