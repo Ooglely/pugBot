@@ -53,6 +53,9 @@ class WebserverCog(commands.Cog):
         new_regs_channel = agg_server.get_channel(1060014665129791528)
         registration_channel = agg_server.get_channel(996607763159457812)
         registered_role = agg_server.get_role(1059583976039252108)
+        # Give registered role
+        await discord_user.add_roles(registered_role)
+
         # Setup an embed to send to the new-registrations channel:
         registrationEmbed = discord.Embed(
             title="New Registration",
@@ -130,7 +133,7 @@ class WebserverCog(commands.Cog):
         else:
             await discord_user.add_roles(NCAMrole)
 
-        await discord_user.add_roles(sixes_role, hl_role, registered_role)
+        await discord_user.add_roles(sixes_role, hl_role)
 
         # Send the final registration embed to the new-registrations channel.
         registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
