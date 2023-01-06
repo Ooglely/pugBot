@@ -35,7 +35,13 @@ class WebserverCog(commands.Cog):
     @commands.command(pass_context=False)
     async def check_new_register_ping(self, discordID: int, steamID: int):
         # Registered Role ID: 1059583976039252108
+        new_regs_channel = self.bot.get_guild(952817189893865482).get_channel(
+            1060014665129791528
+        )
         user = self.bot.get_guild(952817189893865482).get_member(discordID)
+        if user == None:
+            new_regs_channel.send(f"New registration not found in server: {discordID}")
+            return
         if user.get_role(1059583976039252108) == None:
             await self.register_new_user(discordID, steamID)
 
@@ -97,7 +103,7 @@ class WebserverCog(commands.Cog):
         if sixes_top[0] == 0 and hl_top[0] == 0:
             checks_field += "\n❌ No RGL team history"
             await registration_channel.send(
-                f"<@{discordID}> - Your registration is being looked over."
+                f"<@{discordID}> - Your registration is being looked over manually due to having no RGL history."
             )
             return
         else:
@@ -124,7 +130,7 @@ class WebserverCog(commands.Cog):
                 await discord_user.add_roles(HLBanRole)
             if sixes_top[0] >= 5 or hl_top[0] >= 5:
                 await div_appeal_channel.send(
-                    f"<@{discordID}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (with restrictions), please let us know the classes you played in Adv/Inv."
+                    f"<@{discordID}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (for example, you roster rode on your Advanced seasons), please let us know."
                 )
         if sixes_top[0] >= 5 or hl_top[0] >= 5:
             await discord_user.add_roles(ADINrole)
