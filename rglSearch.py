@@ -140,6 +140,7 @@ class rglAPI:
             "Advanced-2": 5,
             "Invite": 7,
             "Admin Placement": 0,
+            "Dead Teams": 0,
         }
         sixesdiv = [0, 0]
         hldiv = [0, 0]
