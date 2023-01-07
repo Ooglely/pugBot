@@ -138,6 +138,7 @@ class rglAPI:
             "Advanced": 5,
             "Advanced-1": 6,
             "Advanced-2": 5,
+            "Challenger": 6,
             "Invite": 7,
             "Admin Placement": 0,
             "Dead Teams": 0,
@@ -145,21 +146,29 @@ class rglAPI:
         sixesdiv = [0, 0]
         hldiv = [0, 0]
         for season in player["sixes"]:
-            if divs[season["divisionName"]] > sixesdiv[0]:
-                sixesdiv[0] = divs[season["divisionName"]]
-                sixesdiv[1] = 1
-            elif divs[season["divisionName"]] == sixesdiv[0]:
-                sixesdiv[1] += 1
+            divisionName = season["divisionName"].replace("RGL-", "")
+            if divisionName in divs:
+                if divs[divisionName] > sixesdiv[0]:
+                    sixesdiv[0] = divs[divisionName]
+                    sixesdiv[1] = 1
+                elif divs[divisionName] == sixesdiv[0]:
+                    sixesdiv[1] += 1
+            else:
+                print(f"Division not found: {divisionName}")
         for season in player["hl"]:
-            if divs[season["divisionName"]] > hldiv[0]:
-                hldiv[0] = divs[season["divisionName"]]
-                hldiv[1] = 1
-            elif divs[season["divisionName"]] == hldiv[0]:
-                hldiv[1] += 1
+            divisionName = season["divisionName"].replace("RGL-", "")
+            if divisionName in divs:
+                if divs[divisionName] > hldiv[0]:
+                    hldiv[0] = divs[divisionName]
+                    hldiv[1] = 1
+                elif divs[divisionName] == hldiv[0]:
+                    hldiv[1] += 1
+            else:
+                print(f"Division not found: {divisionName}")
         return [sixesdiv, hldiv]
 
 
 if __name__ == "__main__":
-    sixes, hl = rglAPI().get_top_div(76561198171178258)
+    sixes, hl = rglAPI().get_top_div(76561199000969112)
     print(sixes)
     print(hl)
