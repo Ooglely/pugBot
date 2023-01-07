@@ -27,10 +27,8 @@ class WebserverCog(commands.Cog):
         asyncio.create_task(self.start_server())
 
     @commands.command(pass_context=False)
-    async def test_registration(self, discord, steam):
-        print(discord)
-        print(steam)
-        await self.check_new_register_ping(self, int(discord), int(steam))
+    async def test_registration(self, ctx, discord, steam):
+        await self.check_new_register_ping(int(discord), int(steam))
 
     @commands.command(pass_context=False)
     async def check_new_register_ping(self, discordID: int, steamID: int):
@@ -39,8 +37,12 @@ class WebserverCog(commands.Cog):
             1060014665129791528
         )
         user = self.bot.get_guild(952817189893865482).get_member(discordID)
+        print(user)
         if user == None:
-            new_regs_channel.send(f"New registration not found in server: {discordID}")
+            await new_regs_channel.send(
+                f"New registration not found in server: {discordID}"
+            )
+            print("User not found in server")
             return
         if user.get_role(1059583976039252108) == None:
             await self.register_new_user(discordID, steamID)
@@ -168,9 +170,13 @@ class WebserverCog(commands.Cog):
             if request.headers["password"] == API_PASSWORD:
                 print(registration.steam)
                 print(registration.discord)
+                await asyncio.sleep(3)
                 await app.bot.check_new_register_ping(
                     int(registration.discord), int(registration.steam)
                 )
                 return {"message": "Hello world"}
             else:
                 return {"message": "Wrong password"}
+        else:
+            print("Incorrect password in headers")
+            print(request.headers)
