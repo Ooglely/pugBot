@@ -104,6 +104,7 @@ class WebserverCog(commands.Cog):
         sixes_top, hl_top = rglAPI.get_top_div(steamID)
         if sixes_top[0] == 0 and hl_top[0] == 0:
             checks_field += "\n❌ No RGL team history"
+            await new_regs_channel.send(embed=registrationEmbed)
             await registration_channel.send(
                 f"<@{discordID}> - Your registration is being looked over manually due to having no RGL history."
             )
