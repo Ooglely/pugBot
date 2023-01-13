@@ -21,7 +21,7 @@ hl_maps = [
     ["koth_ashville", "koth_ashville_final"],
     ["pl_vigil", "pl_vigil_rc9"],
     ["cp_steel", "cp_steel_f12"],
-    ["koth_proot", "koth_proot_b4b"],
+    ["koth_proot", "koth_proot_b4c"],
 ]
 
 sixes_maps = [
