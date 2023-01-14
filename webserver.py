@@ -21,6 +21,11 @@ class NewUser(BaseModel):
     discord: str
 
 
+class NewConnect(BaseModel):
+    discordID: str
+    connectCommand: str
+
+
 class WebserverCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -148,6 +153,14 @@ class WebserverCog(commands.Cog):
         registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
         await new_regs_channel.send(embed=registrationEmbed)
 
+    async def send_connect_dm(self, discordID: int, connectCommand: str):
+        connectEmbed = discord.Embed(
+            title="New Connect",
+            color=0xF0984D,
+        )
+        connectEmbed.add_field(name="Connect Command", value=connectCommand)
+        await self.bot.get_user(int(discordID)).send(embed=connectEmbed)
+
     async def start_server(self):
         config = uvicorn.Config(
             "webserver:app",
@@ -175,9 +188,24 @@ class WebserverCog(commands.Cog):
                 await app.bot.check_new_register_ping(
                     int(registration.discord), int(registration.steam)
                 )
-                return {"message": "Hello world"}
+                return {"message": "Success"}
             else:
                 return {"message": "Wrong password"}
         else:
             print("Incorrect password in headers")
             print(request.headers)
+
+    @app.post("/api/send_connect")
+    async def send_connect(connect: NewConnect, request: Request):
+        print(connect)
+        if request.headers["user-agent"].startswith("sm-ripext"):
+            print(connect.discordID)
+            print(connect.connectCommand)
+            await app.bot.send_connect_dm(
+                int(connect.discordID), str(connect.connectCommand)
+            )
+            return {"message": "Success"}
+        else:
+            print("Request not from TF2 plugin")
+            print(request.headers)
+            return {"message": "Wrong password"}
