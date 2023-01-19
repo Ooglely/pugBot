@@ -100,6 +100,7 @@ class WebserverCog(commands.Cog):
             await registration_channel.send(
                 f"<@{discordID}> - Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
             )
+            await discord_user.remove_roles(registered_role)
             return
 
         registrationEmbed.set_thumbnail(url=player_data["avatar"])

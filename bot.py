@@ -8,12 +8,7 @@ import os
 from rglSearch import rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import (
-    update_player,
-    get_server_status,
-    update_server_status,
-    get_steam_from_discord,
-)
+from database import get_steam_from_discord
 from servers import ServerCog
 from webserver import WebserverCog
 import asyncio
@@ -55,7 +50,7 @@ async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("------")
     await bot.add_cog(ServerCog(bot))
-    await bot.add_cog(WebserverCog(bot))
+    # await bot.add_cog(WebserverCog(bot))
     # fatkid_check.start()
 
     startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
@@ -259,11 +254,20 @@ async def check(ctx):
 
 @bot.command()
 async def stats(ctx, *args):
-    wait = await ctx.send("Give me a moment, grabbing all logs...")
-    if args == []:
+    print(args)
+    if args == ():
         id = get_steam_from_discord(ctx.author.id)
-    id = get_steam64(args[0])
+    else:
+        id = get_steam64(args[0])
 
+    if id == None:
+        await ctx.send(
+            "Unable to find player. Either register with the bot at <#1026980468807184385> or specify a steam ID in the command."
+        )
+        return
+
+    wait = await ctx.send("Give me a moment, grabbing all logs...")
+    print(f"ID: {id}")
     info = rglSearch(int(id))
     logString = f"```\n{info[0]}'s pug stats"
 
@@ -278,4 +282,5 @@ async def stats(ctx, *args):
     await ctx.send(logString)
 
 
-bot.run(DISCORD_TOKEN)
+# bot.run(DISCORD_TOKEN)
+bot.run("OTk5ODM0NzEyNDA1MjAwOTA2.G9Qd1b.T-JiOb-mf2n_uU3yuqSpMwMkLlp_N-CHbYOLYQ")

@@ -4,3 +4,4 @@ output.json
 __pycache__
 sender.py
 test_run.bat
+update_all_logs.py

@@ -1,39 +1,25 @@
 import pymongo
 
 client = pymongo.MongoClient(
-    "mongodb+srv://alen:u7U^qhc&RBAKoc@rglbot.9v1juuk.mongodb.net/?retryWrites=true&w=majority"
+    "mongodb://mongo:qE2c9UY1P0WT92vAXlbn@containers-us-west-157.railway.app:7516/?retryWrites=true&w=majority"
 )
 # db = client.players
 
 
-def update_player(name, discord, id, div):
-    db = client.players
-    db["data"].update_one(
-        {"name": str(name)},
-        {
-            "$set": {
-                "name": str(name),
-                "discord": int(discord),
-                "steam64": int(id),
-                "div": str(div),
-            }
-        },
-        upsert=True,
-    )
-    return
-
 def get_steam_from_discord(discord):
-    db = client.players
-    return db["data"].find_one({"discord": discord})["steam64"]
+    db = client.data
+    if db["players"].find_one({"discord": str(discord)}) == None:
+        return None
+    return db["players"].find_one({"discord": str(discord)})["steam"]
 
 
-def update_server_status(status):
-    db = client.servers
-    db["pug_status"].update_one(
-        {"name": "server"}, {"$set": {"status": status}}, upsert=True
-    )
+def get_player_stats(steam):
+    db = client.data
+    if db["stats"].find_one({"steam": steam}) == None:
+        return None
+    return db["stats"].find_one({"steam": steam})
 
 
-def get_server_status():
-    db = client.servers
-    return db["pug_status"].find_one({"name": "server"})["status"]
+def add_player_stats(player):
+    db = client.data.stats
+    db.update_one({"steam": player["steam"]}, {"$set": player}, upsert=True)
