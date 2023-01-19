@@ -50,8 +50,7 @@ async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("------")
     await bot.add_cog(ServerCog(bot))
-    # await bot.add_cog(WebserverCog(bot))
-    # fatkid_check.start()
+    await bot.add_cog(WebserverCog(bot))
 
     startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
     startEmbed.add_field(name="Latest Commit", value=NEW_COMMIT_NAME, inline=False)
@@ -282,5 +281,4 @@ async def stats(ctx, *args):
     await ctx.send(logString)
 
 
-# bot.run(DISCORD_TOKEN)
-bot.run("OTk5ODM0NzEyNDA1MjAwOTA2.G9Qd1b.T-JiOb-mf2n_uU3yuqSpMwMkLlp_N-CHbYOLYQ")
+bot.run(DISCORD_TOKEN)
