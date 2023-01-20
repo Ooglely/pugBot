@@ -5,10 +5,15 @@ import random
 
 import os
 
-from rglSearch import rglSearch
+from rglSearch import rglAPI, rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import get_steam_from_discord
+from database import (
+    get_all_players,
+    get_divisions,
+    get_steam_from_discord,
+    update_divisons,
+)
 from servers import ServerCog
 from webserver import WebserverCog
 import asyncio
@@ -51,6 +56,7 @@ async def on_ready():
     print("------")
     await bot.add_cog(ServerCog(bot))
     await bot.add_cog(WebserverCog(bot))
+    update_rgl.start()
 
     startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
     startEmbed.add_field(name="Latest Commit", value=NEW_COMMIT_NAME, inline=False)
@@ -282,6 +288,35 @@ async def stats(ctx, *args):
     logString += "```"
     await wait.delete()
     await ctx.send(logString)
+
+
+@tasks.loop(hours=24.0)
+async def update_rgl():
+    print("Updating RGL divisions and roles for all registered players...")
+    players = get_all_players()
+    for player in players:
+        agg_server = bot.get_guild(952817189893865482)
+        discord_user = agg_server.get_member(int(player["discord"]))
+        NCAMrole = agg_server.get_role(992286429881303101)
+        IMMArole = agg_server.get_role(992281832437596180)
+        ADINrole = agg_server.get_role(1060021145212047391)
+
+        update_divisons(player["discord"])
+        if get_divisions(player["discord"]) == None:
+            print(f"Player {player['discord']} not found, skipping...")
+            continue
+        else:
+            sixes_top, hl_top = rglAPI.get_top_div(player["steam"])
+            top_div = max(sixes_top, hl_top)
+
+        if top_div >= 5:
+            await discord_user.add_roles(ADINrole)
+            await discord_user.remove_roles(NCAMrole, IMMArole)
+        elif top_div >= 3:
+            await discord_user.add_roles(IMMArole)
+            await discord_user.remove_roles(NCAMrole)
+        else:
+            await discord_user.add_roles(NCAMrole)
 
 
 bot.run(DISCORD_TOKEN)

@@ -1,5 +1,7 @@
 import pymongo
 
+from rglSearch import rglAPI
+
 client = pymongo.MongoClient(
     "mongodb://mongo:qE2c9UY1P0WT92vAXlbn@containers-us-west-157.railway.app:7516/?retryWrites=true&w=majority"
 )
@@ -23,3 +25,25 @@ def get_player_stats(steam):
 def add_player_stats(player):
     db = client.data.stats
     db.update_one({"steam": player["steam"]}, {"$set": player}, upsert=True)
+
+
+def get_all_players():
+    db = client.data.players
+    return db.find()
+
+
+def get_divisions(steamID):
+    db = client.data.players
+    if db["players"].find_one({"discord": str(steamID)})["divison"] == None:
+        return None
+    return db["players"].find_one({"discord": str(steamID)})["divison"]
+
+
+def update_divisons(steamID):
+    db = client.data.players
+    sixes_top, hl_top = rglAPI.get_top_div(int(steamID))
+    db.update_one(
+        {"steam": str(steamID)},
+        {"$set": {"divison": max(sixes_top, hl_top)}},
+        upsert=True,
+    )

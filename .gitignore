@@ -5,3 +5,4 @@ __pycache__
 sender.py
 test_run.bat
 update_all_logs.py
+test.py
