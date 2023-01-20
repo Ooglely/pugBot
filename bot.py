@@ -277,7 +277,7 @@ async def stats(ctx, *args):
             dpm = f"{i[3] / (i[4] / 60):.1f}"
             kdr = f"{i[1] / i[2]:.1f}"
             logString += (
-                f"\n{i[0]: >8}|{i[1]: >5}|{i[2]: >5}|{dpm: >5}|{i[5]: >5}|{kdr: >5}"
+                f"\n{i[0]: >8}|{i[1]: >5}|{i[2]: >5}|{dpm: >5}|{i[5]: >6}|{kdr: >5}"
             )
     logString += "```"
     await wait.delete()
