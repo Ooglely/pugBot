@@ -307,6 +307,7 @@ async def update_rgl():
         SixBanRole = agg_server.get_role(997607078204018780)
         div_appeal_channel = agg_server.get_channel(1060023899666002001)
         ban_appeal_channel = agg_server.get_channel(1006534381998981140)
+        log_channel = agg_server.get_channel(1026985050677465148)
 
         db.update_divisons(player["steam"])
         if db.get_divisions(player["discord"]) == None:
@@ -338,11 +339,21 @@ async def update_rgl():
             else:
                 await discord_user.add_roles(NCAMrole)
 
-            ban_status = db.update_rgl_ban_status(int(player["steam"]))
-            if ban_status == True:
+            db_player = db.get_player_from_steam(player["steam"])
+            if "rgl_ban" in db_player:
+                old_ban_status = db_player["rgl_ban"]
+            else:
+                old_ban_status = False
+            new_ban_status = db.update_rgl_ban_status(int(player["steam"]))
+            if (old_ban_status == False) and (new_ban_status == True):
                 await discord_user.add_roles(SixBanRole, HLBanRole)
                 await ban_appeal_channel.send(
                     f"<@{player['discord']}> You have been automatically banned from pugs due to currently being RGL banned."
+                )
+
+            if (old_ban_status == True) and (new_ban_status == False):
+                await log_channel.send(
+                    f"<@{player['discord']}> is no longer banned on RGL."
                 )
 
         await asyncio.sleep(60)

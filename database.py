@@ -6,6 +6,11 @@ client = pymongo.MongoClient(
     "mongodb://mongo:qE2c9UY1P0WT92vAXlbn@containers-us-west-157.railway.app:7516/?retryWrites=true&w=majority"
 )
 # db = client.players
+def get_player_from_steam(steam):
+    db = client.data.players
+    if db.find_one({"steam": str(steam)}) == None:
+        return None
+    return db.find_one({"steam": str(steam)})
 
 
 def get_steam_from_discord(discord):
@@ -16,10 +21,10 @@ def get_steam_from_discord(discord):
 
 
 def get_player_stats(steam):
-    db = client.data
-    if db["stats"].find_one({"steam": steam}) == None:
+    db = client.data.stats
+    if db.find_one({"steam": steam}) == None:
         return None
-    return db["stats"].find_one({"steam": steam})
+    return db.find_one({"steam": steam})
 
 
 def add_player_stats(player):
@@ -51,7 +56,10 @@ def update_divisons(steamID: int):
 
 def update_rgl_ban_status(steamID: int) -> bool:
     db = client.data.players
-    ban_status = rglAPI().check_banned(steamID)
+    try:
+        ban_status = rglAPI().check_banned(steamID)
+    except LookupError:
+        ban_status = False
     db.update_one(
         {"steam": str(steamID)},
         {"$set": {"rgl_ban": ban_status}},
