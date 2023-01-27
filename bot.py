@@ -283,7 +283,10 @@ async def stats(ctx, *args):
     for i in stats:
         if i[1] != 0:
             dpm = f"{i[3] / (i[4] / 60):.1f}"
-            kdr = f"{i[1] / i[2]:.1f}"
+            if i[2] == 0:
+                kdr = f"{i[1]:.1f}"
+            else:
+                kdr = f"{i[1] / i[2]:.1f}"
             logString += (
                 f"\n{i[0]: >8}|{i[1]: >5}|{i[2]: >5}|{dpm: >5}|{i[5]: >6}|{kdr: >5}"
             )
