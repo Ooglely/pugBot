@@ -123,7 +123,7 @@ class rglAPI:
 
     def check_banned(self, steamid: int):
         player = self.get_player(steamid)
-        if player["status"]["isBanned"] or player["status"]["isOnProbation"]:
+        if player["status"]["isBanned"]:
             return True
         else:
             return False

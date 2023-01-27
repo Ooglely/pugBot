@@ -303,9 +303,12 @@ async def update_rgl():
         NCAMrole = agg_server.get_role(992286429881303101)
         IMMArole = agg_server.get_role(992281832437596180)
         ADINrole = agg_server.get_role(1060021145212047391)
-        HLBanRole = agg_server.get_role(1060020104462606396)
-        SixBanRole = agg_server.get_role(1060020133495578704)
+        HLDivBanRole = agg_server.get_role(1060020104462606396)
+        SixDivBanRole = agg_server.get_role(1060020133495578704)
+        HLBanRole = agg_server.get_role(997607002299707432)
+        SixBanRole = agg_server.get_role(997607078204018780)
         div_appeal_channel = agg_server.get_channel(1060023899666002001)
+        ban_appeal_channel = agg_server.get_channel(1006534381998981140)
 
         update_divisons(player["steam"])
         if get_divisions(player["discord"]) == None:
@@ -327,15 +330,21 @@ async def update_rgl():
                         f"<@{player['discord']}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (for example, you roster rode on your Advanced seasons or you've played in here before), please let us know."
                     )
                     if sixes_top[0] >= 5:
-                        await discord_user.add_roles(SixBanRole)
+                        await discord_user.add_roles(SixDivBanRole)
                     if hl_top[0] >= 5:
-                        await discord_user.add_roles(HLBanRole)
+                        await discord_user.add_roles(HLDivBanRole)
 
             elif top_div >= 3:
                 await discord_user.add_roles(IMMArole)
                 await discord_user.remove_roles(NCAMrole)
             else:
                 await discord_user.add_roles(NCAMrole)
+
+            if rglAPI.check_banned(int(player["steam"])) == True:
+                await discord_user.add_roles(SixBanRole, HLBanRole)
+                await ban_appeal_channel.send(
+                    f"<@{player['discord']}> You have been automatically banned from pugs due to currently being RGL banned."
+                )
 
         await asyncio.sleep(60)
 
