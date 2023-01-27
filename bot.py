@@ -8,12 +8,7 @@ import os
 from rglSearch import rglAPI, rglSearch
 from stats import logSearch
 from util import get_steam64
-from database import (
-    get_all_players,
-    get_divisions,
-    get_steam_from_discord,
-    update_divisons,
-)
+import database as db
 from servers import ServerCog
 from webserver import WebserverCog
 import asyncio
@@ -263,7 +258,7 @@ async def check(ctx):
 async def stats(ctx, *args):
     print(args)
     if args == ():
-        id = get_steam_from_discord(ctx.author.id)
+        id = db.get_steam_from_discord(ctx.author.id)
     else:
         id = get_steam64(args[0])
 
@@ -298,7 +293,7 @@ async def stats(ctx, *args):
 @tasks.loop(hours=24.0)
 async def update_rgl():
     print("Updating RGL divisions and roles for all registered players...")
-    players = get_all_players()
+    players = db.get_all_players()
     for player in players:
         print(player)
         agg_server = bot.get_guild(952817189893865482)
@@ -313,8 +308,8 @@ async def update_rgl():
         div_appeal_channel = agg_server.get_channel(1060023899666002001)
         ban_appeal_channel = agg_server.get_channel(1006534381998981140)
 
-        update_divisons(player["steam"])
-        if get_divisions(player["discord"]) == None:
+        db.update_divisons(player["steam"])
+        if db.get_divisions(player["discord"]) == None:
             print(f"Player {player['discord']} not found, skipping...")
             continue
         else:
@@ -343,7 +338,8 @@ async def update_rgl():
             else:
                 await discord_user.add_roles(NCAMrole)
 
-            if rglAPI.check_banned(int(player["steam"])) == True:
+            ban_status = db.update_rgl_ban_status(int(player["steam"]))
+            if ban_status == True:
                 await discord_user.add_roles(SixBanRole, HLBanRole)
                 await ban_appeal_channel.send(
                     f"<@{player['discord']}> You have been automatically banned from pugs due to currently being RGL banned."

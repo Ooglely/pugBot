@@ -47,3 +47,14 @@ def update_divisons(steamID: int):
         {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
         upsert=True,
     )
+
+
+def update_rgl_ban_status(steamID: int) -> bool:
+    db = client.data.players
+    ban_status = rglAPI().check_banned(steamID)
+    db.update_one(
+        {"steam": str(steamID)},
+        {"$set": {"rgl_ban": ban_status}},
+        upsert=True,
+    )
+    return ban_status
