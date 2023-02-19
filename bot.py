@@ -321,7 +321,7 @@ async def update_rgl():
         if discord_user != None:
             if top_div >= 5:
                 await discord_user.add_roles(ADINrole)
-                if (await discord_user.get_role(992286429881303101) != None) or (
+                if (discord_user.get_role(992286429881303101) != None) or (
                     discord_user.get_role(992281832437596180) != None
                 ):
                     await discord_user.remove_roles(NCAMrole, IMMArole)
