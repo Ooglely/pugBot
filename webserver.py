@@ -82,6 +82,14 @@ class WebserverCog(commands.Cog):
         # We will add a checks field later, but want to add data to it as we go along the process.
         checks_field = ""
 
+        # Since we have started the registration process we can delete the messages the user has sent in #pug-registration
+        # (if they have anyways)
+        reg_messages = await registration_channel.history(limit=200).flatten()
+
+        for message in reg_messages:
+            if message.author.id == discordID:
+                await message.delete()
+
         # We want to check some things to allow a player in automatically:
         # 1. They have at least 50 logs.
         logNum = await get_total_logs(steamID)
