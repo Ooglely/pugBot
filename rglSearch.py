@@ -110,16 +110,20 @@ class rglAPI:
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
-        for season in all_teams:
-            if season["formatId"] == 3:  # 6s format
-                if season["regionId"] == 40:  # NA Sixes region code
-                    sixes_teams.append(season)
-            elif season["formatId"] == 2:  # HL format
-                if season["regionId"] == 24:  # NA HL region code
-                    hl_teams.append(season)
-        core_seasons["sixes"] = sixes_teams
-        core_seasons["hl"] = hl_teams
-        return core_seasons
+        try:
+            for season in all_teams:
+                if season["formatId"] == 3:  # 6s format
+                    if season["regionId"] == 40:  # NA Sixes region code
+                        sixes_teams.append(season)
+                elif season["formatId"] == 2:  # HL format
+                    if season["regionId"] == 24:  # NA HL region code
+                        hl_teams.append(season)
+            core_seasons["sixes"] = sixes_teams
+            core_seasons["hl"] = hl_teams
+            return core_seasons
+        except:
+            print(f"Error getting core teams for {steamid}: {all_teams}")
+            return None
 
     def check_banned(self, steamid: int):
         player = self.get_player(steamid)
@@ -169,6 +173,7 @@ class rglAPI:
 
 
 if __name__ == "__main__":
-    print(rglAPI().get_player(76561198238041746))
-    print(rglAPI().get_all_teams(76561198238041746))
-    print(rglAPI().get_core_teams(76561198238041746))
+    print(rglAPI().get_player(76561198118776341))
+    print(rglAPI().get_all_teams(76561198118776341))
+    print(rglAPI().get_core_teams(76561198118776341))
+    print(rglAPI().get_top_div(76561198118776341))
