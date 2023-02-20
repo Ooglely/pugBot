@@ -312,10 +312,16 @@ async def update_rgl():
         if db.get_divisions(player["discord"]) == None:
             print(f"Player {player['discord']} not found, skipping...")
             continue
-        else:
-            sixes_top, hl_top = rglAPI.get_top_div(int(player["steam"]))
-            top_div = max(sixes_top[0], hl_top[0])
-            print(top_div)
+
+        try:
+            rglAPI().get_player(int(player["steam"]))
+        except LookupError:
+            print(f"Player {player['discord']} not found in RGL, skipping...")
+            continue
+
+        sixes_top, hl_top = rglAPI.get_top_div(int(player["steam"]))
+        top_div = max(sixes_top[0], hl_top[0])
+        print(top_div)
 
         if discord_user != None:
             if top_div >= 5:

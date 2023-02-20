@@ -169,4 +169,6 @@ class rglAPI:
 
 
 if __name__ == "__main__":
-    print(rglAPI().get_player(76561198118776341))
+    print(rglAPI().get_player(76561198238041746))
+    print(rglAPI().get_all_teams(76561198238041746))
+    print(rglAPI().get_core_teams(76561198238041746))
