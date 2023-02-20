@@ -20,11 +20,7 @@ NEW_COMMIT_NAME = os.environ["RAILWAY_GIT_COMMIT_SHA"]
 
 rglAPI = rglAPI()
 
-version = "v0.9.0"
-
-# Setting initial variables
-lastLog = ""
-pug_running = False
+version = "v0.10.0"
 
 roles = [
     [" (Scout Restriction)", "999191878736039957"],

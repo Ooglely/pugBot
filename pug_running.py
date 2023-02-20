@@ -1,9 +1,7 @@
 import os
 import discord
 from discord.ext import commands, tasks
-
-API_PASSWORD = os.environ["BOT_API_PASSWORD"]
-PORT = os.environ["PORT"]
+from discord import app_commands
 
 organizing_status: bool = False
 pug_running_status: bool = False
@@ -55,3 +53,7 @@ class PugCog(commands.Cog):
                     f"Assuming that pugs are dead. Resetting first to 18 tracker."
                 )
                 organizing_status = False
+
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(PugCog(bot))

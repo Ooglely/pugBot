@@ -1,5 +1,5 @@
-import json
-from discord.ext import commands, tasks
+from discord.ext import commands
+from discord import app_commands
 from fastapi import FastAPI, Request
 import uvicorn
 import asyncio
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import os
 from rglSearch import rglAPI
 from stats import get_total_logs
+from util import get_steam64
 import discord
 
 API_PASSWORD = os.environ["BOT_API_PASSWORD"]
@@ -35,6 +36,21 @@ class WebserverCog(commands.Cog):
     async def test_registration(self, ctx, discord, steam):
         await self.check_new_register_ping(int(discord), int(steam))
 
+    @app_commands.command(
+        name="register", description="Manually register a user in the database."
+    )
+    @app_commands.checks.has_role("Runners")
+    async def manual_registration(
+        self,
+        interaction: discord.Interaction,
+        discord_user: discord.User,
+        steam_id: str,
+    ) -> None:
+        registration = await self.check_new_register_ping(
+            int(discord_user.id), int(get_steam64(steam_id))
+        )
+        await interaction.response.send_message(embed=registration, ephemeral=True)
+
     @commands.command(pass_context=False)
     async def check_new_register_ping(self, discordID: int, steamID: int):
         # Registered Role ID: 1059583976039252108
@@ -48,9 +64,10 @@ class WebserverCog(commands.Cog):
                 f"New registration not found in server: {discordID}"
             )
             print("User not found in server")
-            return
+            return "User not found in server"
         if user.get_role(1059583976039252108) == None:
-            await self.register_new_user(discordID, steamID)
+            registration = await self.register_new_user(discordID, steamID)
+            return registration
 
     async def register_new_user(self, discordID: int, steamID: int):
         agg_server = self.bot.get_guild(952817189893865482)
@@ -161,6 +178,7 @@ class WebserverCog(commands.Cog):
         # Send the final registration embed to the new-registrations channel.
         registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
         await new_regs_channel.send(embed=registrationEmbed)
+        return registrationEmbed
 
     async def send_connect_dm(self, discordID: int, connectCommand: str):
         connectEmbed = discord.Embed(

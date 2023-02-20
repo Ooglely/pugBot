@@ -8,3 +8,4 @@ update_all_logs.py
 test.py
 chat_from_logs.py
 *.log
+test_bot.py
