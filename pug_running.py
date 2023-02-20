@@ -3,13 +3,12 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
-organizing_status: bool = False
-pug_running_status: bool = False
-
 
 class PugCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.pug_running = False
+        self.organizing = False
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, state_before, state_after):
@@ -20,7 +19,7 @@ class PugCog(commands.Cog):
         # sixes_inp = agg_server.get_channel()
         log_channel = agg_server.get_channel(1026985050677465148)
 
-        if organizing_status != True:
+        if self.organizing != True:
             if len(hl_organizing.members) >= 18:
                 # Highlander pug is forming
                 # In the future after I have assured this works I will change it to move to inp channel
@@ -31,7 +30,7 @@ class PugCog(commands.Cog):
                 await log_channel.send(
                     f"First 18 players in organizing: {player_string}"
                 )
-                organizing_status = True
+                self.organizing = True
 
             elif len(sixes_organizing.members) >= 12:
                 player_string = ""
@@ -41,7 +40,7 @@ class PugCog(commands.Cog):
                 await log_channel.send(
                     f"First 12 players in organizing: {player_string}"
                 )
-                organizing_status = True
+                self.organizing = True
         else:
             players = []
             for channel in agg_server.voice_channels:
@@ -52,7 +51,7 @@ class PugCog(commands.Cog):
                 await log_channel.send(
                     f"Assuming that pugs are dead. Resetting first to 18 tracker."
                 )
-                organizing_status = False
+                self.organizing = False
 
 
 async def setup(bot: commands.Bot) -> None:
