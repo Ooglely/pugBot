@@ -16,8 +16,8 @@ class PugCog(commands.Cog):
         agg_server = self.bot.get_guild(952817189893865482)
         hl_organizing = agg_server.get_channel(996567486621306880)
         sixes_organizing = agg_server.get_channel(997602270592118854)
-        hl_inp = agg_server.get_channel(1009978053528670371)
-        sixes_inp = agg_server.get_channel()
+        # hl_inp = agg_server.get_channel(1009978053528670371)
+        # sixes_inp = agg_server.get_channel()
         log_channel = agg_server.get_channel(1026985050677465148)
 
         if organizing_status != True:
