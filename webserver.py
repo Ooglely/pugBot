@@ -10,8 +10,8 @@ from stats import get_total_logs
 from util import get_steam64
 import discord
 
-API_PASSWORD = os.environ["BOT_API_PASSWORD"]
-PORT = os.environ["PORT"]
+API_PASSWORD = "abc"  # os.environ["BOT_API_PASSWORD"]
+PORT = 5050  # os.environ["PORT"]
 
 app = FastAPI()
 rglAPI = rglAPI()
@@ -46,10 +46,13 @@ class WebserverCog(commands.Cog):
         discord_user: discord.User,
         steam_id: str,
     ) -> None:
-        registration = await self.check_new_register_ping(
+        await self.check_new_register_ping(
             int(discord_user.id), int(get_steam64(steam_id))
         )
-        await interaction.response.send_message(embed=registration, ephemeral=True)
+        await interaction.response.send_message(
+            content=f"Registered user\nDiscord: {discord_user.id}\nSteam: {steam_id}",
+            ephemeral=True,
+        )
 
     @commands.command(pass_context=False)
     async def check_new_register_ping(self, discordID: int, steamID: int):
@@ -66,8 +69,7 @@ class WebserverCog(commands.Cog):
             print("User not found in server")
             return "User not found in server"
         if user.get_role(1059583976039252108) == None:
-            registration = await self.register_new_user(discordID, steamID)
-            return registration
+            await self.register_new_user(discordID, steamID)
 
     async def register_new_user(self, discordID: int, steamID: int):
         agg_server = self.bot.get_guild(952817189893865482)
@@ -101,9 +103,7 @@ class WebserverCog(commands.Cog):
 
         # Since we have started the registration process we can delete the messages the user has sent in #pug-registration
         # (if they have anyways)
-        reg_messages = await registration_channel.history(limit=200).flatten()
-
-        for message in reg_messages:
+        async for message in registration_channel.history(limit=100):
             if message.author.id == discordID:
                 await message.delete()
 
@@ -178,7 +178,6 @@ class WebserverCog(commands.Cog):
         # Send the final registration embed to the new-registrations channel.
         registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
         await new_regs_channel.send(embed=registrationEmbed)
-        return registrationEmbed
 
     async def send_connect_dm(self, discordID: int, connectCommand: str):
         connectEmbed = discord.Embed(
