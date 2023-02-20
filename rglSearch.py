@@ -1,3 +1,4 @@
+import asyncio
 import requests
 from bs4 import BeautifulSoup
 
@@ -95,18 +96,18 @@ class rglAPI:
     def __init__(self):
         self.apiURL = "https://api.rgl.gg/v0/"
 
-    def get_player(self, steamid: int):
+    async def get_player(self, steamid: int):
         player = requests.get(self.apiURL + "profile/" + str(steamid)).json()
         if "statusCode" in player:
             raise LookupError("Player does not exist in RGL")
         else:
             return player
 
-    def get_all_teams(self, steamid: int):
+    async def get_all_teams(self, steamid: int):
         return requests.get(self.apiURL + "profile/" + str(steamid) + "/teams").json()
 
-    def get_core_teams(self, steamid: int):
-        all_teams = self.get_all_teams(steamid)
+    async def get_core_teams(self, steamid: int):
+        all_teams = await self.get_all_teams(steamid)
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
@@ -125,15 +126,17 @@ class rglAPI:
             print(f"Error getting core teams for {steamid}: {all_teams}")
             return None
 
-    def check_banned(self, steamid: int):
-        player = self.get_player(steamid)
+    async def check_banned(self, steamid: int):
+        player = await self.get_player(steamid)
         if player["status"]["isBanned"]:
             return True
         else:
             return False
 
-    def get_top_div(self, steamid: int):
-        player = self.get_core_teams(steamid)
+    async def get_top_div(self, steamid: int):
+        player = await self.get_core_teams(steamid)
+        if player == None:
+            return [[0, 0], [0, 0]]
         divs = {
             "Newcomer": 1,
             "Amateur": 2,
@@ -172,8 +175,12 @@ class rglAPI:
         return [sixesdiv, hldiv]
 
 
+async def test_func():
+    print(await rglAPI().get_player(76561198118776341))
+    print(await rglAPI().get_all_teams(76561198118776341))
+    print(await rglAPI().get_core_teams(76561198118776341))
+    print(await rglAPI().get_top_div(76561198118776341))
+
+
 if __name__ == "__main__":
-    print(rglAPI().get_player(76561198118776341))
-    print(rglAPI().get_all_teams(76561198118776341))
-    print(rglAPI().get_core_teams(76561198118776341))
-    print(rglAPI().get_top_div(76561198118776341))
+    asyncio.run(test_func())

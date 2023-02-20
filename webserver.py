@@ -11,7 +11,7 @@ from util import get_steam64
 import discord
 
 API_PASSWORD = os.environ["BOT_API_PASSWORD"]
-PORT = os.environ["PORT"]
+PORT = 2024  # os.environ["PORT"]
 
 app = FastAPI()
 rglAPI = rglAPI()
@@ -117,7 +117,7 @@ class WebserverCog(commands.Cog):
 
         # 2. They have an RGL profile.
         try:
-            player_data = rglAPI.get_player(steamID)
+            player_data = await rglAPI.get_player(steamID)
         except LookupError:
             checks_field += "\n❌ RGL Profile does not exist"
             registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
@@ -132,7 +132,7 @@ class WebserverCog(commands.Cog):
         checks_field += "\n✅ RGL Profile exists"
 
         # 3. If they have an RGL profile, they have been on a team.
-        sixes_top, hl_top = rglAPI.get_top_div(steamID)
+        sixes_top, hl_top = await rglAPI.get_top_div(steamID)
         if sixes_top[0] == 0 and hl_top[0] == 0:
             checks_field += "\n❌ No RGL team history"
             await new_regs_channel.send(embed=registrationEmbed)
@@ -144,7 +144,7 @@ class WebserverCog(commands.Cog):
             checks_field += "\n✅ RGL team history exists"
 
         # 4. If they have an RGL history, they are not banned.
-        if rglAPI.check_banned(steamID):
+        if await rglAPI.check_banned(steamID):
             checks_field += "\n❌ Currently banned from RGL"
             registrationEmbed.add_field(name="Checks", value=checks_field, inline=False)
             await new_regs_channel.send(embed=registrationEmbed)

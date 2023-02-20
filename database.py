@@ -44,9 +44,9 @@ def get_divisions(discordID):
     return db.find_one({"discord": str(discordID)})["divison"]
 
 
-def update_divisons(steamID: int):
+async def update_divisons(steamID: int):
     db = client.data.players
-    sixes_top, hl_top = rglAPI().get_top_div(steamID)
+    sixes_top, hl_top = await rglAPI().get_top_div(steamID)
     db.update_one(
         {"steam": str(steamID)},
         {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
@@ -54,10 +54,10 @@ def update_divisons(steamID: int):
     )
 
 
-def update_rgl_ban_status(steamID: int) -> bool:
+async def update_rgl_ban_status(steamID: int) -> bool:
     db = client.data.players
     try:
-        ban_status = rglAPI().check_banned(steamID)
+        ban_status = await rglAPI().check_banned(steamID)
     except LookupError:
         ban_status = False
     db.update_one(

@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands, tasks
-import json
 import random
 
 import os
@@ -294,6 +293,7 @@ async def update_rgl():
     print("Updating RGL divisions and roles for all registered players...")
     players = db.get_all_players()
     for player in players:
+        await asyncio.sleep(30)
         print(player)
         agg_server = bot.get_guild(952817189893865482)
         discord_user = agg_server.get_member(int(player["discord"]))
@@ -308,18 +308,18 @@ async def update_rgl():
         ban_appeal_channel = agg_server.get_channel(1006534381998981140)
         log_channel = agg_server.get_channel(1026985050677465148)
 
-        db.update_divisons(player["steam"])
+        await db.update_divisons(player["steam"])
         if db.get_divisions(player["discord"]) == None:
             print(f"Player {player['discord']} not found, skipping...")
             continue
 
         try:
-            rglAPI.get_player(int(player["steam"]))
+            await rglAPI.get_player(int(player["steam"]))
         except LookupError:
             print(f"Player {player['discord']} not found in RGL, skipping...")
             continue
 
-        sixes_top, hl_top = rglAPI.get_top_div(int(player["steam"]))
+        sixes_top, hl_top = await rglAPI.get_top_div(int(player["steam"]))
         top_div = max(sixes_top[0], hl_top[0])
         print(top_div)
 
@@ -349,7 +349,7 @@ async def update_rgl():
                 old_ban_status = db_player["rgl_ban"]
             else:
                 old_ban_status = False
-            new_ban_status = db.update_rgl_ban_status(int(player["steam"]))
+            new_ban_status = await db.update_rgl_ban_status(int(player["steam"]))
             if (old_ban_status == False) and (new_ban_status == True):
                 await discord_user.add_roles(SixBanRole, HLBanRole)
                 await ban_appeal_channel.send(
@@ -360,8 +360,6 @@ async def update_rgl():
                 await log_channel.send(
                     f"<@{player['discord']}> is no longer banned on RGL."
                 )
-
-        await asyncio.sleep(300)
 
 
 bot.run(DISCORD_TOKEN)
