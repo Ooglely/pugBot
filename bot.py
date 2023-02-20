@@ -361,7 +361,7 @@ async def update_rgl():
                     f"<@{player['discord']}> is no longer banned on RGL."
                 )
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(300)
 
 
 bot.run(DISCORD_TOKEN)
