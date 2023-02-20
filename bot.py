@@ -314,7 +314,7 @@ async def update_rgl():
             continue
 
         try:
-            rglAPI().get_player(int(player["steam"]))
+            rglAPI.get_player(int(player["steam"]))
         except LookupError:
             print(f"Player {player['discord']} not found in RGL, skipping...")
             continue
