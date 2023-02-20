@@ -11,7 +11,7 @@ from util import get_steam64
 import discord
 
 API_PASSWORD = os.environ["BOT_API_PASSWORD"]
-PORT = 2024  # os.environ["PORT"]
+PORT = os.environ["PORT"]
 
 app = FastAPI()
 rglAPI = rglAPI()
