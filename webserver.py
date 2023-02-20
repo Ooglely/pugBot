@@ -10,8 +10,8 @@ from stats import get_total_logs
 from util import get_steam64
 import discord
 
-API_PASSWORD = "abc"  # os.environ["BOT_API_PASSWORD"]
-PORT = 5050  # os.environ["PORT"]
+API_PASSWORD = os.environ["BOT_API_PASSWORD"]
+PORT = os.environ["PORT"]
 
 app = FastAPI()
 rglAPI = rglAPI()
