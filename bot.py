@@ -11,6 +11,7 @@ from util import get_steam64
 import database as db
 from servers import ServerCog
 from webserver import WebserverCog
+from pug_running import PugCog
 import asyncio
 
 DISCORD_TOKEN = os.environ["discord_token"]
@@ -40,6 +41,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 intents.presences = True
+intents.voice_states = True
 
 activity = discord.Activity(name="tf.oog.pw :3", type=discord.ActivityType.watching)
 bot = commands.Bot(command_prefix="r!", intents=intents, activity=activity)
@@ -53,6 +55,7 @@ async def on_ready():
     print("------")
     await bot.add_cog(ServerCog(bot))
     await bot.add_cog(WebserverCog(bot))
+    await bot.add_cog(PugCog(bot))
     update_rgl.start()
 
     startEmbed = discord.Embed(title="Railway: Bot deployed!", color=0xF0984D)
