@@ -136,7 +136,7 @@ class rglAPI:
     async def get_top_div(self, steamid: int):
         player = await self.get_core_teams(steamid)
         if player == None:
-            return [[0, 0], [0, 0]]
+            return [[-1, -1], [-1, -1]]
         divs = {
             "Newcomer": 1,
             "Amateur": 2,

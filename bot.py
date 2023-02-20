@@ -323,6 +323,12 @@ async def update_rgl():
         top_div = max(sixes_top[0], hl_top[0])
         print(top_div)
 
+        if top_div == -1:
+            print(
+                f"RGL api timed out while searching player {player['discord']}, skipping..."
+            )
+            continue
+
         if discord_user != None:
             if top_div >= 5:
                 await discord_user.add_roles(ADINrole)
