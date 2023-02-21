@@ -22,6 +22,8 @@ rglAPI = rglAPI()
 
 version = "v0.10.0"
 
+update_time = datetime.time(hour=6, minute=0, tzinfo=datetime.timezone.utc)
+
 roles = [
     [" (Scout Restriction)", "999191878736039957"],
     [" (Soldier Restriction)", "999191955831537665"],
@@ -287,9 +289,6 @@ async def stats(ctx, *args):
     logString += "```"
     await wait.delete()
     await ctx.send(logString)
-
-
-update_time = datetime.time(hour=6, tzinfo=datetime.timezone.utc)
 
 
 @tasks.loop(hours=24.0, time=update_time)
