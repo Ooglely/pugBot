@@ -291,7 +291,7 @@ async def stats(ctx, *args):
     await ctx.send(logString)
 
 
-@tasks.loop(hours=24.0, time=update_time)
+@tasks.loop(time=update_time)
 async def update_rgl():
     print("Updating RGL divisions and roles for all registered players...")
     players = db.get_all_players()
