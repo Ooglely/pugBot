@@ -15,8 +15,8 @@ class PugCog(commands.Cog):
         agg_server = self.bot.get_guild(952817189893865482)
         hl_organizing = agg_server.get_channel(996567486621306880)
         sixes_organizing = agg_server.get_channel(997602270592118854)
-        # hl_inp = agg_server.get_channel(1009978053528670371)
-        # sixes_inp = agg_server.get_channel()
+        hl_inp = agg_server.get_channel(1009978053528670371)
+        sixes_inp = agg_server.get_channel(1077390612644515861)
         log_channel = agg_server.get_channel(1026985050677465148)
 
         if self.organizing != True:
@@ -25,6 +25,7 @@ class PugCog(commands.Cog):
                 # In the future after I have assured this works I will change it to move to inp channel
                 player_string = ""
                 for player in hl_organizing.members:
+                    player.move_to(hl_inp)
                     player_string += f"{player.mention} "
 
                 await log_channel.send(
@@ -35,6 +36,7 @@ class PugCog(commands.Cog):
             elif len(sixes_organizing.members) >= 12:
                 player_string = ""
                 for player in sixes_organizing.members:
+                    player.move_to(sixes_inp)
                     player_string += f"{player.mention} "
 
                 await log_channel.send(
