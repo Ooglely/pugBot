@@ -1,3 +1,4 @@
+import datetime
 import discord
 from discord.ext import commands, tasks
 import random
@@ -288,7 +289,10 @@ async def stats(ctx, *args):
     await ctx.send(logString)
 
 
-@tasks.loop(hours=24.0)
+update_time = datetime.time(hour=6, tzinfo=datetime.timezone.utc)
+
+
+@tasks.loop(hours=24.0, time=update_time)
 async def update_rgl():
     print("Updating RGL divisions and roles for all registered players...")
     players = db.get_all_players()

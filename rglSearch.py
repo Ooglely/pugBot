@@ -176,10 +176,10 @@ class rglAPI:
 
 
 async def test_func():
-    print(await rglAPI().get_player(76561198118776341))
-    print(await rglAPI().get_all_teams(76561198118776341))
-    print(await rglAPI().get_core_teams(76561198118776341))
-    print(await rglAPI().get_top_div(76561198118776341))
+    print(await rglAPI().get_player(76561199067925855))
+    print(await rglAPI().get_all_teams(76561199067925855))
+    print(await rglAPI().get_core_teams(76561199067925855))
+    print(await rglAPI().get_top_div(76561199067925855))
 
 
 if __name__ == "__main__":
