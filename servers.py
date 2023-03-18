@@ -306,7 +306,7 @@ class ServerCog(commands.Cog):
 
                     logChannel = self.bot.get_channel(996985303220879390)
                     await logChannel.send(
-                        "https://logs.tf/" + str(logs["logs"][0]["id"])
+                        "https://loogs.tf/" + str(logs["logs"][0]["id"])
                     )
 
     @server_status.before_loop
