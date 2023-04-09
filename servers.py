@@ -159,19 +159,19 @@ class ServerCog(commands.Cog):
         await ctx.send(embed=embed)
 
         # RCON Message
-        channel = self.bot.get_channel(1000161175859900546)
-        await channel.send(rcon)
+        rcon_channel = discord.utils.get(ctx.guild.channels, name="rcon")
+        await rcon_channel.send(rcon)
 
         # Connect Message
-        channel = self.bot.get_channel(996980099486322798)
+        connect_channel = discord.utils.get(ctx.guild.channels, name="connect")
         connectEmbed = discord.Embed(title=connectLink, color=0x3DFF1F)
         connectEmbed.add_field(name="Command", value=connect, inline=False)
-        await channel.send(embed=connectEmbed)
+        await connect_channel.send(embed=connectEmbed)
 
     @commands.command()
     @commands.has_role("Runners")
     async def config(self, ctx, config: str):
-        channel = self.bot.get_channel(1000161175859900546)
+        channel = discord.utils.get(ctx.guild.channels, name="rcon")
         rconMessage = await channel.fetch_message(channel.last_message_id)
         rconCommand = rconMessage.content
 
@@ -189,7 +189,7 @@ class ServerCog(commands.Cog):
     @commands.command()
     @commands.has_role("Runners")
     async def map(self, ctx, map: str):
-        channel = self.bot.get_channel(1000161175859900546)
+        channel = discord.utils.get(ctx.guild.channels, name="rcon")
         rconMessage = await channel.fetch_message(channel.last_message_id)
         rconCommand = rconMessage.content
 
@@ -210,7 +210,9 @@ class ServerCog(commands.Cog):
                 config = "rgl_HL_stopwatch"
             whitelist_command = "tftrue_whitelist_id 13297"
 
-        elif ctx.channel.id == 997602235208962150:  # 6s Channels
+        elif (
+            ctx.channel.id == 997602235208962150 or ctx.guild.id == 987879398017474590
+        ):  # 6s Channels
             for sixesmap in sixes_maps:
                 if map == sixesmap[0]:
                     map = sixesmap[1]
