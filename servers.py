@@ -77,10 +77,10 @@ class ServerCog(commands.Cog):
                     reserve = server
                     break
 
-        connectPassword = "andrew." + "".join(
+        connectPassword = "pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=8)
         )
-        rconPassword = "rcon.andrew." + "".join(
+        rconPassword = "rcon.pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=20)
         )
 
