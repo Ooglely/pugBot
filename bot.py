@@ -123,40 +123,6 @@ async def search(ctx, arg: str):
 
 @bot.command()
 @commands.has_role("Runners")
-async def move(ctx):
-    if ctx.channel.id == 996415628007186542:  # HL Channels
-        nextPugChannel = bot.get_channel(1009978053528670371)
-        team1Channel = bot.get_channel(987171351720771644)
-        team2Channel = bot.get_channel(994443542707580951)
-        selectingChannel = bot.get_channel(996567486621306880)
-
-        for member in selectingChannel.members:
-            await member.move_to(nextPugChannel)
-
-        for member in team1Channel.members:
-            await member.move_to(selectingChannel)
-
-        for member in team2Channel.members:
-            await member.move_to(selectingChannel)
-
-        await ctx.send("Players moved.")
-
-    if ctx.channel.id == 997602235208962150:  # 6s Channels
-        team1Channel = bot.get_channel(997602308525404242)
-        team2Channel = bot.get_channel(997602346173464587)
-        selectingChannel = bot.get_channel(997602270592118854)
-
-        for member in team1Channel.members:
-            await member.move_to(selectingChannel)
-
-        for member in team2Channel.members:
-            await member.move_to(selectingChannel)
-
-        await ctx.send("Players moved.")
-
-
-@bot.command()
-@commands.has_role("Runners")
 async def randomize(ctx, num: int):
     team1Players = 0
     team2Players = 0
@@ -173,10 +139,10 @@ async def randomize(ctx, num: int):
 
         for player in players:
             if team1Players < num:
-                await ctx.message.guild.get_member(player).move_to(team1Channel)
+                # await ctx.message.guild.get_member(player).move_to(team1Channel)
                 team1Players += 1
             elif team2Players < num:
-                await ctx.message.guild.get_member(player).move_to(team2Channel)
+                # await ctx.message.guild.get_member(player).move_to(team2Channel)
                 team2Players += 1
             else:
                 break
@@ -196,10 +162,10 @@ async def randomize(ctx, num: int):
 
         for player in players:
             if team1Players < num:
-                await ctx.message.guild.get_member(player).move_to(team1Channel)
+                # await ctx.message.guild.get_member(player).move_to(team1Channel)
                 team1Players += 1
             elif team2Players < num:
-                await ctx.message.guild.get_member(player).move_to(team2Channel)
+                # await ctx.message.guild.get_member(player).move_to(team2Channel)
                 team2Players += 1
             else:
                 break
