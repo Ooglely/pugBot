@@ -25,7 +25,7 @@ class PugCog(commands.Cog):
                 # In the future after I have assured this works I will change it to move to inp channel
                 player_string = ""
                 for player in hl_organizing.members:
-                    await player.move_to(hl_inp)
+                    # await player.move_to(hl_inp)
                     player_string += f"{player.mention} "
 
                 await log_channel.send(
@@ -36,7 +36,7 @@ class PugCog(commands.Cog):
             elif len(sixes_organizing.members) >= 12:
                 player_string = ""
                 for player in sixes_organizing.members:
-                    await player.move_to(sixes_inp)
+                    # await player.move_to(sixes_inp)
                     player_string += f"{player.mention} "
 
                 await log_channel.send(
