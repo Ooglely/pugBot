@@ -1,68 +1,37 @@
 import pymongo
+import constants
 
-from rglSearch import rglAPI
-
-client = pymongo.MongoClient(
-    "mongodb://mongo:qE2c9UY1P0WT92vAXlbn@containers-us-west-157.railway.app:7516/?retryWrites=true&w=majority"
-)
-# db = client.players
-def get_player_from_steam(steam):
-    db = client.data.players
-    if db.find_one({"steam": str(steam)}) == None:
-        return None
-    return db.find_one({"steam": str(steam)})
+client = pymongo.MongoClient(constants.DB_URL)
 
 
-def get_steam_from_discord(discord):
-    db = client.data
-    if db["players"].find_one({"discord": str(discord)}) == None:
-        return None
-    return db["players"].find_one({"discord": str(discord)})["steam"]
+def is_server_setup(guild):
+    db = client.guilds.config
+    if db.find_one({"guild": guild}) == None:
+        return False
+    else:
+        return True
 
 
-def get_player_stats(steam):
-    db = client.data.stats
-    if db.find_one({"steam": steam}) == None:
-        return None
-    return db.find_one({"steam": steam})
-
-
-def add_player_stats(player):
-    db = client.data.stats
-    db.update_one({"steam": player["steam"]}, {"$set": player}, upsert=True)
-
-
-def get_all_players():
-    db = client.data.players
-    return db.find()
-
-
-def get_divisions(discordID):
-    db = client.data.players
-    if db.find_one({"discord": str(discordID)}) == None:
-        return None
-    return db.find_one({"discord": str(discordID)})["divison"]
-
-
-async def update_divisons(steamID: int):
-    db = client.data.players
-    sixes_top, hl_top = await rglAPI().get_top_div(steamID)
+def add_new_guild(guild, role, connect, rcon):
+    db = client.guilds.config
     db.update_one(
-        {"steam": str(steamID)},
-        {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
+        {"guild": guild},
+        {"$set": {"role": role, "connect": connect, "rcon": rcon}},
         upsert=True,
     )
 
 
-async def update_rgl_ban_status(steamID: int) -> bool:
-    db = client.data.players
-    try:
-        ban_status = await rglAPI().check_banned(steamID)
-    except LookupError:
-        ban_status = False
+def get_server(guild):
+    db = client.guilds.config
+    if db.find_one({"guild": guild}) == None:
+        return None
+    return db.find_one({"guild": guild})
+
+
+def set_guild_serveme(guild, serveme):
+    db = client.guilds.config
     db.update_one(
-        {"steam": str(steamID)},
-        {"$set": {"rgl_ban": ban_status}},
+        {"guild": guild},
+        {"$set": {"serveme": serveme}},
         upsert=True,
     )
-    return ban_status
