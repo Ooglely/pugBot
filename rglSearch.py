@@ -2,94 +2,17 @@ import asyncio
 import requests
 from bs4 import BeautifulSoup
 
-
-def rglSearch(id):
-    URL = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(id)
-    page = requests.get(URL)
-
-    soup = BeautifulSoup(page.content, "html.parser")
-    name = soup.find(
-        id="ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_lblPlayerName"
-    ).get_text()
-    pfp = soup.find(
-        id="ContentPlaceHolder1_ContentPlaceHolder1_ContentPlaceHolder1_imgProfileImage"
-    ).get("src")
-    seasonList = soup.select("tr > td > a")
-    banList = soup.find(id="banhistory").nextSibling.nextSibling.find_all("td")
-
-    bans = []
-    for i in banList:
-        element = i.get_text()
-        if element.strip() != "":
-            bans.append(element.strip())
-
-    num = 0
-    banHistory = []
-    for count, i in enumerate(bans):
-        if count == num:
-            banHistory.append(
-                [bans[count].strip(), bans[count + 1].strip(), bans[count + 2].strip()]
-            )
-            num += 3
-
-    seasons = []
-    for i in seasonList:
-        seasons.append(i.get_text())
-
-    num = 0
-    seasonHistory = []
-    for count, i in enumerate(seasons):
-        if i.strip() == "":
-            del seasons[count]
-        if not "\r\n" in i:
-            del seasons[count]
-
-    for count, i in enumerate(seasons):
-        if count == num:
-            seasonHistory.append(
-                [
-                    seasons[count].strip(),
-                    seasons[count + 1].strip(),
-                    seasons[count + 2].strip(),
-                ]
-            )
-            num += 3
-
-    sixes = ""
-    hl = ""
-    pl = ""
-    for i in seasonHistory:
-        if i[0].startswith("Sixes S"):
-            sixes += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-        if i[0].startswith("HL Season"):
-            hl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-        if i[0].startswith("P7 Season"):
-            pl += i[0] + " - " + i[1] + " - " + i[2] + "\n"
-
-    bans = ""
-    for i in banHistory:
-        bans += i[0] + " - " + i[1] + ": " + i[2] + "\n"
-
-    divs = {
-        "Newcomer": 1,
-        "Amateur": 2,
-        "Intermediate": 3,
-        "Main": 4,
-        "Advanced": 5,
-        "Invite": 6,
-    }
-    divNum = 0
-    for i in seasonHistory:
-        if i[0].startswith("Sixes S"):
-            if i[1] in divs:
-                if divs[i[1]] > divNum:
-                    divNum = divs[i[1]]
-        if i[0].startswith("HL Season"):
-            if i[1] in divs:
-                if divs[i[1]] > divNum:
-                    divNum = divs[i[1]]
-
-    return [name, pfp, sixes, hl, pl, bans, divNum]
+class Player:
+    def __init__(self, steamid, name, pfp, sixes, hl, bans):
+        self.steamid = steamid
+        self.name = name
+        self.pfp = pfp
+        self.sixes = sixes
+        self.hl = hl
+        self.bans = bans
+    
+    def __str__(self):
+        return f"ID: {self.steamid}\nName: {self.name}\nPFP: {self.pfp}\nSixes: {self.sixes}\nHL: {self.hl}\nBans: {self.bans}"
 
 
 class rglAPI:
@@ -113,12 +36,10 @@ class rglAPI:
         hl_teams = []
         try:
             for season in all_teams:
-                if season["formatId"] == 3:  # 6s format
-                    if season["regionId"] == 40:  # NA Sixes region code
-                        sixes_teams.append(season)
-                elif season["formatId"] == 2:  # HL format
-                    if season["regionId"] == 24:  # NA HL region code
-                        hl_teams.append(season)
+                if season["formatId"] == 3 and season["regionId"] == 40:  # NA Sixes region code
+                    sixes_teams.append(season)
+                elif season["formatId"] == 2 and season["regionId"] == 24:  # NA HL region code
+                    hl_teams.append(season)
             core_seasons["sixes"] = sixes_teams
             core_seasons["hl"] = hl_teams
             return core_seasons
@@ -173,13 +94,31 @@ class rglAPI:
             else:
                 print(f"Division not found: {divisionName}")
         return [sixesdiv, hldiv]
+    
+    async def create_player(self, steamid: int) -> Player:
+        sixes = []
+        hl = []
+        player_data = await self.get_player(steamid)
+        team_data = await self.get_core_teams(steamid)
+
+        for season in team_data["sixes"]:
+            if season["divisionName"] != "Dead Teams" and season["divisionName"] != "Admin Placement" and season["teamName"].startswith("Free Agent -") != True:
+                sixes.append({"team": season["teamName"], "division": season["divisionName"], "season": season["seasonName"]})
+
+        for season in team_data["hl"]:
+            if season["divisionName"] != "Dead Teams" and season["divisionName"] != "Admin Placement" and season["teamName"].startswith("Free Agent -") != True:
+                hl.append({"team": season["teamName"], "division": season["divisionName"], "season": season["seasonName"]})
+
+        if player_data["status"]["isBanned"]:
+            ban_info = [True, player_data["banInformation"]["reason"]]
+        else:
+            ban_info = [False, None]
+
+        return Player(int(player_data["steamId"]), player_data["name"], player_data["avatar"], sixes, hl, ban_info)
 
 
 async def test_func():
-    print(await rglAPI().get_player(76561199067925855))
-    print(await rglAPI().get_all_teams(76561199067925855))
-    print(await rglAPI().get_core_teams(76561199067925855))
-    print(await rglAPI().get_top_div(76561199067925855))
+    print(await rglAPI().create_player(76561199067925855))
 
 
 if __name__ == "__main__":
