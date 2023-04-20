@@ -39,8 +39,8 @@ sixes_maps = [
 
 kothmaps = [
     "koth_product_final",
-    "koth_proot_b4b",
-    "koth_ashville_rc2d",
+    "koth_proot_b4c",
+    "koth_ashville_final",
     "koth_cascade",
 ]
 
