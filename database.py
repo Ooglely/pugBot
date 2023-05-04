@@ -2,8 +2,10 @@ import pymongo
 
 from rglSearch import rglAPI
 
+MONGO_URL = os.environ["MONGO_URL"]
+
 client = pymongo.MongoClient(
-    "mongodb://mongo:qE2c9UY1P0WT92vAXlbn@containers-us-west-157.railway.app:7516/?retryWrites=true&w=majority"
+    MONGO_URL
 )
 # db = client.players
 def get_player_from_steam(steam):
