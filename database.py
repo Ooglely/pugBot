@@ -1,4 +1,5 @@
 import pymongo
+import os
 
 from rglSearch import rglAPI
 
