@@ -2,6 +2,7 @@ import asyncio
 import requests
 from bs4 import BeautifulSoup
 
+
 class Player:
     def __init__(self, steamid, name, pfp, sixes, hl, bans):
         self.steamid = steamid
@@ -10,7 +11,7 @@ class Player:
         self.sixes = sixes
         self.hl = hl
         self.bans = bans
-    
+
     def __str__(self):
         return f"ID: {self.steamid}\nName: {self.name}\nPFP: {self.pfp}\nSixes: {self.sixes}\nHL: {self.hl}\nBans: {self.bans}"
 
@@ -36,9 +37,13 @@ class rglAPI:
         hl_teams = []
         try:
             for season in all_teams:
-                if season["formatId"] == 3 and season["regionId"] == 40:  # NA Sixes region code
+                if (
+                    season["formatId"] == 3 and season["regionId"] == 40
+                ):  # NA Sixes region code
                     sixes_teams.append(season)
-                elif season["formatId"] == 2 and season["regionId"] == 24:  # NA HL region code
+                elif (
+                    season["formatId"] == 2 and season["regionId"] == 24
+                ):  # NA HL region code
                     hl_teams.append(season)
             core_seasons["sixes"] = sixes_teams
             core_seasons["hl"] = hl_teams
@@ -94,7 +99,7 @@ class rglAPI:
             else:
                 print(f"Division not found: {divisionName}")
         return [sixesdiv, hldiv]
-    
+
     async def create_player(self, steamid: int) -> Player:
         sixes = []
         hl = []
@@ -102,19 +107,46 @@ class rglAPI:
         team_data = await self.get_core_teams(steamid)
 
         for season in team_data["sixes"]:
-            if season["divisionName"] != "Dead Teams" and season["divisionName"] != "Admin Placement" and season["teamName"].startswith("Free Agent -") != True:
-                sixes.append({"team": season["teamName"], "division": season["divisionName"], "season": season["seasonName"]})
+            if (
+                season["divisionName"] != "Dead Teams"
+                and season["divisionName"] != "Admin Placement"
+                and season["teamName"].startswith("Free Agent -") != True
+            ):
+                sixes.append(
+                    {
+                        "team": season["teamName"],
+                        "division": season["divisionName"],
+                        "season": season["seasonName"],
+                    }
+                )
 
         for season in team_data["hl"]:
-            if season["divisionName"] != "Dead Teams" and season["divisionName"] != "Admin Placement" and season["teamName"].startswith("Free Agent -") != True:
-                hl.append({"team": season["teamName"], "division": season["divisionName"], "season": season["seasonName"]})
+            if (
+                season["divisionName"] != "Dead Teams"
+                and season["divisionName"] != "Admin Placement"
+                and season["teamName"].startswith("Free Agent -") != True
+            ):
+                hl.append(
+                    {
+                        "team": season["teamName"],
+                        "division": season["divisionName"],
+                        "season": season["seasonName"],
+                    }
+                )
 
         if player_data["status"]["isBanned"]:
             ban_info = [True, player_data["banInformation"]["reason"]]
         else:
             ban_info = [False, None]
 
-        return Player(int(player_data["steamId"]), player_data["name"], player_data["avatar"], sixes, hl, ban_info)
+        return Player(
+            int(player_data["steamId"]),
+            player_data["name"],
+            player_data["avatar"],
+            sixes,
+            hl,
+            ban_info,
+        )
 
 
 async def test_func():

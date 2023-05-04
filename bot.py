@@ -2,9 +2,10 @@ import nextcord
 from nextcord.ext import commands, tasks
 
 import database
-from rglSearch import rglAPI, Player
+from rglAPI import rglAPI, Player
 from constants import *
 from util import *
+from servers import ServerCog
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -13,7 +14,10 @@ intents.presences = True
 intents.voice_states = True
 
 activity = nextcord.Activity(name="tf.oog.pw :3", type=nextcord.ActivityType.watching)
-bot = commands.Bot(command_prefix="x!", intents=intents, activity=activity)
+bot: nextcord.Client = commands.Bot(
+    command_prefix="x!", intents=intents, activity=activity
+)
+bot.add_cog(ServerCog(bot))
 
 RGL = rglAPI()
 
@@ -129,15 +133,14 @@ async def serveme(interaction: nextcord.Interaction, api_key: str):
     database.set_guild_serveme(interaction.guild_id, api_key)
     await interaction.send("Serveme API Key set!")
 
+
 async def create_player_embed(player: Player):
     if player.bans[0] == False:
         embedColor = 0xF0984D
     else:
         embedColor = 0xFF0000
 
-    url = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(
-        player.steamid
-    )
+    url = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(player.steamid)
 
     embed = nextcord.Embed(title=player.name, url=url, color=embedColor)
     embed.set_thumbnail(url=player.pfp)
@@ -146,14 +149,28 @@ async def create_player_embed(player: Player):
         for season in player.sixes:
             if season["division"].startswith("RGL-"):
                 season["division"] = season["division"][4:]
-            sixes_teams += season["season"] + " - " + season["division"] + " - " + season["team"] + "\n"
+            sixes_teams += (
+                season["season"]
+                + " - "
+                + season["division"]
+                + " - "
+                + season["team"]
+                + "\n"
+            )
         embed.add_field(name="Sixes", value=sixes_teams, inline=False)
     if player.hl != []:  # HL Data
         hl_teams = ""
         for season in player.hl:
             if season["division"].startswith("RGL-"):
                 season["division"] = season["division"][4:]
-            hl_teams += season["season"] + " - " + season["division"] + " - " + season["team"] + "\n"
+            hl_teams += (
+                season["season"]
+                + " - "
+                + season["division"]
+                + " - "
+                + season["team"]
+                + "\n"
+            )
         embed.add_field(name="Highlander", value=hl_teams, inline=False)
     if player.bans[0] == True:  # Ban Info
         embed.add_field(name="Currently Banned", value=player.bans[1], inline=False)
@@ -171,7 +188,8 @@ async def playerListener(message):
             await message.channel.send(embed=embed)
             pass
 
-@bot.slash_command()
+
+@bot.slash_command(guild_ids=TESTING_GUILDS)
 async def search(interaction: nextcord.Interaction, steamid: str):
     rgl = await RGL.create_player(get_steam64(steamid))
     embed = await create_player_embed(rgl)

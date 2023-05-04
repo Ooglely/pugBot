@@ -1,5 +1,8 @@
 from steam import steamid
 from steam.steamid import SteamID
+from database import get_server
+
+import nextcord
 
 
 def get_steam64(arg):
@@ -18,3 +21,11 @@ def get_steam64(arg):
         id = args[1].replace("&r", "")
 
     return id
+
+
+async def check_if_runner(guild, user) -> bool:
+    required_role = get_server(168371563660443648)["role"]
+    if required_role not in [role.id for role in user.roles]:
+        return False
+    else:
+        return True

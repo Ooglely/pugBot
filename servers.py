@@ -1,318 +1,195 @@
-import discord
-from discord.ext import commands, tasks
-import requests
-import json
+from nextcord.ext import tasks, commands
+from constants import *
+from util import check_if_runner
+
+import bs4
+import aiohttp
 import random
+import database
 import string
-from rcon.source import Client
-import time as unixtime
-import asyncio
-import os
+import nextcord
 
-version = "v0.8.1"
-timestamp = unixtime.time()
-lastLog = 0
+SIXES_MAPS = {}
+HL_MAPS = {}
 
-hl_maps = [
-    ["koth_product", "koth_product_final"],
-    ["pl_upward", "pl_upward_f10"],
-    ["koth_lakeside", "koth_lakeside_r2"],
-    ["pl_swiftwater", "pl_swiftwater_final1"],
-    ["koth_ashville", "koth_ashville_final"],
-    ["pl_vigil", "pl_vigil_rc9"],
-    ["cp_steel", "cp_steel_f12"],
-    ["koth_proot", "koth_proot_b4c"],
-]
-
-sixes_maps = [
-    ["cp_gullywash", "cp_gullywash_f9"],
-    ["koth_bagel", "koth_bagel_rc5"],
-    ["cp_metalworks", "cp_metalworks_f4"],
-    ["cp_snakewater", "cp_snakewater_final1"],
-    ["koth_product", "koth_product_final"],
-    ["cp_process", "cp_process_f11"],
-    ["koth_clearcut", "koth_clearcut_b15d"],
-    ["cp_granary", "cp_granary_pro_rc8"],
-    ["cp_badlands", "cp_prolands_rc2ta"],
-    ["cp_reckoner", "cp_reckoner_rc6"],
-]
-
-kothmaps = [
-    "koth_product_final",
-    "koth_proot_b4b",
-    "koth_ashville_rc2d",
-    "koth_cascade",
-]
-
-SERVEME_API_KEY = os.environ["serveme_key"]
+with open("maps.json") as json_file:
+    maps: dict = json.load(json_file)
 
 
 class ServerCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: nextcord.Client):
         self.bot = bot
-        self.server_status.start()
+        self.mapUpdater.start()
 
-    @commands.command()
-    @commands.has_role("Runners")
-    async def startserver(self, ctx):
+    @tasks.loop(hours=4)
+    async def mapUpdater(self):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://docs.rgl.gg/league/references/maps_and_configs/"
+            ) as resp:
+                html = await resp.text()
+                soup = bs4.BeautifulSoup(html, "html.parser")
+                map_marker = soup.find(id="custom-map-downloads")
+                sixes_list = map_marker.find_next_sibling("ul")
+                hl_list = sixes_list.find_next_sibling("ul")
+
+                for map in sixes_list.find_all("li"):
+                    SIXES_MAPS[map.text.rsplit("_", 1)[0]] = map.text
+
+                for map in hl_list.find_all("li"):
+                    HL_MAPS[map.text.rsplit("_", 1)[0]] = map.text
+
+        print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
+
+        map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
+
+        map_json = json.dumps(map_dict)
+
+        with open("maps.json", "w") as outfile:
+            outfile.write(map_json)
+
+        # await self.bot.sync_all_application_commands(register_new=True)
+        print("All app commands synced")
+
+    async def get_new_reservation(self, serveme_key: str):
+        times_json, times_text = await self.get_reservation_times(serveme_key)
         headers = {"Content-type": "application/json"}
-        new = requests.get(
-            "https://na.serveme.tf/api/reservations/new?api_key=" + SERVEME_API_KEY,
-            headers=headers,
-        )
-        times = new.text
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.post(
+                "https://na.serveme.tf/api/reservations/find_servers?api_key="
+                + serveme_key,
+                data=times_text,
+                headers=headers,
+            ) as resp:
+                servers = await resp.json()
+                return servers, times_json
 
+    async def get_reservation_times(self, serveme_key: str):
         headers = {"Content-type": "application/json"}
-        find_servers = requests.post(
-            "https://na.serveme.tf/api/reservations/find_servers?api_key="
-            + SERVEME_API_KEY,
-            data=times,
-            headers=headers,
-        )
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(
+                "https://na.serveme.tf/api/reservations/new?api_key=" + serveme_key
+            ) as times:
+                times_json = await times.json()
+                times_text = await times.text()
+                return times_json, times_text
 
-        for server in find_servers.json()["servers"]:
+    @nextcord.slash_command(name="reserve", guild_ids=TESTING_GUILDS)
+    async def reserve_server(
+        self,
+        interaction: nextcord.Interaction,
+        map: str = nextcord.SlashOption(
+            name="map",
+            choices=maps["sixes"] | maps["hl"],
+        ),
+        gamemode: str = nextcord.SlashOption(
+            name="gamemode",
+            choices={
+                "6s": "sixes",
+                "HL": "highlander",
+            },
+        ),
+    ):
+        print(gamemode)
+        runner_req: bool = await check_if_runner(interaction.guild, interaction.user)
+        if runner_req == False:
+            await interaction.send("You do not have permission to run servers.")
+            return
+
+        guild_data = database.get_server(interaction.guild.id)
+        serveme_api_key = guild_data["serveme"]
+        servers, times = await self.get_new_reservation(serveme_api_key)
+
+        for server in servers["servers"]:
             if "chi" in server["ip"]:
                 if 536 != server["id"]:
-                    print(server)
+                    print("New server reserved: " + str(server))
                     reserve = server
                     break
 
-        connectPassword = "andrew." + "".join(
+        connectPassword = "pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=8)
         )
-        rconPassword = "rcon.andrew." + "".join(
+        rconPassword = "rcon.pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=20)
         )
 
-        if ctx.channel.id == 996415628007186542:  # HL Channels
-            map = random.choice(kothmaps)
-
-        elif ctx.channel.id == 997602235208962150:  # 6s Channels
-            map = random.choice(sixes_maps)[1]
-
+        if gamemode == "sixes":
+            whitelist_id = 20  # 6s whitelist ID
+            if map not in maps["sixes"].values():
+                await interaction.send("Invalid map.")
+                return
+            if map.startswith("cp_"):
+                server_config_id = 69  # rgl_6s_5cp_scrim
+            else:
+                server_config_id = 68  # rgl_6s_koth_bo5
         else:
-            map = "koth_product_final"
+            whitelist_id = 22  # HL whitelist ID
+            if map not in maps["hl"].values():
+                await interaction.send("Invalid map.")
+                return
+            if map.startswith("pl_"):
+                server_config_id = 55
+            else:
+                server_config_id = 54
 
         reserveString = {
             "reservation": {
-                "starts_at": new.json()["reservation"]["starts_at"],
-                "ends_at": new.json()["reservation"]["ends_at"],
+                "starts_at": times["reservation"]["starts_at"],
+                "ends_at": times["reservation"]["ends_at"],
                 "rcon": rconPassword,
                 "password": connectPassword,
                 "server_id": reserve["id"],
                 "enable_plugins": True,
                 "enable_demos_tf": True,
                 "first_map": map,
-                "server_config_id": 54,
-                "whitelist_id": 22,
+                "server_config_id": server_config_id,
+                "whitelist_id": whitelist_id,
                 "custom_whitelist_id": None,
                 "auto_end": True,
             }
         }
 
-        reserveJSON = json.dumps(reserveString)
+        reserve_JSON = json.dumps(reserveString)
 
-        sendReservation = requests.post(
-            "https://na.serveme.tf/api/reservations?api_key=" + SERVEME_API_KEY,
-            data=reserveJSON,
-            headers=headers,
-        )
-        server = sendReservation.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
+                data=reserve_JSON,
+                headers={"Content-type": "application/json"},
+            ) as resp:
+                print(await resp.text())
 
         connect = (
-            "connect "
-            + server["reservation"]["server"]["ip"]
-            + ":"
-            + str(server["reservation"]["server"]["port"])
-            + '; password "'
-            + server["reservation"]["password"]
-            + '"'
+            "connect " + reserve["ip_and_port"] + '; password "' + connectPassword + '"'
         )
         rcon = (
             "rcon_address "
-            + server["reservation"]["server"]["ip"]
-            + ":"
-            + str(server["reservation"]["server"]["port"])
+            + reserve["ip_and_port"]
             + '; rcon_password "'
-            + server["reservation"]["rcon"]
+            + rconPassword
             + '"'
         )
         connectLink = (
-            "steam://connect/"
-            + server["reservation"]["server"]["ip"]
-            + ":"
-            + str(server["reservation"]["server"]["port"])
-            + "/"
-            + server["reservation"]["password"]
+            "steam://connect/" + reserve["ip_and_port"] + "/" + connectPassword
         )
 
-        embed = discord.Embed(title="Server started!", color=0xF0984D)
-        embed.add_field(
-            name="Server", value=server["reservation"]["server"]["name"], inline=False
-        )
+        embed = nextcord.Embed(title="Server started!", color=0xF0984D)
+        embed.add_field(name="Server", value=reserve["name"], inline=False)
         embed.add_field(name="Connect", value=connect, inline=False)
         embed.add_field(
             name="RCON", value="RCON has been sent in the rcon channel.", inline=False
         )
         embed.add_field(name="Map", value=map, inline=False)
-        embed.set_footer(text=version)
-        await ctx.send(embed=embed)
+        embed.set_footer(text=VERSION)
+        await interaction.send(embed=embed)
 
         # RCON Message
-        channel = self.bot.get_channel(1000161175859900546)
-        await channel.send(rcon)
+        rcon_channel = self.bot.get_channel(guild_data["rcon"])
+        await rcon_channel.send(rcon)
 
         # Connect Message
-        channel = self.bot.get_channel(996980099486322798)
-        connectEmbed = discord.Embed(title=connectLink, color=0x3DFF1F)
+        connect_channel = self.bot.get_channel(guild_data["connect"])
+        connectEmbed = nextcord.Embed(title=connectLink, color=0x3DFF1F)
         connectEmbed.add_field(name="Command", value=connect, inline=False)
-        await channel.send(embed=connectEmbed)
-
-    @commands.command()
-    @commands.has_role("Runners")
-    async def config(self, ctx, config: str):
-        channel = self.bot.get_channel(1000161175859900546)
-        rconMessage = await channel.fetch_message(channel.last_message_id)
-        rconCommand = rconMessage.content
-
-        ip = rconCommand.split(" ")[1].split(":")[0]
-        port = rconCommand.split(" ")[1].split(":")[1].split(";")[0]
-        password = rconCommand.split(" ")[3].split('"')[1]
-
-        with Client(str(ip), int(port), passwd=password) as client:
-            response = client.run("exec", config)
-
-        print(response)
-
-        await ctx.send("Config executed.")
-
-    @commands.command()
-    @commands.has_role("Runners")
-    async def map(self, ctx, map: str):
-        channel = self.bot.get_channel(1000161175859900546)
-        rconMessage = await channel.fetch_message(channel.last_message_id)
-        rconCommand = rconMessage.content
-
-        ip = rconCommand.split(" ")[1].split(":")[0]
-        port = rconCommand.split(" ")[1].split(":")[1].split(";")[0]
-        password = rconCommand.split(" ")[3].split('"')[1]
-
-        if ctx.channel.id == 996415628007186542:  # HL Channels
-            for hlmap in hl_maps:
-                if map == hlmap[0]:
-                    map = hlmap[1]
-                    break
-            if map.startswith("cp_"):
-                config = "rgl_HL_stopwatch"
-            elif map.startswith("koth_"):
-                config = "rgl_HL_koth_bo5"
-            elif map.startswith("pl_"):
-                config = "rgl_HL_stopwatch"
-            whitelist_command = "tftrue_whitelist_id 13297"
-
-        elif ctx.channel.id == 997602235208962150:  # 6s Channels
-            for sixesmap in sixes_maps:
-                if map == sixesmap[0]:
-                    map = sixesmap[1]
-                    break
-            if map.startswith("cp_"):
-                config = "rgl_6s_5cp_scrim"
-            elif map.startswith("koth_"):
-                config = "rgl_6s_koth_bo5"
-            whitelist_command = "tftrue_whitelist_id 12241"
-
-        command = "exec " + config + "; changelevel " + map
-
-        with Client(str(ip), int(port), passwd=password) as client:
-            client.run(command)
-            await ctx.send("Changing config to " + config + ".")
-            await ctx.send("Changing map to " + map + ".")
-
-        with Client(str(ip), int(port), passwd=password) as client:
-            await asyncio.sleep(10)
-            client.run(whitelist_command)
-
-        if map.startswith("pl_"):
-            await asyncio.sleep(20)
-            with Client(str(ip), int(port), passwd=password) as client:
-                client.run(command)
-                await ctx.send("Reloading map to ensure config executed.")
-
-    @commands.command()
-    @commands.has_role("Runners")
-    async def randommap(self, ctx):
-        channel = self.bot.get_channel(1000161175859900546)
-        rconMessage = await channel.fetch_message(channel.last_message_id)
-        rconCommand = rconMessage.content
-
-        ip = rconCommand.split(" ")[1].split(":")[0]
-        port = rconCommand.split(" ")[1].split(":")[1].split(";")[0]
-        password = rconCommand.split(" ")[3].split('"')[1]
-
-        if ctx.channel.id == 996415628007186542:  # HL Channels
-            map = random.choice(hl_maps)[1]
-            if map.startswith("cp_"):
-                config = "rgl_HL_stopwatch"
-            elif map.startswith("koth_"):
-                config = "rgl_HL_koth_bo5"
-            elif map.startswith("pl_"):
-                config = "rgl_HL_stopwatch"
-
-        elif ctx.channel.id == 997602235208962150:  # 6s Channels
-            map = random.choice(sixes_maps)[1]
-            if map.startswith("cp_"):
-                config = "rgl_6s_5cp_scrim"
-            elif map.startswith("koth_"):
-                config = "rgl_6s_koth_bo5"
-
-        command = "exec " + config + "; changelevel " + map
-
-        with Client(str(ip), int(port), passwd=password) as client:
-            client.run(command)
-            await ctx.send("Changing config to " + config + ".")
-            await ctx.send("Changing map to " + map + ".")
-
-        if map.startswith("pl_"):
-            await asyncio.sleep(20)
-            with Client(str(ip), int(port), passwd=password) as client:
-                client.run(command)
-                await ctx.send("Reloading map to ensure config executed.")
-
-    @tasks.loop(seconds=30, count=None)  # task runs every 30 seconds
-    async def server_status(self):
-        players = []
-        guild = self.bot.get_guild(952817189893865482)
-        for channel in guild.voice_channels:
-            for member in channel.members:
-                players.append(member.id)
-
-        if len(players) > 8:
-            with open("logs.json") as log_file:
-                LOGS = json.load(log_file)
-            lastLog = LOGS["lastLog"]
-
-            status = requests.get(
-                "https://na.serveme.tf/api/reservations?api_key=" + SERVEME_API_KEY,
-                headers={"Content-type": "application/json"},
-            ).json()
-            logs = requests.get(
-                "https://logs.tf/api/v1/log?uploader=76561198171178258"
-            ).json()
-            if str(status["reservations"][0]["id"]) in logs["logs"][0]["title"]:
-                if logs["logs"][0]["id"] != lastLog:
-                    newLog = {"lastLog": logs["logs"][0]["id"]}
-                    with open("logs.json", "w") as outfile:
-                        json.dump(newLog, outfile)
-
-                    logChannel = self.bot.get_channel(996985303220879390)
-                    await logChannel.send(
-                        "https://loogs.tf/" + str(logs["logs"][0]["id"])
-                    )
-
-    @server_status.before_loop
-    async def server_status_wait(self):
-        await self.bot.wait_until_ready()
-
-
-async def setup(bot):
-    await bot.add_cog(ServerCog(bot))
+        await connect_channel.send(embed=connectEmbed)
