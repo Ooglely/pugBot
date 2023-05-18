@@ -5,7 +5,7 @@ from database import get_server
 import nextcord
 
 
-def get_steam64(arg):
+def get_steam64(arg: str | int) -> str:
     if arg.startswith("https://steamcommunity.com/id/"):
         id = steamid.steam64_from_url(arg)
     if arg.startswith("[U:1:"):
@@ -23,8 +23,8 @@ def get_steam64(arg):
     return id
 
 
-async def check_if_runner(guild, user) -> bool:
-    required_role = get_server(168371563660443648)["role"]
+async def check_if_runner(guild: nextcord.Guild, user: nextcord.Member) -> bool:
+    required_role = get_server(guild.id)["role"]
     if required_role not in [role.id for role in user.roles]:
         return False
     else:
