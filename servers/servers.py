@@ -1,6 +1,7 @@
 from nextcord.ext import tasks, commands
 from constants import *
 from util import check_if_runner
+from servers.servemeAPI import servemeAPI
 
 import bs4
 import aiohttp
@@ -9,11 +10,10 @@ import database
 import string
 import nextcord
 
-SIXES_MAPS = {}
-HL_MAPS = {}
-
 with open("maps.json") as json_file:
     maps: dict = json.load(json_file)
+    SIXES_MAPS: dict = maps["sixes"]
+    HL_MAPS: dict = maps["hl"]
 
 
 class ServerCog(commands.Cog):
@@ -48,31 +48,8 @@ class ServerCog(commands.Cog):
         with open("maps.json", "w") as outfile:
             outfile.write(map_json)
 
-        # await self.bot.sync_all_application_commands(register_new=True)
+        await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
-
-    async def get_new_reservation(self, serveme_key: str):
-        times_json, times_text = await self.get_reservation_times(serveme_key)
-        headers = {"Content-type": "application/json"}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.post(
-                "https://na.serveme.tf/api/reservations/find_servers?api_key="
-                + serveme_key,
-                data=times_text,
-                headers=headers,
-            ) as resp:
-                servers = await resp.json()
-                return servers, times_json
-
-    async def get_reservation_times(self, serveme_key: str):
-        headers = {"Content-type": "application/json"}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(
-                "https://na.serveme.tf/api/reservations/new?api_key=" + serveme_key
-            ) as times:
-                times_json = await times.json()
-                times_text = await times.text()
-                return times_json, times_text
 
     @nextcord.slash_command(name="reserve", guild_ids=TESTING_GUILDS)
     async def reserve_server(
@@ -93,12 +70,12 @@ class ServerCog(commands.Cog):
         print(gamemode)
         runner_req: bool = await check_if_runner(interaction.guild, interaction.user)
         if runner_req == False:
-            await interaction.send("You do not have permission to run servers.")
+            await interaction.send("You do not have permission to reserve servers.")
             return
 
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await self.get_new_reservation(serveme_api_key)
+        servers, times = await servemeAPI().get_new_reservation(serveme_api_key)
 
         for server in servers["servers"]:
             if "chi" in server["ip"]:
@@ -192,4 +169,5 @@ class ServerCog(commands.Cog):
         connect_channel = self.bot.get_channel(guild_data["connect"])
         connectEmbed = nextcord.Embed(title=connectLink, color=0x3DFF1F)
         connectEmbed.add_field(name="Command", value=connect, inline=False)
+        connectEmbed.add_field(name="Connect Link", value=connectLink, inline=False)
         await connect_channel.send(embed=connectEmbed)
