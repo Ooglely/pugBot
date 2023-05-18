@@ -1,7 +1,8 @@
 from nextcord.ext import tasks, commands
 from constants import *
-from util import check_if_runner
+from util import check_if_runner, get_exec_command
 from servers.servemeAPI import servemeAPI
+from rcon.source import Client
 
 import bs4
 import aiohttp
@@ -171,3 +172,50 @@ class ServerCog(commands.Cog):
         connectEmbed.add_field(name="Command", value=connect, inline=False)
         connectEmbed.add_field(name="Connect Link", value=connectLink, inline=False)
         await connect_channel.send(embed=connectEmbed)
+
+    @nextcord.slash_command(name="map", guild_ids=TESTING_GUILDS)
+    async def change_map(
+        self,
+        interaction: nextcord.Interaction,
+        map: str = nextcord.SlashOption(
+            name="map",
+            choices=maps["sixes"] | maps["hl"],
+        ),
+    ):
+        runner_req: bool = await check_if_runner(interaction.guild, interaction.user)
+        if runner_req == False:
+            await interaction.send("You do not have permission to change the map.")
+            return
+
+        guild_data = database.get_server(interaction.guild.id)
+        serveme_api_key = guild_data["serveme"]
+        reservations = await servemeAPI().get_current_reservations(serveme_api_key)
+
+        if len(reservations) == 0:
+            await interaction.send(
+                "There are no active reservations with the associated serveme account."
+            )
+            return
+        elif len(reservations) == 1:
+            try:
+                command: str = await get_exec_command(reservations[0], map)
+            except Exception:
+                await interaction.send(
+                    "Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
+                )
+                return
+
+            with Client(
+                reservations[0]["server"]["ip"],
+                int(reservations[0]["server"]["port"]),
+                passwd=reservations[0]["rcon"],
+            ) as client:
+                client.run(command)
+
+            await interaction.send("Changing map to " + map + ".")
+            return
+        else:
+            # TODO
+            await interaction.send(
+                "There are multiple active reservations with the associated serveme account. This is not supported yet."
+            )
