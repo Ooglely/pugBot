@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import database
 
 
 class servemeAPI:
@@ -41,9 +42,9 @@ class servemeAPI:
 
 
 async def test_func():
-    test_result = await servemeAPI().get_current_reservations(
-        "da8501910f804b4abebdfe8e8e048c2c"
-    )
+    guild_data = database.get_server(168371563660443648)
+    serveme_api_key = guild_data["serveme"]
+    test_result = await servemeAPI().get_current_reservations(serveme_api_key)
     print(test_result)
 
 
