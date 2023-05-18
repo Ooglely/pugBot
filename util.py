@@ -29,3 +29,28 @@ async def check_if_runner(guild: nextcord.Guild, user: nextcord.Member) -> bool:
         return False
     else:
         return True
+
+
+async def get_exec_command(reservation: dict, map: str) -> str:
+    whitelist_id: int = reservation["whitelist_id"]
+    new_config: str
+
+    if whitelist_id == 20:  # 6s whitelist ID
+        if map.startswith("cp_"):
+            new_config = "rgl_6s_5cp_scrim"
+        elif map.startswith("koth_"):
+            new_config = "rgl_6s_koth_bo5"
+        else:
+            new_config = "rgl_off"
+    elif whitelist_id == 22:  # HL whitelist ID
+        if map.startswith("pl_"):
+            new_config = "rgl_hl_stopwatch"
+        elif map.startswith("koth_"):
+            new_config = "rgl_hl_koth_bo5"
+        else:
+            new_config = "rgl_off"
+    else:
+        raise Exception("Invalid whitelist ID.")
+
+    command: str = "exec " + new_config + "; changelevel " + map
+    return command
