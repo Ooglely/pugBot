@@ -1,6 +1,5 @@
-from nextcord.ext import tasks, commands
+from nextcord.ext import tasks, commands, application_checks
 from constants import *
-from util import check_if_runner, get_exec_command
 from servers.servemeAPI import servemeAPI
 from rcon.source import Client
 
@@ -10,6 +9,7 @@ import random
 import database
 import string
 import nextcord
+import util
 
 with open("maps.json") as json_file:
     maps: dict = json.load(json_file)
@@ -52,7 +52,24 @@ class ServerCog(commands.Cog):
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
 
+    @commands.Cog.listener("on_application_command_error")
+    async def handle_errors(self, interaction: nextcord.Interaction, error: Exception):
+        if error.__class__ == application_checks.ApplicationMissingRole:
+            await interaction.send(
+                "You are missing the runner role to be able to use this command.\n"
+                + str(error)
+            )
+        elif error.__class__ == util.ServerNotSetupError:
+            await interaction.send(
+                "This server has not been set up for bot usage yet; please run the /setup command.\n"
+                + str(error)
+            )
+        else:
+            await interaction.send("An error has occurred.\n" + str(error))
+
     @nextcord.slash_command(name="reserve", guild_ids=TESTING_GUILDS)
+    @util.is_setup()
+    @util.is_runner()
     async def reserve_server(
         self,
         interaction: nextcord.Interaction,
@@ -69,7 +86,9 @@ class ServerCog(commands.Cog):
         ),
     ):
         print(gamemode)
-        runner_req: bool = await check_if_runner(interaction.guild, interaction.user)
+        runner_req: bool = await util.check_if_runner(
+            interaction.guild, interaction.user
+        )
         if runner_req == False:
             await interaction.send("You do not have permission to reserve servers.")
             return
@@ -173,6 +192,8 @@ class ServerCog(commands.Cog):
         connectEmbed.add_field(name="Connect Link", value=connectLink, inline=False)
         await connect_channel.send(embed=connectEmbed)
 
+    @util.is_setup()
+    @util.is_runner()
     @nextcord.slash_command(name="map", guild_ids=TESTING_GUILDS)
     async def change_map(
         self,
@@ -182,11 +203,6 @@ class ServerCog(commands.Cog):
             choices=maps["sixes"] | maps["hl"],
         ),
     ):
-        runner_req: bool = await check_if_runner(interaction.guild, interaction.user)
-        if runner_req == False:
-            await interaction.send("You do not have permission to change the map.")
-            return
-
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = await servemeAPI().get_current_reservations(serveme_api_key)
@@ -198,7 +214,7 @@ class ServerCog(commands.Cog):
             return
         elif len(reservations) == 1:
             try:
-                command: str = await get_exec_command(reservations[0], map)
+                command: str = await util.get_exec_command(reservations[0], map)
             except Exception:
                 await interaction.send(
                     "Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
