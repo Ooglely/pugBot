@@ -1,8 +1,14 @@
 from steam import steamid
 from steam.steamid import SteamID
-from database import get_server
+from database import get_server, is_server_setup
+from nextcord.ext import application_checks
 
 import nextcord
+
+
+class ServerNotSetupError(Exception):
+    def __init__(self, message="Server is not setup."):
+        self.message = message
 
 
 def get_steam64(arg: str | int) -> str:
@@ -23,12 +29,28 @@ def get_steam64(arg: str | int) -> str:
     return id
 
 
-async def check_if_runner(guild: nextcord.Guild, user: nextcord.Member) -> bool:
-    required_role = get_server(guild.id)["role"]
-    if required_role not in [role.id for role in user.roles]:
-        return False
-    else:
-        return True
+def is_runner():
+    def predicate(interaction: nextcord.Interaction):
+        required_role = get_server(interaction.guild.id)["role"]
+        if required_role not in [role.id for role in interaction.user.roles]:
+            raise application_checks.ApplicationMissingRole(required_role)
+        else:
+            return True
+
+    return nextcord.ext.application_checks.check(predicate)
+
+
+# TODO: Need to add a check in here for if the serveme is there or not
+def is_setup():
+    def predicate(interaction: nextcord.Interaction):
+        if is_server_setup(interaction.guild.id) == False:
+            raise ServerNotSetupError(
+                "Guild id: " + str(interaction.guild.id) + " is not setup."
+            )
+        else:
+            return True
+
+    return nextcord.ext.application_checks.check(predicate)
 
 
 async def get_exec_command(reservation: dict, map: str) -> str:
