@@ -38,6 +38,7 @@ class servemeAPI:
                 for reservation in reservations["reservations"]:
                     if reservation["status"] != "Ended":
                         active_servers.append(reservation)
+                active_servers.reverse()
                 return active_servers
 
 

@@ -85,14 +85,6 @@ class ServerCog(commands.Cog):
             },
         ),
     ):
-        print(gamemode)
-        runner_req: bool = await util.check_if_runner(
-            interaction.guild, interaction.user
-        )
-        if runner_req == False:
-            await interaction.send("You do not have permission to reserve servers.")
-            return
-
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         servers, times = await servemeAPI().get_new_reservation(serveme_api_key)
@@ -231,7 +223,53 @@ class ServerCog(commands.Cog):
             await interaction.send("Changing map to " + map + ".")
             return
         else:
-            # TODO
+
+            class Servers(nextcord.ui.View):
+                def __init__(self):
+                    super().__init__()
+                    self.server_chosen = None
+
+            class ServerButton(nextcord.ui.Button):
+                def __init__(self, reservation, num):
+                    self.num = num
+                    super().__init__(
+                        label=f"ID #{reservation['id']} - {reservation['server']['name']}",
+                        custom_id=str(num),
+                        style=nextcord.ButtonStyle.blurple,
+                    )
+
+                async def callback(self, interaction: nextcord.Interaction):
+                    super().view.server_chosen = self.num
+                    super().view.stop()
+
+            view = Servers()
+
+            for num, reservation in enumerate(reservations):
+                button = ServerButton(reservation, num)
+                view.add_item(button)
+
             await interaction.send(
-                "There are multiple active reservations with the associated serveme account. This is not supported yet."
+                "Select a reservation to change the map on.", view=view
+            )
+            await view.wait()
+            print(view.server_chosen)
+            server_id = view.server_chosen
+
+            try:
+                command: str = await util.get_exec_command(reservations[server_id], map)
+            except Exception:
+                await interaction.edit_original_message(
+                    "Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
+                )
+                return
+
+            with Client(
+                reservations[server_id]["server"]["ip"],
+                int(reservations[server_id]["server"]["port"]),
+                passwd=reservations[server_id]["rcon"],
+            ) as client:
+                client.run(command)
+
+            await interaction.edit_original_message(
+                content="Changing map to " + map + ".", view=None
             )
