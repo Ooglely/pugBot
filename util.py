@@ -7,7 +7,14 @@ import nextcord
 
 
 class ServerNotSetupError(Exception):
-    def __init__(self, message="Server is not setup."):
+    def __init__(self, message="Server is not setup. Please run /setup."):
+        self.message = message
+
+
+class NoServemeKey(Exception):
+    def __init__(
+        self, message="No serveme key setup for the server. Please run /serveme."
+    ):
         self.message = message
 
 
@@ -46,6 +53,12 @@ def is_setup():
         if is_server_setup(interaction.guild.id) == False:
             raise ServerNotSetupError(
                 "Guild id: " + str(interaction.guild.id) + " is not setup."
+            )
+        elif get_server(interaction.guild.id).get("serveme") == None:
+            raise NoServemeKey(
+                "Guild id: "
+                + str(interaction.guild.id)
+                + " does not have a serveme key setup."
             )
         else:
             return True

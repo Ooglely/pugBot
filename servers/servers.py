@@ -64,6 +64,10 @@ class ServerCog(commands.Cog):
                 "This server has not been set up for bot usage yet; please run the /setup command.\n"
                 + str(error)
             )
+        elif error.__class__ == util.NoServemeKey:
+            await interaction.send(
+                "This server has not been set up with a serveme.tf API key yet; please run the /serveme command.\n"
+            )
         else:
             await interaction.send("An error has occurred.\n" + str(error))
 
@@ -252,7 +256,6 @@ class ServerCog(commands.Cog):
                 "Select a reservation to change the map on.", view=view
             )
             await view.wait()
-            print(view.server_chosen)
             server_id = view.server_chosen
 
             try:
