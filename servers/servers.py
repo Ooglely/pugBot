@@ -1,6 +1,7 @@
 from nextcord.ext import tasks, commands, application_checks
 from constants import *
 from servers.servemeAPI import servemeAPI
+from servers import Servers, ServerButton
 from rcon.source import Client
 
 import bs4
@@ -227,36 +228,17 @@ class ServerCog(commands.Cog):
             await interaction.send("Changing map to " + map + ".")
             return
         else:
-
-            class Servers(nextcord.ui.View):
-                def __init__(self):
-                    super().__init__()
-                    self.server_chosen = None
-
-            class ServerButton(nextcord.ui.Button):
-                def __init__(self, reservation, num):
-                    self.num = num
-                    super().__init__(
-                        label=f"ID #{reservation['id']} - {reservation['server']['name']}",
-                        custom_id=str(num),
-                        style=nextcord.ButtonStyle.blurple,
-                    )
-
-                async def callback(self, interaction: nextcord.Interaction):
-                    super().view.server_chosen = self.num
-                    super().view.stop()
-
-            view = Servers()
+            server_view = Servers()
 
             for num, reservation in enumerate(reservations):
                 button = ServerButton(reservation, num)
-                view.add_item(button)
+                server_view.add_item(button)
 
             await interaction.send(
-                "Select a reservation to change the map on.", view=view
+                "Select a reservation to change the map on.", view=server_view
             )
-            await view.wait()
-            server_id = view.server_chosen
+            await server_view.wait()
+            server_id = server_view.server_chosen
 
             try:
                 command: str = await util.get_exec_command(reservations[server_id], map)
@@ -275,4 +257,50 @@ class ServerCog(commands.Cog):
 
             await interaction.edit_original_message(
                 content="Changing map to " + map + ".", view=None
+            )
+
+    @util.is_setup()
+    @util.is_runner()
+    @nextcord.slash_command(name="rcon", guild_ids=TESTING_GUILDS)
+    async def rcon_command(self, interaction: nextcord.Interaction, command: str):
+        guild_data = database.get_server(interaction.guild.id)
+        serveme_api_key = guild_data["serveme"]
+        reservations = await servemeAPI().get_current_reservations(serveme_api_key)
+
+        if len(reservations) == 0:
+            await interaction.send(
+                "There are no active reservations with the associated serveme account."
+            )
+            return
+        elif len(reservations) == 1:
+            with Client(
+                reservations[0]["server"]["ip"],
+                int(reservations[0]["server"]["port"]),
+                passwd=reservations[0]["rcon"],
+            ) as client:
+                client.run(command)
+            await interaction.send("Ran command ```" + command + "```")
+            return
+        else:
+            server_view = Servers()
+
+            for num, reservation in enumerate(reservations):
+                button = ServerButton(reservation, num)
+                server_view.add_item(button)
+
+            await interaction.send(
+                "Select a reservation to run the command on.", view=server_view
+            )
+            await server_view.wait()
+            server_id = server_view.server_chosen
+
+            with Client(
+                reservations[server_id]["server"]["ip"],
+                int(reservations[server_id]["server"]["port"]),
+                passwd=reservations[server_id]["rcon"],
+            ) as client:
+                client.run(command)
+
+            await interaction.edit_original_message(
+                content="Ran command ```" + command + "```", view=None
             )
