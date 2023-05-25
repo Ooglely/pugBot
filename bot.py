@@ -5,7 +5,8 @@ import database
 from rglAPI import rglAPI, Player
 from constants import *
 from util import *
-from servers import ServerCog
+from servers.servers import ServerCog
+from agg.webserver import WebserverCog
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -17,6 +18,7 @@ activity = nextcord.Activity(name="tf.oog.pw :3", type=nextcord.ActivityType.wat
 bot: nextcord.Client = commands.Bot(
     command_prefix="x!", intents=intents, activity=activity
 )
+
 bot.add_cog(ServerCog(bot))
 
 RGL = rglAPI()
@@ -27,6 +29,8 @@ async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print(f"Running Rewrite: {NEW_COMMIT_NAME}")
     print("------")
+    bot.add_cog(WebserverCog(bot))
+    await bot.sync_all_application_commands()
 
 
 class SetupView(nextcord.ui.View):
@@ -70,30 +74,10 @@ class ChannelView(nextcord.ui.View):
             self.stop()
 
 
-class ApiInput(nextcord.ui.TextInput):
-    def __init__(self):
-        super().__init__(
-            label="Serveme API Key", placeholder="Enter your Serveme API Key", row=1
-        )
-
-    async def callback(self, interaction: nextcord.Interaction):
-        await interaction.response.defer()
-        self.view.serveme = self.value
-        self.view.stop()
-
-
-class ApiView(nextcord.ui.View):
-    def __init__(self):
-        super().__init__()
-        self.serveme = None
-        self.add_item(ApiInput())
-
-
 @bot.slash_command(guild_ids=TESTING_GUILDS)
 async def setup(interaction: nextcord.Interaction):
     setup_view = SetupView()
     channel_view = ChannelView()
-    api_view = ApiView()
     await interaction.send(
         "Select a role to be the runner role.", view=setup_view, ephemeral=True
     )
@@ -118,12 +102,8 @@ async def setup(interaction: nextcord.Interaction):
         name="RCON Channel", value=f"<#{channel_view.rcon}>", inline=True
     )
     await interaction.edit_original_message(content=None, embed=setup_embed, view=None)
-    database.new_server(
-        interaction.guild_id,
-        setup_view.role,
-        channel_view.connect,
-        channel_view.rcon,
-        api_view.serveme,
+    database.add_new_guild(
+        interaction.guild_id, setup_view.role, channel_view.connect, channel_view.rcon
     )
     print("New Server: " + str(interaction.guild_id))
 
