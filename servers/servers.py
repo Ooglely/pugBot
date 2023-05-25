@@ -225,7 +225,7 @@ class ServerCog(commands.Cog):
             ) as client:
                 client.run(command)
 
-            await interaction.send("Changing map to " + map + ".")
+            await interaction.send("Changing map to `" + map + "`.")
             return
         else:
             server_view = Servers()
@@ -256,7 +256,7 @@ class ServerCog(commands.Cog):
                 client.run(command)
 
             await interaction.edit_original_message(
-                content="Changing map to " + map + ".", view=None
+                content="Changing map to `" + map + "`.", view=None
             )
 
     @util.is_setup()
@@ -279,8 +279,7 @@ class ServerCog(commands.Cog):
                 passwd=reservations[0]["rcon"],
             ) as client:
                 client.run(command)
-            await interaction.send("Ran command ```" + command + "```")
-            return
+            await interaction.send("Ran command `" + command + "`")
         else:
             server_view = Servers()
 
@@ -302,5 +301,5 @@ class ServerCog(commands.Cog):
                 client.run(command)
 
             await interaction.edit_original_message(
-                content="Ran command ```" + command + "```", view=None
+                content="Ran command `" + command + "`", view=None
             )
