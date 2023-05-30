@@ -35,3 +35,15 @@ def set_guild_serveme(guild, serveme):
         {"$set": {"serveme": serveme}},
         upsert=True,
     )
+
+
+def get_player_stats(steam):
+    db = client.players.stats
+    if db.find_one({"steam": steam}) == None:
+        return None
+    return db.find_one({"steam": steam})
+
+
+def update_player_stats(steam, stats):
+    db = client.players.stats
+    db.update_one({"steam": steam}, {"$set": stats}, upsert=True)
