@@ -47,3 +47,10 @@ def get_player_stats(steam):
 def update_player_stats(steam, stats):
     db = client.players.stats
     db.update_one({"steam": steam}, {"$set": stats}, upsert=True)
+
+
+def get_steam_from_discord(discord):
+    db = client.data
+    if db["players"].find_one({"discord": str(discord)}) == None:
+        return None
+    return db["players"].find_one({"discord": str(discord)})["steam"]
