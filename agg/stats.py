@@ -1,7 +1,16 @@
+from typing import Optional
 import aiohttp
 from steam.steamid import SteamID
-from database import get_player_stats, update_player_stats
+from database import get_player_stats, update_player_stats, get_steam_from_discord
+from constants import TESTING_GUILDS
+from util import get_steam64
 import json
+import nextcord
+from nextcord.ext import commands
+from rglAPI import rglAPI
+from datetime import timedelta
+
+rglAPI = rglAPI()
 
 
 class ClassStats:
@@ -99,5 +108,61 @@ async def get_total_logs(steamID):
             return logs["results"]
 
 
-async def test_func():
-    print(await get_total_logs(76561198171178258))
+class StatsCog(commands.Cog):
+    def __init__(self, bot: nextcord.Client):
+        self.bot = bot
+
+    # TODO: Add stats command
+    @nextcord.slash_command(
+        name="stats",
+        description="Retrieve pug stats for a player",
+        guild_ids=TESTING_GUILDS,
+    )
+    async def stats(
+        self,
+        interaction: nextcord.Interaction,
+        id: Optional[str] = nextcord.SlashOption(
+            name="steam",
+            description="A steam ID, steam URL, or RGL link.",
+            required=False,
+        ),
+    ):
+        if id == None:
+            steamID = get_steam_from_discord(interaction.user.id)
+        else:
+            steamID = get_steam64(id)
+
+        if steamID == None:
+            await interaction.send(
+                "Unable to find player. Either register with the bot at <#1026980468807184385> or specify a steam ID/URL in the command."
+            )
+            return
+
+        await interaction.send("Give me a moment, grabbing all logs...")
+        print(f"ID: {steamID}")
+        info = await rglAPI.get_player(int(steamID))
+        print(info)
+        logString = f"```\n{info['name']}'s pug stats"
+
+        player = PlayerStats(int(steamID))
+        await player.import_logs_from_db()
+        await player.find_new_logs()
+        await player.update_db_player_stats()
+
+        logString += "\n  Class |  K  |  D  | DPM | KDR | Logs | Playtime"
+        stats = get_player_stats(int(steamID))
+
+        for class_stats in stats["stats"].items():
+            print(class_stats)
+            class_name = class_stats[0].capitalize()
+            class_stats = class_stats[1]
+            playtime = timedelta(seconds=class_stats["total_time"])
+            if class_stats["logs"] != 0:
+                dpm = f"{class_stats['dmg'] / (class_stats['total_time'] / 60):.1f}"
+                if class_stats["deaths"] == 0:
+                    kdr = f"{class_stats['kills']:.1f}"
+                else:
+                    kdr = f"{class_stats['kills'] / class_stats['deaths']:.1f}"
+                logString += f"\n{class_name: >8}|{class_stats['kills']: >5}|{class_stats['deaths']: >5}|{dpm: >5}|{kdr: >5}|{class_stats['logs']: >5} | {playtime}"
+        logString += "```"
+        await interaction.edit_original_message(content=logString)
