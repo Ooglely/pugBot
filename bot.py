@@ -7,6 +7,7 @@ from constants import *
 from util import *
 from servers.servers import ServerCog
 from agg.webserver import WebserverCog
+from agg.stats import StatsCog
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -20,6 +21,7 @@ bot: nextcord.Client = commands.Bot(
 )
 
 bot.add_cog(ServerCog(bot))
+bot.add_cog(StatsCog(bot))
 
 RGL = rglAPI()
 
@@ -130,13 +132,9 @@ async def create_player_embed(player: Player):
             if season["division"].startswith("RGL-"):
                 season["division"] = season["division"][4:]
             sixes_teams += (
-                season["season"]
-                + " - "
-                + season["division"]
-                + " - "
-                + season["team"]
-                + "\n"
+                f"{season['season']} - {season['division']} - {season['team']}\n"
             )
+
         embed.add_field(name="Sixes", value=sixes_teams, inline=False)
     if player.hl != []:  # HL Data
         hl_teams = ""
@@ -144,12 +142,7 @@ async def create_player_embed(player: Player):
             if season["division"].startswith("RGL-"):
                 season["division"] = season["division"][4:]
             hl_teams += (
-                season["season"]
-                + " - "
-                + season["division"]
-                + " - "
-                + season["team"]
-                + "\n"
+                f"{season['season']} - {season['division']} - {season['team']}\n"
             )
         embed.add_field(name="Highlander", value=hl_teams, inline=False)
     if player.bans[0] == True:  # Ban Info
@@ -174,6 +167,9 @@ async def search(interaction: nextcord.Interaction, steamid: str):
     rgl = await RGL.create_player(get_steam64(steamid))
     embed = await create_player_embed(rgl)
     await interaction.send(embed=embed)
+
+
+# TODO: Add automatic rgl updates
 
 
 bot.run(DISCORD_TOKEN)
