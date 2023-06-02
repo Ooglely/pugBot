@@ -4,8 +4,7 @@ from fastapi import FastAPI, Request
 import uvicorn
 import asyncio
 from rglAPI import rglAPI
-from stats import get_total_logs
-
+from agg.stats import get_total_logs
 import agg
 from constants import API_PASSWORD, PORT
 
@@ -21,7 +20,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
     @nextcord.slash_command(
         name="register",
         description="Manually register a user in the database.",
-        guild_ids=agg.SERVER_ID,
+        guild_ids=agg.AGG_SERVER_ID,
     )
     @util.is_runner()
     async def manual_registration(

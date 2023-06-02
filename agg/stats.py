@@ -2,7 +2,7 @@ from typing import Optional
 import aiohttp
 from steam.steamid import SteamID
 from database import get_player_stats, update_player_stats, get_steam_from_discord
-from constants import TESTING_GUILDS
+from agg import AGG_SERVER_ID
 from util import get_steam64
 import json
 import nextcord
@@ -116,7 +116,7 @@ class StatsCog(commands.Cog):
     @nextcord.slash_command(
         name="stats",
         description="Retrieve pug stats for a player",
-        guild_ids=TESTING_GUILDS,
+        guild_ids=AGG_SERVER_ID,
     )
     async def stats(
         self,
