@@ -1,4 +1,5 @@
 """Utility functions for use throughout the code."""
+import aiohttp
 import nextcord
 from steam import steamid
 from steam.steamid import SteamID
@@ -129,3 +130,29 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
 
     command: str = "exec " + new_config + "; changelevel " + tf_map
     return command
+
+
+async def get_all_logs():
+    """Gets the logs from logs.tf for agg.
+
+    Returns:
+        logs: dict of logs
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            "https://logs.tf/api/v1/log?uploader=76561198171178258"
+        ) as resp:
+            logs = await resp.json()
+            return logs
+
+
+async def get_log(log_id: int):
+    """Returns log data from the logs.tf API.
+
+    Returns:
+        log: dict of log
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://logs.tf/api/v1/log/" + str(log_id)) as resp:
+            log = await resp.json()
+            return log
