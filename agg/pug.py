@@ -2,9 +2,13 @@
     A cog that holds all of the commands to run pugs in agg.
 """
 import nextcord
-from nextcord.ext import commands
+from nextcord.ext import commands, tasks
 from agg import AGG_SERVER_ID, PugCategory, HL_CHANNELS, AD_CHANNELS
-from util import is_runner
+from database import get_server
+from servers.servemeAPI import servemeAPI
+from util import is_runner, get_log, get_all_logs
+
+serveme: servemeAPI = servemeAPI()
 
 
 class PugCog(commands.Cog):
@@ -18,6 +22,8 @@ class PugCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot: nextcord.Client = bot
         self.organizing: bool = False
+        self.last_log: int = 0
+        self.logs.start()  # pylint: disable=no-member
 
     @commands.Cog.listener(name="on_voice_state_update")
     async def first_to_18(
@@ -120,8 +126,36 @@ class PugCog(commands.Cog):
 
         await interaction.send("Moved players.")
 
-    # async def pug(self):
-    #    pass
+    @nextcord.slash_command(name="pug", guild_ids=AGG_SERVER_ID)
+    async def pug(self):
+        """Starts a pug using the ip.oog.pw server."""
+        return
 
-    # async def logs(self):
-    #    pass
+    @tasks.loop(minutes=1, reconnect=True)
+    async def logs(self):
+        """Checks for new logs every minute, and sends it to the log channel if it is completed."""
+        guild_data = get_server(AGG_SERVER_ID[0])
+        serveme_api_key: str = guild_data["serveme"]
+        current_reservations: dict = await serveme.get_current_reservations(
+            serveme_api_key
+        )
+        latest_reservation: dict = current_reservations["reservations"][0]
+
+        logs = await get_all_logs()
+        # If the id for the latest reservation is in the title of the latest log...
+        if str(latest_reservation["id"]) in logs["logs"][0]["title"]:
+            # If the log is new...
+            if logs["logs"][0]["id"] != self.last_log:
+                log = await get_log(latest_reservation["id"])
+                # If the pug is completed...
+                if (
+                    log["teams"]["Red"]["score"] == 3
+                    or log["teams"]["Blue"]["score"] == 3
+                ):
+                    self.last_log = logs["logs"][0]["id"]
+                    log_channel: nextcord.TextChannel = self.bot.get_channel(
+                        996985303220879390
+                    )
+                    await log_channel.send(
+                        "https://loogs.tf/" + str(logs["logs"][0]["id"])
+                    )
