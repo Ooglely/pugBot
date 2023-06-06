@@ -50,6 +50,11 @@ class ServerCog(commands.Cog):
                     SIXES_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
 
                 for tf_map in hl_list.find_all("li"):
+                    if "/" in tf_map.text:
+                        versions = tf_map.text.split(" / ", 1)
+                        for map_version in versions:
+                            HL_MAPS[map_version.strip()] = map_version.strip()
+                        continue
                     HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
 
         print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
