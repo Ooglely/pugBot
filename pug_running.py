@@ -33,14 +33,14 @@ class PugCog(commands.Cog):
                 )
                 self.organizing = True
 
-            elif len(sixes_organizing.members) >= 12:
+            elif len(sixes_organizing.members) >= 18:
                 player_string = ""
                 for player in sixes_organizing.members:
                     await player.move_to(sixes_inp)
                     player_string += f"{player.mention} "
 
                 await log_channel.send(
-                    f"First 12 players in organizing: {player_string}"
+                    f"First 18 players in organizing: {player_string}"
                 )
                 self.organizing = True
         else:
