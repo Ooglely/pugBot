@@ -120,11 +120,23 @@ class ServerCog(commands.Cog):
         serveme_api_key = guild_data["serveme"]
         servers, times = await servemeAPI().get_new_reservation(serveme_api_key)
 
+        reserve: dict
+        server_found: bool = False
+
         for server in servers["servers"]:
             if "chi" in server["ip"]:
                 if 536 != server["id"]:
                     print("New server reserved: " + str(server))
                     reserve = server
+                    server_found = True
+                    break
+
+        if not server_found:
+            for server in servers["servers"]:
+                if "ks" in server["ip"]:
+                    print("New server reserved: " + str(server))
+                    reserve = server
+                    server_found = True
                     break
 
         connect_password = "pug." + "".join(
@@ -272,7 +284,9 @@ class ServerCog(commands.Cog):
             server_view.add_item(button)
 
         await interaction.send(
-            "Select a reservation to change the map on.", view=server_view
+            "Select a reservation to change the map on.",
+            view=server_view,
+            ephemeral=True,
         )
         await server_view.wait()
         server_id = server_view.server_chosen
