@@ -1,5 +1,5 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
-import requests
+import aiohttp
 
 
 class Player:
@@ -40,13 +40,14 @@ class RGL_API:
         Returns:
             dict: The player data.
         """
-        player = requests.get(
-            self.api_url + "profile/" + str(steam_id), timeout=60
-        ).json()
-        if "statusCode" in player:
-            raise LookupError("Player does not exist in RGL")
-
-        return player
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                self.api_url + "profile/" + str(steam_id)
+            ) as player_data:
+                player = await player_data.json()
+                if "statusCode" in player:
+                    raise LookupError("Player does not exist in RGL")
+                return player
 
     async def get_all_teams(self, steam_id: int):
         """Gets all teams a player has been on.
@@ -57,9 +58,12 @@ class RGL_API:
         Returns:
             dict: The team data.
         """
-        return requests.get(
-            self.api_url + "profile/" + str(steam_id) + "/teams", timeout=60
-        ).json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                self.api_url + "profile/" + str(steam_id) + "/teams"
+            ) as team_data:
+                teams = await team_data.json()
+                return teams
 
     async def get_core_teams(self, steam_id: int):
         """Gets all 6s and HL season teams a player has been on.
