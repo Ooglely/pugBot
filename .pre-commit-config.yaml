@@ -13,6 +13,7 @@ repos:
     rev: v1.3.0  # Use the sha / tag you want to point at
     hooks:
     -   id: mypy
+        additional_dependencies: [types-requests==2.31.0.1]
         args: [--ignore-missing-imports, --check-untyped-defs]
 -   repo: local
     hooks:
