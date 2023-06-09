@@ -12,3 +12,4 @@ DB_URL = os.getenv("DB_URL") or config_file["db_connection_string"]
 VERSION = os.getenv("BOT_VERSION") or config_file["version"] or "dev"
 API_PASSWORD = os.getenv("BOT_API_PASSWORD") or None
 PORT = os.getenv("PORT") or 8000
+BOT_COLOR = 0xF0984D

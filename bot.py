@@ -4,7 +4,7 @@ from nextcord.ext import commands
 
 import database
 from rgl_api import RGL_API, Player
-from constants import TESTING_GUILDS, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
+from constants import BOT_COLOR, TESTING_GUILDS, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
 from util import get_steam64
 from servers.servers import ServerCog
 from agg.webserver import WebserverCog
@@ -24,6 +24,7 @@ bot: nextcord.Client = commands.Bot(
 bot.add_cog(ServerCog(bot))
 bot.add_cog(StatsCog(bot))
 bot.add_cog(PugCog(bot))
+bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()
 
@@ -222,6 +223,42 @@ async def search(interaction: nextcord.Interaction, steamid: str):
     rgl = await RGL.create_player(int(get_steam64(steamid)))
     embed = await create_player_embed(rgl)
     await interaction.send(embed=embed)
+
+
+@bot.slash_command(guild_ids=TESTING_GUILDS)
+async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-builtin
+    """The /help command, explains all the commands the bot has.
+
+    Args:
+        interaction (nextcord.Interaction): The interaction that invoked the command.
+    """
+    help_embed = nextcord.Embed(
+        title="pugBot Commands",
+        url="https://github.com/Ooglely/pugBot",
+        color=BOT_COLOR,
+    )
+    help_embed.set_thumbnail("https://ooglely.github.io/53EWxbz.jpeg")
+    help_embed.add_field(
+        name="Global Commands",
+        value="""/setup - Used to setup the bot for a guild (Admin only)
+                 /serveme - Used to set the serveme api key for a guild(Admin only)
+                 /search - Search for a player's RGL profile
+                 /reserve - Get a new reservation from na.serveme.tf
+                 /map - Change the map on a running reservation
+                 /rcon - Run an rcon command on an active reservation""",
+        inline=False,
+    )
+    if interaction.guild_id == 952817189893865482:
+        help_embed.add_field(
+            name="AGG Commands",
+            value="""/stats - Show a player's pug stats
+                     /register - Register a new user in the database
+                     /move - Move all players after a pug is over
+                     /pug - Not implemented yet""",
+            inline=False,
+        )
+    help_embed.set_footer(text=VERSION)
+    await interaction.send(embed=help_embed)
 
 
 # TODO: Add automatic rgl updates
