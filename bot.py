@@ -5,7 +5,7 @@ from nextcord.ext import commands
 import database
 from rgl_api import RGL_API, Player
 from constants import BOT_COLOR, TESTING_GUILDS, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
-from util import get_steam64
+from util import get_steam64, is_setup
 from servers.servers import ServerCog
 from agg.webserver import WebserverCog
 from agg.stats import StatsCog
@@ -103,7 +103,10 @@ class ChannelView(nextcord.ui.View):
             self.stop()
 
 
-@bot.slash_command(guild_ids=TESTING_GUILDS)
+@bot.slash_command(
+    guild_ids=TESTING_GUILDS,
+    default_member_permissions=nextcord.Permissions(manage_guild=True),
+)
 async def setup(interaction: nextcord.Interaction):
     """The /setup command, used to setup the bot for a guild.
 
@@ -142,7 +145,11 @@ async def setup(interaction: nextcord.Interaction):
     print("New Server: " + str(interaction.guild_id))
 
 
-@bot.slash_command(guild_ids=TESTING_GUILDS)
+@bot.slash_command(
+    guild_ids=TESTING_GUILDS,
+    default_member_permissions=nextcord.Permissions(manage_guild=True),
+)
+@is_setup()
 async def serveme(interaction: nextcord.Interaction, api_key: str):
     """The /serveme command, used to set the serveme api key for a guild.
 
