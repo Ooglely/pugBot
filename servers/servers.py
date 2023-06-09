@@ -4,8 +4,8 @@ import string
 import random
 
 import aiohttp
-import bs4
 import nextcord
+from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
 
@@ -41,7 +41,7 @@ class ServerCog(commands.Cog):
                 "https://docs.rgl.gg/league/references/maps_and_configs/"
             ) as resp:
                 html = await resp.text()
-                soup = bs4.BeautifulSoup(html, "html.parser")
+                soup = BeautifulSoup(html, "html.parser")
                 map_marker = soup.find(id="custom-map-downloads")
                 sixes_list = map_marker.find_next_sibling("ul")
                 hl_list = sixes_list.find_next_sibling("ul")
