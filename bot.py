@@ -150,7 +150,7 @@ async def serveme(interaction: nextcord.Interaction, api_key: str):
         api_key (str): The api key to set.
     """
     database.set_guild_serveme(interaction.guild_id, api_key)
-    await interaction.send("Serveme API Key set!")
+    await interaction.send("Serveme API Key set!", ephemeral=True)
 
 
 async def create_player_embed(player: Player) -> nextcord.Embed:
