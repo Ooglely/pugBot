@@ -10,11 +10,11 @@ from steam.steamid import SteamID
 
 from agg import AGG_SERVER_ID
 from database import get_player_stats, update_player_stats, get_steam_from_discord
-from rglAPI import rglAPI
+from rgl_api import RGL_API
 from util import get_steam64
 
 
-RGL: rglAPI = rglAPI()
+RGL: RGL_API = RGL_API()
 
 
 class ClassStats:
@@ -127,7 +127,7 @@ class PlayerStats:
 
     async def update_db_player_stats(self):
         """Updates the database with the stats stored in the class"""
-        update_player_stats(self.steam64, self.__dict__)
+        update_player_stats(self.steam64, self.__dict__)  # type: ignore
 
 
 async def get_total_logs(steam_id: str):

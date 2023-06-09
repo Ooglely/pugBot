@@ -1,7 +1,6 @@
 """This file contains the classes used in the agg commands,
 and the IDs for the agg guild and channels."""
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
-import nextcord
 
 
 class NewUser(BaseModel):

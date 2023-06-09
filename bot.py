@@ -3,7 +3,7 @@ import nextcord
 from nextcord.ext import commands
 
 import database
-from rglAPI import rglAPI, Player
+from rgl_api import RGL_API, Player
 from constants import TESTING_GUILDS, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
 from util import get_steam64
 from servers.servers import ServerCog
@@ -25,7 +25,7 @@ bot.add_cog(ServerCog(bot))
 bot.add_cog(StatsCog(bot))
 bot.add_cog(PugCog(bot))
 
-RGL = rglAPI()
+RGL: RGL_API = RGL_API()
 
 
 @bot.event
@@ -181,9 +181,9 @@ async def create_player_embed(player: Player) -> nextcord.Embed:
             )
 
         embed.add_field(name="Sixes", value=sixes_teams, inline=False)
-    if player.hl != []:  # HL Data
+    if player.highlander != []:  # HL Data
         hl_teams = ""
-        for season in player.hl:
+        for season in player.highlander:
             if season["division"].startswith("RGL-"):
                 season["division"] = season["division"][4:]
             hl_teams += (

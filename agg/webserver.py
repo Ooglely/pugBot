@@ -8,10 +8,10 @@ import agg
 import util
 from agg.stats import get_total_logs
 from constants import API_PASSWORD, PORT
-from rglAPI import rglAPI
+from rgl_api import RGL_API
 
 app: FastAPI = FastAPI()
-RGL: rglAPI = rglAPI()
+RGL: RGL_API = RGL_API()
 
 
 class WebserverCog(nextcord.ext.commands.Cog):

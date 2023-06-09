@@ -12,7 +12,7 @@ from rcon.source import Client
 import database
 import util
 from constants import TESTING_GUILDS, VERSION
-from servers.servemeAPI import servemeAPI
+from servers.serveme_api import ServemeAPI
 from servers import Servers, ServerButton
 
 
@@ -118,7 +118,7 @@ class ServerCog(commands.Cog):
         """
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await servemeAPI().get_new_reservation(serveme_api_key)
+        servers, times = await ServemeAPI().get_new_reservation(serveme_api_key)
 
         reserve: dict
         server_found: bool = False
@@ -250,7 +250,7 @@ class ServerCog(commands.Cog):
         """
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await servemeAPI().get_current_reservations(serveme_api_key)
+        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
 
         if len(reservations) == 0:
             await interaction.send(
@@ -325,7 +325,7 @@ class ServerCog(commands.Cog):
         """
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await servemeAPI().get_current_reservations(serveme_api_key)
+        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
 
         if len(reservations) == 0:
             await interaction.send(

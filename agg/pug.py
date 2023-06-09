@@ -1,14 +1,12 @@
-"""
-    A cog that holds all of the commands to run pugs in agg.
-"""
+"""A cog that holds all of the commands to run pugs in agg."""
 import nextcord
 from nextcord.ext import commands, tasks
 from agg import AGG_SERVER_ID, PugCategory, HL_CHANNELS, AD_CHANNELS
 from database import get_server
-from servers.servemeAPI import servemeAPI
+from servers.serveme_api import ServemeAPI
 from util import is_runner, get_log, get_all_logs
 
-serveme: servemeAPI = servemeAPI()
+serveme: ServemeAPI = ServemeAPI()
 
 
 class PugCog(commands.Cog):
@@ -17,6 +15,7 @@ class PugCog(commands.Cog):
     Attributes:
         bot (nextcord.Client): The bot client.
         organizing (bool): Whether or not a pug is being organized.
+        last_log (int): Last log sent in the log channel.
     """
 
     def __init__(self, bot: nextcord.Client):
@@ -127,8 +126,9 @@ class PugCog(commands.Cog):
         await interaction.send("Moved players.")
 
     @nextcord.slash_command(name="pug", guild_ids=AGG_SERVER_ID)
-    async def pug(self):
+    async def pug(self, interaction=nextcord.Interaction):
         """Starts a pug using the ip.oog.pw server."""
+        interaction.send("Not implemented yet.")
         return
 
     @tasks.loop(minutes=1, reconnect=True)

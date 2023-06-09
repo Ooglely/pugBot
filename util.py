@@ -126,7 +126,7 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
         else:
             new_config = "rgl_off"
     else:
-        raise Exception("Invalid whitelist ID.")
+        raise ValueError("Invalid whitelist ID.")
 
     command: str = "exec " + new_config + "; changelevel " + tf_map
     return command
