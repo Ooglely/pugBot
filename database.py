@@ -144,6 +144,7 @@ def get_player_from_steam(steam: int):
 def get_all_players():
     """Get all players from the database."""
     database = client.players.data
+    print(database.count_documents({}))
     return database.find()
 
 
