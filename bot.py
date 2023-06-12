@@ -65,7 +65,6 @@ async def on_ready():
 @bot.listen("on_message")
 async def playerListener(message):
     if message.content.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
-
         rgl = rglSearch(get_steam64(message.content))
 
         url = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(
@@ -95,7 +94,6 @@ async def playerListener(message):
 
 @bot.command()
 async def search(ctx, arg: str):
-
     rgl = rglSearch(get_steam64(arg))
 
     url = "https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(get_steam64(arg))

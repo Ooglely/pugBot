@@ -5,9 +5,9 @@ from rglSearch import rglAPI
 
 MONGO_URL = os.environ["MONGO_URL"]
 
-client = pymongo.MongoClient(
-    MONGO_URL + "/?retryWrites=true&w=majority"
-)
+client = pymongo.MongoClient(MONGO_URL + "/?retryWrites=true&w=majority")
+
+
 # db = client.players
 def get_player_from_steam(steam):
     db = client.data.players

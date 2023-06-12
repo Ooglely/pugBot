@@ -83,15 +83,8 @@ class ServerCog(commands.Cog):
         rconPassword = "rcon.pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=20)
         )
-
-        if ctx.channel.id == 996415628007186542:  # HL Channels
-            map = random.choice(kothmaps)
-
-        elif ctx.channel.id == 997602235208962150:  # 6s Channels
-            map = random.choice(sixes_maps)[1]
-
-        else:
-            map = "koth_product_final"
+        
+        map = "koth_product_final"
 
         reserveString = {
             "reservation": {
@@ -196,32 +189,18 @@ class ServerCog(commands.Cog):
         ip = rconCommand.split(" ")[1].split(":")[0]
         port = rconCommand.split(" ")[1].split(":")[1].split(";")[0]
         password = rconCommand.split(" ")[3].split('"')[1]
-
-        if ctx.channel.id == 996415628007186542:  # HL Channels
-            for hlmap in hl_maps:
-                if map == hlmap[0]:
-                    map = hlmap[1]
-                    break
-            if map.startswith("cp_"):
-                config = "rgl_HL_stopwatch"
-            elif map.startswith("koth_"):
-                config = "rgl_HL_koth_bo5"
-            elif map.startswith("pl_"):
-                config = "rgl_HL_stopwatch"
-            whitelist_command = "tftrue_whitelist_id 13297"
-
-        elif (
-            ctx.channel.id == 997602235208962150 or ctx.guild.id == 987879398017474590
-        ):  # 6s Channels
-            for sixesmap in sixes_maps:
-                if map == sixesmap[0]:
-                    map = sixesmap[1]
-                    break
-            if map.startswith("cp_"):
-                config = "rgl_6s_5cp_scrim"
-            elif map.startswith("koth_"):
-                config = "rgl_6s_koth_bo5"
-            whitelist_command = "tftrue_whitelist_id 12241"
+        
+        for hlmap in hl_maps:
+            if map == hlmap[0]:
+                map = hlmap[1]
+                break
+        if map.startswith("cp_"):
+            config = "rgl_HL_stopwatch"
+        elif map.startswith("koth_"):
+            config = "rgl_HL_koth_bo5"
+        elif map.startswith("pl_"):
+            config = "rgl_HL_stopwatch"
+        whitelist_command = "tftrue_whitelist_id 13297"
 
         command = "exec " + config + "; changelevel " + map
 
