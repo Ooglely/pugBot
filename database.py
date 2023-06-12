@@ -1,6 +1,7 @@
 """Functions for interacting with the database throughout the bot."""
 import pymongo
 import constants
+from rgl_api import RGL_API
 
 client = pymongo.MongoClient(constants.DB_URL)
 
@@ -106,3 +107,61 @@ def get_steam_from_discord(discord: int):
     if database.find_one({"discord": str(discord)}) is None:
         return None
     return database.find_one({"discord": str(discord)})["steam"]
+
+
+def get_all_players():
+    """Get all players from the database."""
+    database = client.players.data
+    return database.find()
+
+
+def get_divisions(discord: int):
+    """Get the RGL divisons of a player.
+
+    Args:
+        discord (int): The discord ID to get.
+
+    Returns:
+        dict: The top divs of the player.
+    """
+    database = client.players.data
+    if database.find_one({"discord": str(discord)}) is None:
+        return None
+    return database.find_one({"discord": str(discord)})["divison"]
+
+
+async def update_divisons(steam: int):
+    """Update the RGL divisons of a player.
+
+    Args:
+        steam (int): The steam ID to update.
+    """
+    database = client.players.data
+    sixes_top, hl_top = await RGL_API().get_top_div(steam)
+    database.update_one(
+        {"steam": str(steam)},
+        {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
+        upsert=True,
+    )
+
+
+async def update_rgl_ban_status(steam: int) -> bool:
+    """Update the RGL ban status of a player.
+
+    Args:
+        steam (int): The steam ID to update.
+
+    Returns:
+        bool: True if the player is banned, False otherwise.
+    """
+    database = client.players.data
+    try:
+        ban_status = await RGL_API().check_banned(steam)
+    except LookupError:
+        ban_status = False
+    database.update_one(
+        {"steam": str(steam)},
+        {"$set": {"rgl_ban": ban_status}},
+        upsert=True,
+    )
+    return ban_status
