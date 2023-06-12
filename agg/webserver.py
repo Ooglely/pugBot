@@ -45,8 +45,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             int(discord_user.id), int(util.get_steam64(steam_id))
         )
         await interaction.send(
-            f"""User registered.\nSteam: `{util.get_steam64(steam_id)}`\n
-            Discord: `{discord_user.id}`""",
+            f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
             ephemeral=True,
         )
 
@@ -103,13 +102,14 @@ class WebserverCog(nextcord.ext.commands.Cog):
         )
 
         nc_am_role: nextcord.Role = agg_server.get_role(992286429881303101)
-        im_ma_role: nextcord.Role = agg_server.get_role(992281832437596180)
+        im_role: nextcord.Role = agg_server.get_role(992281832437596180)
+        main_role: nextcord.Role = agg_server.get_role(1117852769823502397)
         ad_in_role: nextcord.Role = agg_server.get_role(1060021145212047391)
-        hl_ban_role: nextcord.Role = agg_server.get_role(1060020104462606396)
-        six_ban_role: nextcord.Role = agg_server.get_role(1060020133495578704)
 
-        sixes_role: nextcord.Role = agg_server.get_role(997600373399359608)
+        hl_ban_role: nextcord.Role = agg_server.get_role(1060020104462606396)
+
         hl_role: nextcord.Role = agg_server.get_role(997600342306988112)
+        ad_role: nextcord.Role = agg_server.get_role(997600373399359608)
 
         registered_role: nextcord.Role = agg_server.get_role(1059583976039252108)
 
@@ -155,8 +155,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             )
             await new_regs_channel.send(embed=registration_embed)
             await registration_channel.send(
-                f"""<@{discord_id}> - Your RGL profile does not exist.
-                Please create one at https://rgl.gg/?showFront=true and try again."""
+                f"<@{discord_id}> - Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
             )
             await discord_user.remove_roles(registered_role)
             return
@@ -168,10 +167,12 @@ class WebserverCog(nextcord.ext.commands.Cog):
         sixes_top, hl_top = await RGL.get_top_div(steam_id)
         if sixes_top[0] == 0 and hl_top[0] == 0:
             checks_field += "\n❌ No RGL team history"
+            registration_embed.add_field(
+                name="Checks", value=checks_field, inline=False
+            )
             await new_regs_channel.send(embed=registration_embed)
             await registration_channel.send(
-                f"""<@{discord_id}> - Your registration is being looked
-                over manually due to having no RGL history."""
+                f"<@{discord_id}> - Your registration is being looked over manually due to having no RGL history."
             )
             return
 
@@ -185,37 +186,33 @@ class WebserverCog(nextcord.ext.commands.Cog):
             )
             await new_regs_channel.send(embed=registration_embed)
             await registration_channel.send(
-                f"""<@{discord_id}> - You are currently banned from RGL.
-                We do not let banned players into pugs.
-                Come back after your ban expires."""
+                f"<@{discord_id}> - You are currently banned from RGL. We do not let banned players into pugs. Come back after your ban expires."
             )
             return
 
         checks_field += "\n✅ Not banned from RGL"
 
         # 5. If they are ADV/INV, they get the div ban role. Else, give them the right div role.
-        await discord_user.remove_roles(nc_am_role, im_ma_role)
-        if discord_user.get_role(1060036280970395730) is None:
-            if sixes_top[0] >= 5:
-                await discord_user.add_roles(six_ban_role)
-            if hl_top[0] >= 5:
-                await discord_user.add_roles(hl_ban_role)
-            if sixes_top[0] >= 5 or hl_top[0] >= 5:
-                await div_appeal_channel.send(
-                    f"""<@{discord_id}> You have been automatically restricted from normal pugs
-                    due to having Advanced/Invite experience in Highlander.\n
-                    If you believe that you should be let in (for example, you roster
-                    rode on your Advanced seasons), please let us know. Note, this does not mean
-                    you are restricted from After Dark pugs."""
-                )
-        if sixes_top[0] >= 5 or hl_top[0] >= 5:
-            await discord_user.add_roles(ad_in_role)
-        elif sixes_top[0] >= 3 or hl_top[0] >= 3:
-            await discord_user.add_roles(im_ma_role)
-        else:
-            await discord_user.add_roles(nc_am_role)
+        await discord_user.add_roles(hl_role)
 
-        await discord_user.add_roles(sixes_role, hl_role)
+        hl_top_div: int = hl_top[0]
+        await discord_user.remove_roles(nc_am_role, im_role, main_role)
+        # Div bybass role
+        if discord_user.get_role(1060036280970395730) is None:
+            if hl_top_div >= 5:  # Advanced and up
+                await discord_user.add_roles(hl_ban_role)
+                await discord_user.remove_roles(hl_role)
+                await div_appeal_channel.send(
+                    f"<@{discord_id}> You have been automatically restricted from normal pugs due to having Advanced/Invite experience in Highlander.\nIf you believe that you should be let in (for example, you roster rode on your Advanced seasons), please let us know.\nNote, this does not mean you are restricted from After Dark pugs."
+                )
+        if hl_top_div >= 5:  # Advanced and up
+            await discord_user.add_roles(ad_in_role, ad_role)
+        elif hl_top_div >= 4:  # Main
+            await discord_user.add_roles(main_role, ad_role)
+        elif hl_top_div >= 3:  # IM
+            await discord_user.add_roles(im_role)
+        else:  # NC/AM
+            await discord_user.add_roles(nc_am_role)
 
         # Send the final registration embed to the new-registrations channel.
         registration_embed.add_field(name="Checks", value=checks_field, inline=False)
