@@ -2,8 +2,12 @@
 import json
 import os
 
-with open("config.json", encoding="UTF-8") as json_file:
-    config_file = json.load(json_file)
+if os.path.isfile("./config.json"):
+    with open("config.json", encoding="UTF-8") as config:
+        config_file = json.load(config)
+else:
+    with open("example_config.json", encoding="UTF-8") as example_config:
+        config_file = json.load(example_config)
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN") or config_file["discord_token"]
 NEW_COMMIT_NAME = os.getenv("RAILWAY_GIT_COMMIT_SHA") or "Local Test"
