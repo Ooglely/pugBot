@@ -10,6 +10,7 @@ from servers.servers import ServerCog
 from agg.webserver import WebserverCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
+from agg.update_roles import UpdateRolesCog
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -24,6 +25,7 @@ bot: nextcord.Client = commands.Bot(
 bot.add_cog(ServerCog(bot))
 bot.add_cog(StatsCog(bot))
 bot.add_cog(PugCog(bot))
+bot.add_cog(UpdateRolesCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()

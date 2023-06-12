@@ -25,9 +25,7 @@ class PugCog(commands.Cog):
         self.logs.start()  # pylint: disable=no-member
 
     @commands.Cog.listener(name="on_voice_state_update")
-    async def first_to_18(
-        self, member, state_before, state_after
-    ):  # pylint: disable=unused-argument
+    async def first_to_18(self, _member, state_before, state_after):
         """Moves the first 18 players in organizing to the inp channel.
 
         Keeps track of the first 18 players so that they are given priority to be chosen.
@@ -142,6 +140,7 @@ class PugCog(commands.Cog):
     @tasks.loop(minutes=1, reconnect=True)
     async def logs(self):
         """Checks for new logs every minute, and sends it to the log channel if it is completed."""
+        print("Checking for new logs...")
         guild_data = get_server(AGG_SERVER_ID[0])
         serveme_api_key: str = guild_data["serveme"]
         current_reservations: dict = await serveme.get_current_reservations(

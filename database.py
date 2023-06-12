@@ -3,6 +3,8 @@ import pymongo
 import constants
 from rgl_api import RGL_API
 
+RGL: RGL_API = RGL_API()
+
 client = pymongo.MongoClient(constants.DB_URL)
 
 
@@ -68,6 +70,21 @@ def set_guild_serveme(guild: int, serveme: str):
     )
 
 
+def add_player(steam: str, discord: str):
+    """Add a new player to the database.
+
+    Args:
+        steam (int): The steam ID to add.
+        discord (int): The discord ID to add.
+    """
+    database = client.players.data
+    database.update_one(
+        {"steam": steam},
+        {"$set": {"steam": steam, "discord": discord, "rgl_registered": False}},
+        upsert=True,
+    )
+
+
 def get_player_stats(steam: int):
     """Get the player stats from the database.
 
@@ -83,11 +100,11 @@ def get_player_stats(steam: int):
     return database.find_one({"steam": steam})
 
 
-def update_player_stats(steam: int, stats: dict):
+def update_player_stats(steam: str, stats: dict):
     """Update the player stats in the database.
 
     Args:
-        steam (int): The steam ID to update.
+        steam (str): The steam ID to update.
         stats (dict): The stats to update.
     """
     database = client.players.stats
@@ -152,7 +169,7 @@ async def update_divisons(steam: int):
         steam (int): The steam ID to update.
     """
     database = client.players.data
-    sixes_top, hl_top = await RGL_API().get_top_div(steam)
+    sixes_top, hl_top = await RGL.get_top_div(steam)
     database.update_one(
         {"steam": str(steam)},
         {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
@@ -171,7 +188,7 @@ async def update_rgl_ban_status(steam: int) -> bool:
     """
     database = client.players.data
     try:
-        ban_status = await RGL_API().check_banned(steam)
+        ban_status = await RGL.check_banned(steam)
     except LookupError:
         ban_status = False
     database.update_one(

@@ -8,6 +8,7 @@ import agg
 import util
 from agg.stats import get_total_logs
 from constants import API_PASSWORD, PORT
+from database import add_player
 from rgl_api import RGL_API
 
 app: FastAPI = FastAPI()
@@ -44,6 +45,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         await self.check_new_register_ping(
             int(discord_user.id), int(util.get_steam64(steam_id))
         )
+        add_player(util.get_steam64(steam_id), str(discord_user.id))
         await interaction.send(
             f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
             ephemeral=True,
