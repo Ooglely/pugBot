@@ -1,3 +1,6 @@
+ci:
+    skip: [pylint]
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
@@ -9,3 +12,18 @@ repos:
     rev: 23.3.0
     hooks:
     -   id: black
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.3.0  # Use the sha / tag you want to point at
+    hooks:
+    -   id: mypy
+        additional_dependencies: [types-requests==2.31.0.1]
+        args: [--ignore-missing-imports, --check-untyped-defs]
+-   repo: local
+    hooks:
+    -   id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        args:
+          - "--rcfile=.pylintrc"

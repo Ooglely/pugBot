@@ -9,3 +9,5 @@ test.py
 chat_from_logs.py
 *.log
 test_bot.py
+code_test.py
+sample_reservation.json

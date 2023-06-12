@@ -1,70 +1,198 @@
+"""Functions for interacting with the database throughout the bot."""
 import pymongo
-import os
+import constants
+from rgl_api import RGL_API
 
-from rglSearch import rglAPI
+RGL: RGL_API = RGL_API()
 
-MONGO_URL = os.environ["MONGO_URL"]
-
-client = pymongo.MongoClient(MONGO_URL + "/?retryWrites=true&w=majority")
+client = pymongo.MongoClient(constants.DB_URL)
 
 
-# db = client.players
-def get_player_from_steam(steam):
-    db = client.data.players
-    if db.find_one({"steam": str(steam)}) == None:
+def is_server_setup(guild: int):
+    """Check if a server is setup.
+
+    Args:
+        guild (int): The guild ID to check.
+
+    Returns:
+        bool: True if the server is setup, False otherwise.
+    """
+    database = client.guilds.config
+    if database.find_one({"guild": guild}) is None:
+        return False
+    return True
+
+
+def add_new_guild(guild: int, role: int, connect: int, rcon: int):
+    """Add a new guild to the database.
+
+    Args:
+        guild (int): The guild ID to add.
+        role (int): The runner role ID.
+        connect (int): The connect channel ID.
+        rcon (int): The rcon channel ID.
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$set": {"role": role, "connect": connect, "rcon": rcon}},
+        upsert=True,
+    )
+
+
+def get_server(guild: int):
+    """Get the server data from the database.
+
+    Args:
+        guild (int): The guild ID to get.
+
+    Returns:
+        dict: The server data from the db.
+    """
+    database = client.guilds.config
+    if database.find_one({"guild": guild}) is None:
         return None
-    return db.find_one({"steam": str(steam)})
+    return database.find_one({"guild": guild})
 
 
-def get_steam_from_discord(discord):
-    db = client.data
-    if db["players"].find_one({"discord": str(discord)}) == None:
+def set_guild_serveme(guild: int, serveme: str):
+    """Set the serveme key for a guild.
+
+    Args:
+        guild (int): The guild ID to set.
+        serveme (str): The serveme key to set.
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$set": {"serveme": serveme}},
+        upsert=True,
+    )
+
+
+def add_player(steam: str, discord: str):
+    """Add a new player to the database.
+
+    Args:
+        steam (int): The steam ID to add.
+        discord (int): The discord ID to add.
+    """
+    database = client.players.data
+    database.update_one(
+        {"steam": steam},
+        {"$set": {"steam": steam, "discord": discord, "rgl_registered": False}},
+        upsert=True,
+    )
+
+
+def get_player_stats(steam: int):
+    """Get the player stats from the database.
+
+    Args:
+        steam (int): The steam ID to get.
+
+    Returns:
+        dict: The player stats from the db.
+    """
+    database = client.players.stats
+    if database.find_one({"steam": steam}) is None:
         return None
-    return db["players"].find_one({"discord": str(discord)})["steam"]
+    return database.find_one({"steam": steam})
 
 
-def get_player_stats(steam):
-    db = client.data.stats
-    if db.find_one({"steam": steam}) == None:
+def update_player_stats(steam: str, stats: dict):
+    """Update the player stats in the database.
+
+    Args:
+        steam (str): The steam ID to update.
+        stats (dict): The stats to update.
+    """
+    database = client.players.stats
+    database.update_one({"steam": steam}, {"$set": stats}, upsert=True)
+
+
+def get_steam_from_discord(discord: int):
+    """Get the steam ID from the database.
+
+    Args:
+        discord (int): The discord ID to get.
+
+    Returns:
+        dict: The steam ID from the db.
+    """
+    database = client.players.data
+    if database.find_one({"discord": str(discord)}) is None:
         return None
-    return db.find_one({"steam": steam})
+    return database.find_one({"discord": str(discord)})["steam"]
 
 
-def add_player_stats(player):
-    db = client.data.stats
-    db.update_one({"steam": player["steam"]}, {"$set": player}, upsert=True)
+def get_player_from_steam(steam: int):
+    """Get the player from the database.
+
+    Args:
+        steam (int): The steam ID to get.
+
+    Returns:
+        dict: Player data
+    """
+    database = client.players.data
+    if database.find_one({"steam": str(steam)}) is None:
+        return None
+    return database.find_one({"steam": str(steam)})
 
 
 def get_all_players():
-    db = client.data.players
-    return db.find()
+    """Get all players from the database."""
+    database = client.players.data
+    return database.find()
 
 
-def get_divisions(discordID):
-    db = client.data.players
-    if db.find_one({"discord": str(discordID)}) == None:
+def get_divisions(discord: int):
+    """Get the RGL divisons of a player.
+
+    Args:
+        discord (int): The discord ID to get.
+
+    Returns:
+        dict: The top divs of the player.
+    """
+    database = client.players.data
+    if database.find_one({"discord": str(discord)}) is None:
         return None
-    return db.find_one({"discord": str(discordID)})["divison"]
+    return database.find_one({"discord": str(discord)})["divison"]
 
 
-async def update_divisons(steamID: int):
-    db = client.data.players
-    sixes_top, hl_top = await rglAPI().get_top_div(steamID)
-    db.update_one(
-        {"steam": str(steamID)},
+async def update_divisons(steam: int):
+    """Update the RGL divisons of a player.
+
+    Args:
+        steam (int): The steam ID to update.
+    """
+    database = client.players.data
+    sixes_top, hl_top = await RGL.get_top_div(steam)
+    database.update_one(
+        {"steam": str(steam)},
         {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
         upsert=True,
     )
 
 
-async def update_rgl_ban_status(steamID: int) -> bool:
-    db = client.data.players
+async def update_rgl_ban_status(steam: int) -> bool:
+    """Update the RGL ban status of a player.
+
+    Args:
+        steam (int): The steam ID to update.
+
+    Returns:
+        bool: True if the player is banned, False otherwise.
+    """
+    database = client.players.data
     try:
-        ban_status = await rglAPI().check_banned(steamID)
+        ban_status = await RGL.check_banned(steam)
     except LookupError:
         ban_status = False
-    db.update_one(
-        {"steam": str(steamID)},
+    database.update_one(
+        {"steam": str(steam)},
         {"$set": {"rgl_ban": ban_status}},
         upsert=True,
     )
