@@ -79,14 +79,12 @@ class ServerCog(commands.Cog):
             )
         elif error.__class__ == util.ServerNotSetupError:
             await interaction.send(
-                """This server has not been set up for bot usage yet;
-                please run the /setup command.\n"""
+                "This server has not been set up for bot usage yet; please run the /setup command.\n"
                 + str(error)
             )
         elif error.__class__ == util.NoServemeKey:
             await interaction.send(
-                """This server has not been set up with a serveme.tf API key yet;
-                please run the /serveme command.\n"""
+                "This server has not been set up with a serveme.tf API key yet; please run the /serveme command.\n"
             )
         else:
             await interaction.send("An error has occurred.\n" + str(error))

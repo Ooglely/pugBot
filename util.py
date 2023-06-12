@@ -85,9 +85,7 @@ def is_setup():
             )
         if get_server(interaction.guild.id).get("serveme") is None:
             raise NoServemeKey(
-                "Guild id: "
-                + str(interaction.guild.id)
-                + " does not have a serveme key setup."
+                f"Guild id: {str(interaction.guild.id)}  does not have a serveme key setup."
             )
 
         return True

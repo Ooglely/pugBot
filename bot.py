@@ -5,7 +5,7 @@ from nextcord.ext import commands
 import database
 from rgl_api import RGL_API, Player
 from constants import BOT_COLOR, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
-from util import get_steam64, is_setup
+from util import get_steam64
 from servers.servers import ServerCog
 from agg.webserver import WebserverCog
 from agg.stats import StatsCog
@@ -150,7 +150,6 @@ async def setup(interaction: nextcord.Interaction):
     description="Set the serveme api key for this server.",
     default_member_permissions=nextcord.Permissions(manage_guild=True),
 )
-@is_setup()
 async def serveme(interaction: nextcord.Interaction, api_key: str):
     """The /serveme command, used to set the serveme api key for a guild.
 
