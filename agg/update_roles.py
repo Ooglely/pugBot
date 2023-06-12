@@ -1,6 +1,5 @@
 """Contains the cog to update users roles over time."""
 import asyncio
-import datetime
 import nextcord
 from nextcord.ext import tasks, commands
 
@@ -11,8 +10,6 @@ from rgl_api import RGL_API
 
 RGL: RGL_API = RGL_API()
 
-update_time = datetime.time(hour=6, minute=0, tzinfo=datetime.timezone.utc)
-
 
 class UpdateRolesCog(commands.Cog):
     """Contains the cog to update users roles over time."""
@@ -21,7 +18,7 @@ class UpdateRolesCog(commands.Cog):
         self.bot: nextcord.Client = bot
         self.update_rgl.start()  # pylint: disable=no-member
 
-    @tasks.loop(hours=1)  # time=update_time
+    @tasks.loop(hours=24)  # time=update_time
     async def update_rgl(self):
         """Updates RGL divisions and roles for all registered players"""
         print("Updating RGL divisions and roles for all registered players...")
