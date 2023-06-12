@@ -202,10 +202,11 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 await discord_user.add_roles(hl_ban_role)
             if sixes_top[0] >= 5 or hl_top[0] >= 5:
                 await div_appeal_channel.send(
-                    f"""<@{discord_id}> You have been automatically restricted from pugs
-                    due to having Advanced/Invite experience in Highlander or 6s.\n
+                    f"""<@{discord_id}> You have been automatically restricted from normal pugs
+                    due to having Advanced/Invite experience in Highlander.\n
                     If you believe that you should be let in (for example, you roster
-                    rode on your Advanced seasons), please let us know."""
+                    rode on your Advanced seasons), please let us know. Note, this does not mean
+                    you are restricted from After Dark pugs."""
                 )
         if sixes_top[0] >= 5 or hl_top[0] >= 5:
             await discord_user.add_roles(ad_in_role)
