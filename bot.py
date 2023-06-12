@@ -212,11 +212,10 @@ async def player_listener(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
-    if message.guild.id != 952817189893865482:
-        if message.content.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
-            rgl = await RGL.create_player(int(get_steam64(message.content)))
-            embed = await create_player_embed(rgl)
-            await message.channel.send(embed=embed)
+    if message.content.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
+        rgl = await RGL.create_player(int(get_steam64(message.content)))
+        embed = await create_player_embed(rgl)
+        await message.channel.send(embed=embed)
 
 
 @bot.slash_command(
