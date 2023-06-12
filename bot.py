@@ -273,7 +273,4 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
     await interaction.send(embed=help_embed)
 
 
-# TODO: Add automatic rgl updates
-
-
 bot.run(DISCORD_TOKEN)
