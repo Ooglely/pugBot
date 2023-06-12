@@ -4,7 +4,7 @@ from nextcord.ext import commands
 
 import database
 from rgl_api import RGL_API, Player
-from constants import BOT_COLOR, TESTING_GUILDS, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
+from constants import BOT_COLOR, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
 from util import get_steam64, is_setup
 from servers.servers import ServerCog
 from agg.webserver import WebserverCog
@@ -18,9 +18,7 @@ intents.message_content = True
 intents.voice_states = True
 
 activity = nextcord.Activity(name="tf.oog.pw :3", type=nextcord.ActivityType.watching)
-bot: nextcord.Client = commands.Bot(
-    command_prefix="x!", intents=intents, activity=activity
-)
+bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
 
 bot.add_cog(ServerCog(bot))
 bot.add_cog(StatsCog(bot))
@@ -35,11 +33,10 @@ RGL: RGL_API = RGL_API()
 async def on_ready():
     """Prints bot information on ready, starts webserver, and syncs commands."""
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print(f"Running Rewrite: {NEW_COMMIT_NAME}")
+    print(f"Running: {NEW_COMMIT_NAME}")
     print("------")
     # Need to add cog on ready instead of before for webserver async to be friendly
     bot.add_cog(WebserverCog(bot))
-    await bot.sync_all_application_commands()
 
 
 class SetupView(nextcord.ui.View):
@@ -108,7 +105,6 @@ class ChannelView(nextcord.ui.View):
 @bot.slash_command(
     name="setup",
     description="Setup the bot for this server.",
-    guild_ids=TESTING_GUILDS,
     default_member_permissions=nextcord.Permissions(manage_guild=True),
 )
 async def setup(interaction: nextcord.Interaction):
@@ -152,7 +148,6 @@ async def setup(interaction: nextcord.Interaction):
 @bot.slash_command(
     name="serveme",
     description="Set the serveme api key for this server.",
-    guild_ids=TESTING_GUILDS,
     default_member_permissions=nextcord.Permissions(manage_guild=True),
 )
 @is_setup()
@@ -226,9 +221,7 @@ async def player_listener(message: nextcord.Message):
 
 
 @bot.slash_command(
-    name="search",
-    description="Search for an RGL profile and display it.",
-    guild_ids=TESTING_GUILDS,
+    name="search", description="Search for an RGL profile and display it."
 )
 async def search(interaction: nextcord.Interaction, steamid: str):
     """Search for a players RGL profile and generate the embed.
@@ -243,9 +236,7 @@ async def search(interaction: nextcord.Interaction, steamid: str):
 
 
 @bot.slash_command(
-    name="help",
-    description="Displays all the bots commands and their purpose.",
-    guild_ids=TESTING_GUILDS,
+    name="help", description="Displays all the bots commands and their purpose."
 )
 async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-builtin
     """The /help command, explains all the commands the bot has.

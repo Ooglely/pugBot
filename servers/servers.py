@@ -11,7 +11,7 @@ from rcon.source import Client
 
 import database
 import util
-from constants import TESTING_GUILDS, VERSION
+from constants import VERSION
 from servers.serveme_api import ServemeAPI
 from servers import Servers, ServerButton
 
@@ -92,9 +92,7 @@ class ServerCog(commands.Cog):
             await interaction.send("An error has occurred.\n" + str(error))
 
     @nextcord.slash_command(
-        name="reserve",
-        description="Reserve a new server on na.serveme.tf.",
-        guild_ids=TESTING_GUILDS,
+        name="reserve", description="Reserve a new server on na.serveme.tf."
     )
     @util.is_setup()
     @util.is_runner()
@@ -237,11 +235,7 @@ class ServerCog(commands.Cog):
 
     @util.is_setup()
     @util.is_runner()
-    @nextcord.slash_command(
-        name="map",
-        description="Change the map on a reservation.",
-        guild_ids=TESTING_GUILDS,
-    )
+    @nextcord.slash_command(name="map", description="Change the map on a reservation.")
     async def change_map(
         self,
         interaction: nextcord.Interaction,
@@ -324,9 +318,7 @@ class ServerCog(commands.Cog):
     @util.is_setup()
     @util.is_runner()
     @nextcord.slash_command(
-        name="rcon",
-        description="Send an rcon command to a reservation.",
-        guild_ids=TESTING_GUILDS,
+        name="rcon", description="Send an rcon command to a reservation."
     )
     async def rcon_command(self, interaction: nextcord.Interaction, command: str):
         """Run a rcon command on one of the user's reserved servers.

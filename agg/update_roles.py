@@ -24,7 +24,7 @@ class UpdateRolesCog(commands.Cog):
         print("Updating RGL divisions and roles for all registered players...")
         players = db.get_all_players()
         for player in players:
-            await asyncio.sleep(5)
+            await asyncio.sleep(20)
             print(player)
             agg_server: nextcord.Guild = self.bot.get_guild(agg.AGG_SERVER_ID[0])
 
