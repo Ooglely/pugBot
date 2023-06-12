@@ -4,7 +4,7 @@ rcon<=2.2.1
 steam==1.4.4
 uvicorn==0.20.0
 nextcord==2.4.2
-requests==2.28.2
+requests==2.31.0
 beautifulsoup4==4.11.1
 dnspython==2.2.1
 aiohttp==3.8.3
