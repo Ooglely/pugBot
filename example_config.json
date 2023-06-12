@@ -1,9 +1,8 @@
 {
-    "discord":{
-        "token":"discord token here"
-    },
-
-    "serveme":{
-        "apiKey":"serveme api key here"
-    }
+    "version":"",
+    "discord_token":"",
+    "testing_guild_ids": [
+        168371563660443648
+    ],
+    "db_connection_string":""
 }
