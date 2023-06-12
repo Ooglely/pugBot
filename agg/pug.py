@@ -86,7 +86,11 @@ class PugCog(commands.Cog):
                 )
                 self.organizing = True
 
-    @nextcord.slash_command(name="move", guild_ids=AGG_SERVER_ID)
+    @nextcord.slash_command(
+        name="move",
+        description="Move all players after a pug has finished.",
+        guild_ids=AGG_SERVER_ID,
+    )
     @is_runner()
     async def move(self, interaction: nextcord.Interaction):
         """Moves all players after a pug is completed.
@@ -125,7 +129,11 @@ class PugCog(commands.Cog):
 
         await interaction.send("Moved players.")
 
-    @nextcord.slash_command(name="pug", guild_ids=AGG_SERVER_ID)
+    @nextcord.slash_command(
+        name="pug",
+        description="Start a pug using the ip.oog.pw server.",
+        guild_ids=AGG_SERVER_ID,
+    )
     async def pug(self, interaction=nextcord.Interaction):
         """Starts a pug using the ip.oog.pw server."""
         interaction.send("Not implemented yet.")

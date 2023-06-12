@@ -104,6 +104,8 @@ class ChannelView(nextcord.ui.View):
 
 
 @bot.slash_command(
+    name="setup",
+    description="Setup the bot for this server.",
     guild_ids=TESTING_GUILDS,
     default_member_permissions=nextcord.Permissions(manage_guild=True),
 )
@@ -146,6 +148,8 @@ async def setup(interaction: nextcord.Interaction):
 
 
 @bot.slash_command(
+    name="serveme",
+    description="Set the serveme api key for this server.",
     guild_ids=TESTING_GUILDS,
     default_member_permissions=nextcord.Permissions(manage_guild=True),
 )
@@ -219,7 +223,11 @@ async def player_listener(message: nextcord.Message):
             await message.channel.send(embed=embed)
 
 
-@bot.slash_command(guild_ids=TESTING_GUILDS)
+@bot.slash_command(
+    name="search",
+    description="Search for an RGL profile and display it.",
+    guild_ids=TESTING_GUILDS,
+)
 async def search(interaction: nextcord.Interaction, steamid: str):
     """Search for a players RGL profile and generate the embed.
 
@@ -232,7 +240,11 @@ async def search(interaction: nextcord.Interaction, steamid: str):
     await interaction.send(embed=embed)
 
 
-@bot.slash_command(guild_ids=TESTING_GUILDS)
+@bot.slash_command(
+    name="help",
+    description="Displays all the bots commands and their purpose.",
+    guild_ids=TESTING_GUILDS,
+)
 async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-builtin
     """The /help command, explains all the commands the bot has.
 

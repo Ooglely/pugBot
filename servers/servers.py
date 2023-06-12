@@ -91,7 +91,11 @@ class ServerCog(commands.Cog):
         else:
             await interaction.send("An error has occurred.\n" + str(error))
 
-    @nextcord.slash_command(name="reserve", guild_ids=TESTING_GUILDS)
+    @nextcord.slash_command(
+        name="reserve",
+        description="Reserve a new server on na.serveme.tf.",
+        guild_ids=TESTING_GUILDS,
+    )
     @util.is_setup()
     @util.is_runner()
     async def reserve_server(
@@ -233,7 +237,11 @@ class ServerCog(commands.Cog):
 
     @util.is_setup()
     @util.is_runner()
-    @nextcord.slash_command(name="map", guild_ids=TESTING_GUILDS)
+    @nextcord.slash_command(
+        name="map",
+        description="Change the map on a reservation.",
+        guild_ids=TESTING_GUILDS,
+    )
     async def change_map(
         self,
         interaction: nextcord.Interaction,
@@ -315,7 +323,11 @@ class ServerCog(commands.Cog):
 
     @util.is_setup()
     @util.is_runner()
-    @nextcord.slash_command(name="rcon", guild_ids=TESTING_GUILDS)
+    @nextcord.slash_command(
+        name="rcon",
+        description="Send an rcon command to a reservation.",
+        guild_ids=TESTING_GUILDS,
+    )
     async def rcon_command(self, interaction: nextcord.Interaction, command: str):
         """Run a rcon command on one of the user's reserved servers.
 

@@ -156,7 +156,7 @@ class StatsCog(commands.Cog):
     # TODO: Add stats command
     @nextcord.slash_command(
         name="stats",
-        description="Retrieve pug stats for a player",
+        description="Retrieve pug stats for a player.",
         guild_ids=AGG_SERVER_ID,
     )
     async def stats(
@@ -187,9 +187,9 @@ class StatsCog(commands.Cog):
             return
 
         await interaction.send("Give me a moment, grabbing all logs...")
-        print(f"ID: {steam_id}")
+
         info = await RGL.get_player(int(steam_id))
-        print(info)
+
         log_string = f"```\n{info['name']}'s pug stats"
 
         player = PlayerStats(int(steam_id))

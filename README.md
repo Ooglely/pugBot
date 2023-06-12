@@ -1,8 +1,6 @@
 To do:
 
 Required:
-Change restriction message
-Fix role assignments on server join
 Add titles, descriptions to all commands.
 MOVE client.data.players to client.players.data
 CHANGE DATABASE TARGET ON WEBSITE REPO!
