@@ -109,6 +109,21 @@ def get_steam_from_discord(discord: int):
     return database.find_one({"discord": str(discord)})["steam"]
 
 
+def get_player_from_steam(steam: int):
+    """Get the player from the database.
+
+    Args:
+        steam (int): The steam ID to get.
+
+    Returns:
+        dict: Player data
+    """
+    database = client.players.data
+    if database.find_one({"steam": str(steam)}) is None:
+        return None
+    return database.find_one({"steam": str(steam)})
+
+
 def get_all_players():
     """Get all players from the database."""
     database = client.players.data
