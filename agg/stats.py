@@ -64,7 +64,7 @@ class PlayerStats:
     def __init__(self, steam: int):
         self.steam64: int = steam
         self.steam3: str = SteamID(steam).as_steam3
-        self.stats: dict[str, ClassStats] = {
+        self.stats = {
             "scout": ClassStats(0, 0, 0, 0, 0),
             "soldier": ClassStats(0, 0, 0, 0, 0),
             "pyro": ClassStats(0, 0, 0, 0, 0),
@@ -80,7 +80,7 @@ class PlayerStats:
     def __dict__(self):
         dict_form = {"steam": self.steam64, "stats": {}, "logs": self.logs}
         for class_stat in self.stats.items():
-            dict_form["stats"][class_stat[0]] = class_stat[1].__dict__  # type: ignore
+            dict_form["stats"][class_stat[0]] = class_stat[1].__dict__  # type: ignore # pylint: disable=not-callable
         return dict_form
 
     async def import_logs_from_db(self):
@@ -127,7 +127,7 @@ class PlayerStats:
 
     async def update_db_player_stats(self):
         """Updates the database with the stats stored in the class"""
-        update_player_stats(self.steam64, self.__dict__)  # type: ignore
+        update_player_stats(self.steam64, self.__dict__())  # type: ignore # pylint: disable=not-callable
 
 
 async def get_total_logs(steam_id: str):
@@ -211,12 +211,6 @@ class StatsCog(commands.Cog):
                     kdr = f"{class_stats['kills']:.1f}"
                 else:
                     kdr = f"{class_stats['kills'] / class_stats['deaths']:.1f}"
-                log_string += f"""\n{class_name: >8}|
-                    {class_stats['kills']: >5}|
-                    {class_stats['deaths']: >5}|
-                    {dpm: >5}|
-                    {kdr: >5}|
-                    {class_stats['logs']: >5} |
-                    {playtime}"""
+                log_string += f"\n{class_name: >8}|{class_stats['kills']: >5}|{class_stats['deaths']: >5}|{dpm: >5}|{kdr: >4} |{class_stats['logs']: >5} | {playtime}"
         log_string += "```"
         await interaction.edit_original_message(content=log_string)
