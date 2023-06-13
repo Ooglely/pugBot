@@ -104,9 +104,9 @@ class PugCog(commands.Cog):
         agg_server: nextcord.Guild = self.bot.get_guild(952817189893865482)
 
         channels: PugCategory
-        if interaction.channel.category.name == "HL Pugs":
+        if interaction.channel.category.id == 996414120662409328:  # Normal pugs
             channels = HL_CHANNELS
-        elif interaction.channel.category.name == "agg after dark":
+        elif interaction.channel.category.id == 997602137683005441:  # AD pugs
             channels = AD_CHANNELS
         else:
             await interaction.send(

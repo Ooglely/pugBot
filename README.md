@@ -3,13 +3,13 @@
 
 
 
-### Currently being completely rewritten on the rewrite branch!
 
 A discord bot for easily running Team Fortress 2 pick-up-games. Currently has 600 unique players registered in it's database, with around 700 unique logged games played.
 
 ## Features ##
-- Integrates with the [serveme.tf](https://na.serveme.tf/) to easily reserve a server with a single command
+- Integrates with the [na.serveme.tf](https://na.serveme.tf/) API to easily reserve a server with a single command
 - Map and config changing automatically with one command
+- Allow multiple people to control one na.serveme.tf reservation
 - Connects to a MongoDB database to store player and server data and stats
 - Keeps track of first 18 players added up for a game
 - Integrates with the [tf.oog.pw](https://tf.oog.pw/) website to link players discord and steam accounts

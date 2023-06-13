@@ -5,7 +5,7 @@ from rgl_api import RGL_API
 
 RGL: RGL_API = RGL_API()
 
-client = pymongo.MongoClient(constants.DB_URL + "/?retryWrites=true&w=majority")
+client = pymongo.MongoClient(constants.DB_URL + "/?w=majority")
 
 
 def is_server_setup(guild: int):
