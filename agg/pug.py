@@ -25,7 +25,7 @@ class PugCog(commands.Cog):
         self.logs.start()  # pylint: disable=no-member
 
     @commands.Cog.listener(name="on_voice_state_update")
-    async def first_to_18(self, _member, state_before, state_after):
+    async def first_to_18(self, _member, state_before, _state_after):
         """Moves the first 18 players in organizing to the inp channel.
 
         Keeps track of the first 18 players so that they are given priority to be chosen.
@@ -49,7 +49,7 @@ class PugCog(commands.Cog):
 
         if self.organizing:
             # Just an extra check to make sure repeat moves aren't done
-            if state_before.channel is None and state_after.channel == hl_organizing:
+            if state_before.channel is None:
                 # If enough players to start a HL pug...
                 player_string: str = ""
                 if len(hl_organizing.members) >= 18:
