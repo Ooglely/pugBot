@@ -1,4 +1,5 @@
 """Files containing the server cog with commands for reserving/managing servers."""
+import asyncio
 import json
 import string
 import random
@@ -99,13 +100,26 @@ class ServerCog(commands.Cog):
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
             name="map",
+            description="The map to set on the server.",
             choices=maps["sixes"] | maps["hl"],
         ),
         gamemode: str = nextcord.SlashOption(
             name="gamemode",
+            description="The gamemode config to set on the server.",
             choices={
                 "6s": "sixes",
                 "HL": "highlander",
+            },
+        ),
+        whitelist: int = nextcord.SlashOption(
+            name="whitelist",
+            description="The whitelist to set on the server.",
+            choices={
+                "RGL 6s": 13531,
+                "RGL HL": 13397,
+                "RGL NR6s": 9914,
+                "TF2CC Regular": 13797,
+                "TF2CC Newbie": 13798,
             },
         ),
     ):
@@ -210,6 +224,10 @@ class ServerCog(commands.Cog):
             "steam://connect/" + reserve["ip_and_port"] + "/" + connect_password
         )
 
+        tf_oog_pw_link = (
+            f"https://tf.oog.pw/connect/{reserve['ip_and_port']}/{connect_password}"
+        )
+
         embed = nextcord.Embed(title="Server started!", color=0xF0984D)
         embed.add_field(name="Server", value=reserve["name"], inline=False)
         embed.add_field(name="Connect", value=connect, inline=False)
@@ -225,11 +243,34 @@ class ServerCog(commands.Cog):
         await rcon_channel.send(rcon)
 
         # Connect Message
-        connect_channel = self.bot.get_channel(guild_data["connect"])
-        connect_embed = nextcord.Embed(title=connect_link, color=0x3DFF1F)
+        connect_embed = nextcord.Embed(
+            title=tf_oog_pw_link, url=tf_oog_pw_link, color=0x3DFF1F
+        )
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
-        await connect_channel.send(embed=connect_embed)
+        if interaction.guild_id == 727627956058325052:  # TF2CC
+            if whitelist == 13797:  # Normal whitelist
+                connect_channel = self.bot.get_channel(934275639291310121)
+                await connect_channel.send(embed=connect_embed)
+            elif whitelist == 13798:  # Newbie whitelist
+                connect_channel = self.bot.get_channel(958053551073021972)
+                await connect_channel.send(embed=connect_embed)
+            else:
+                connect_channel = self.bot.get_channel(guild_data["connect"])
+                await connect_channel.send(embed=connect_embed)
+        else:
+            connect_channel = self.bot.get_channel(guild_data["connect"])
+            await connect_channel.send(embed=connect_embed)
+
+        await asyncio.sleep(20)  # wait for server to start
+
+        # run correct whitelist command
+        with Client(
+            reserve["ip"],
+            int(reserve["port"]),
+            passwd=rcon_password,
+        ) as client:
+            client.run(f"tftrue_whitelist_id {whitelist}")
 
     @util.is_setup()
     @util.is_runner()
