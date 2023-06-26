@@ -37,6 +37,7 @@ async def on_ready():
     print("------")
     # Need to add cog on ready instead of before for webserver async to be friendly
     bot.add_cog(WebserverCog(bot))
+    await bot.sync_all_application_commands()
 
 
 class SetupView(nextcord.ui.View):
