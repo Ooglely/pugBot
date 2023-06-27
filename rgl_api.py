@@ -75,6 +75,7 @@ class RGL_API:
             dict: The team data.
         """
         all_teams = await self.get_all_teams(steam_id)
+        print(all_teams)
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
