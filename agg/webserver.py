@@ -220,6 +220,12 @@ class WebserverCog(nextcord.ext.commands.Cog):
         registration_embed.add_field(name="Checks", value=checks_field, inline=False)
         await new_regs_channel.send(embed=registration_embed)
 
+        # Send it to tf2cc for now as well
+        tf2cc_logs_channel: nextcord.TextChannel = agg_server.get_channel(
+            747482111262457946
+        )
+        await tf2cc_logs_channel.send(embed=registration_embed)
+
     async def send_connect_dm(self, discord_id: int, connect_command: str):
         """Sends a DM to the intended user with the connect commmand.
 
