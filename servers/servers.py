@@ -3,6 +3,7 @@ import asyncio
 import json
 import string
 import random
+from typing import List
 
 import aiohttp
 import nextcord
@@ -14,7 +15,7 @@ import database
 import util
 from constants import VERSION
 from servers.serveme_api import ServemeAPI
-from servers import Servers, ServerButton
+from servers import Reservation, Servers, ServerButton
 
 
 with open("maps.json", encoding="UTF-8") as json_file:
@@ -31,8 +32,10 @@ class ServerCog(commands.Cog):
     """
 
     def __init__(self, bot: nextcord.Client):
+        self.servers: List[Reservation] = []
         self.bot = bot
         self.map_updater.start()  # pylint: disable=no-member
+        self.server_status.start()  # pylint: disable=no-member
 
     @tasks.loop(hours=4)
     async def map_updater(self):
@@ -198,12 +201,15 @@ class ServerCog(commands.Cog):
 
         reserve_json = json.dumps(reserve_string)
 
+        server_id: int
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
                 data=reserve_json,
                 headers={"Content-type": "application/json"},
             ) as resp:
+                server_data = await resp.json()
+                server_id = server_data["reservation"]["id"]
                 print(await resp.text())
 
         connect = (
@@ -236,11 +242,11 @@ class ServerCog(commands.Cog):
         )
         embed.add_field(name="Map", value=tf_map, inline=False)
         embed.set_footer(text=VERSION)
-        await interaction.send(embed=embed)
+        reserve_msg = await interaction.send(embed=embed)
 
         # RCON Message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
-        await rcon_channel.send(rcon)
+        rcon_msg = await rcon_channel.send(rcon)
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -248,19 +254,23 @@ class ServerCog(commands.Cog):
         )
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
+        connect_channel: nextcord.TextChannel
         if interaction.guild_id == 727627956058325052:  # TF2CC
             if whitelist == 13797:  # Normal whitelist
                 connect_channel = self.bot.get_channel(934275639291310121)
-                await connect_channel.send(embed=connect_embed)
             elif whitelist == 13798:  # Newbie whitelist
                 connect_channel = self.bot.get_channel(958053551073021972)
-                await connect_channel.send(embed=connect_embed)
             else:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
-                await connect_channel.send(embed=connect_embed)
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
-            await connect_channel.send(embed=connect_embed)
+
+        connect_msg = await connect_channel.send(embed=connect_embed)
+        reserve_id = await reserve_msg.fetch()
+
+        self.servers.append(
+            Reservation(server_id, serveme_api_key, [reserve_id, rcon_msg, connect_msg])
+        )
 
         await asyncio.sleep(20)  # wait for server to start
 
@@ -338,8 +348,7 @@ class ServerCog(commands.Cog):
             )
         except Exception:
             await interaction.edit_original_message(
-                """Unable to detect the current gamemode.
-                The whitelist on the server is not associated with a gamemode."""
+                "Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
             )
             return
 
@@ -406,3 +415,70 @@ class ServerCog(commands.Cog):
             await interaction.edit_original_message(
                 content="Ran command `" + command + "`", view=None
             )
+
+    @util.is_setup()
+    @util.is_runner()
+    @nextcord.slash_command(name="end", description="End a reservation.")
+    async def end_reservation(self, interaction: nextcord.Interaction):
+        """End a reservation.
+
+        Args:
+            interaction (nextcord.Interaction): Interaction object from invoking the command.
+        """
+        guild_data = database.get_server(interaction.guild.id)
+        serveme_api_key = guild_data["serveme"]
+        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+
+        async with aiohttp.ClientSession() as session:
+            if len(reservations) == 0:
+                await interaction.send(
+                    "There are no active reservations with the associated serveme account."
+                )
+                return
+            if len(reservations) == 1:
+                async with session.delete(
+                    f"https://na.serveme.tf/api/reservations/{reservations[0]['id']}?api_key={serveme_api_key}",
+                ) as resp:
+                    if resp.status == 200:
+                        await interaction.send(
+                            f"Ending reservation `#{reservations[0]['id']}`."
+                        )
+                    else:
+                        await interaction.send(
+                            f"Failed to end reservation `#{reservations[0]['id']}`.\nStatus code: {resp.status}"
+                        )
+            else:
+                server_view = Servers()
+
+                for num, reservation in enumerate(reservations):
+                    button = ServerButton(reservation, num)
+                    server_view.add_item(button)
+
+                await interaction.send("Select a reservation to end.", view=server_view)
+                await server_view.wait()
+                server_id = server_view.server_chosen
+
+                async with session.delete(
+                    f"https://na.serveme.tf/api/reservations/{reservations[server_id]['id']}?api_key={serveme_api_key}",
+                ) as resp:
+                    if resp.status == 200:
+                        await interaction.edit_original_message(
+                            content=f"Ending reservation `#{reservations[server_id]['id']}`.",
+                            view=None,
+                        )
+                    else:
+                        await interaction.edit_original_message(
+                            content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
+                            view=None,
+                        )
+
+    @tasks.loop(minutes=1)
+    async def server_status(self):
+        """Update the status of the servers every minute."""
+        for server in self.servers:
+            status: bool = await server.is_active()
+            if not status:
+                for message in server.messages:
+                    await message.delete()
+                self.servers.remove(server)
+        return
