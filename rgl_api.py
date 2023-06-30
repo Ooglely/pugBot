@@ -1,6 +1,20 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
 import aiohttp
 
+divs = {
+    "Newcomer": 1,
+    "Amateur": 2,
+    "Intermediate": 3,
+    "Main": 4,
+    "Advanced": 5,
+    "Advanced-1": 6,
+    "Advanced-2": 5,
+    "Challenger": 6,
+    "Invite": 7,
+    "Admin Placement": 0,
+    "Dead Teams": 0,
+}
+
 
 class Player:
     """Class representing an RGL player."""
@@ -75,6 +89,9 @@ class RGL_API:
             dict: The team data.
         """
         all_teams = await self.get_all_teams(steam_id)
+        if "statusCode" in all_teams:
+            if all_teams["statusCode"] == 429:
+                raise LookupError("Rate limit exceeded")
         print(all_teams)
         core_seasons = {}
         sixes_teams = []
@@ -121,21 +138,9 @@ class RGL_API:
             list: A list containing the highest division for 6s and HL.
         """
         player = await self.get_core_teams(steam_id)
+        print(player)
         if player is None:
             return [[-1, -1], [-1, -1]]
-        divs = {
-            "Newcomer": 1,
-            "Amateur": 2,
-            "Intermediate": 3,
-            "Main": 4,
-            "Advanced": 5,
-            "Advanced-1": 6,
-            "Advanced-2": 5,
-            "Challenger": 6,
-            "Invite": 7,
-            "Admin Placement": 0,
-            "Dead Teams": 0,
-        }
         sixesdiv = [0, 0]
         hldiv = [0, 0]
         for season in player["sixes"]:
@@ -159,6 +164,42 @@ class RGL_API:
             else:
                 print(f"Division not found: {division_name}")
         return [sixesdiv, hldiv]
+
+    async def get_div_data(self, steam_id: int):
+        """Get both the highest div and the last div played for both 6s and HL.
+
+        Args:
+            steam_id (int): The steamid of the player to get.
+        """
+        player = await self.get_core_teams(steam_id)
+        print(player)
+        player_divs = {
+            "sixes": {"highest": -1, "current": -1},
+            "hl": {"highest": -1, "current": -1},
+        }
+        if player is None:
+            return player_divs
+        for season in player["sixes"]:
+            division_name: str = season["divisionName"].replace("RGL-", "")
+            if division_name in divs:
+                if divs[division_name] > player_divs["sixes"]["highest"]:
+                    player_divs["sixes"]["highest"] = divs[division_name]
+            else:
+                print(f"Division not found: {division_name}")
+            if player_divs["sixes"]["current"] == -1:
+                if divs[division_name] > 0:
+                    player_divs["sixes"]["current"] = divs[division_name]
+        for season in player["hl"]:
+            division_name = season["divisionName"].replace("RGL-", "")
+            if division_name in divs:
+                if divs[division_name] > player_divs["hl"]["highest"]:
+                    player_divs["hl"]["highest"] = divs[division_name]
+            else:
+                print(f"Division not found: {division_name}")
+            if player_divs["hl"]["current"] == -1:
+                if divs[division_name] > 0:
+                    player_divs["hl"]["current"] = divs[division_name]
+        return player_divs
 
     async def create_player(self, steam_id: int) -> Player:
         """Creates a Player object from a steamid.

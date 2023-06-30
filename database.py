@@ -163,17 +163,17 @@ def get_divisions(discord: int):
     return database.find_one({"discord": str(discord)})["divison"]
 
 
-async def update_divisons(steam: int):
+async def update_divisons(steam: int, divisons):
     """Update the RGL divisons of a player.
 
     Args:
         steam (int): The steam ID to update.
+        divisons (dict): The divisons to set for the player.
     """
     database = client.players.data
-    sixes_top, hl_top = await RGL.get_top_div(steam)
     database.update_one(
         {"steam": str(steam)},
-        {"$set": {"divison": {"sixes": sixes_top[0], "hl": hl_top[0]}}},
+        {"$set": {"divison": divisons}},
         upsert=True,
     )
 
