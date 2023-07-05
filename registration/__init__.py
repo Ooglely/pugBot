@@ -10,6 +10,7 @@ class RegistrationSettings:
     def __init__(self):
         self.enabled: bool = False
         self.ban: bool = False
+        self.bypass: bool = False
         self.gamemode: str = ""
         self.mode: str = ""
         self.roles: dict[str, int | None] = {
@@ -19,6 +20,7 @@ class RegistrationSettings:
             "main": None,
             "advanced": None,
             "invite": None,
+            "bypass": None,
             "ban": None,
         }
         self.channels: dict[str, int | None] = {"registration": None, "logs": None}
@@ -34,6 +36,7 @@ class RegistrationSettings:
             print(server["registration"])
             self.enabled = server["registration"]["enabled"]
             self.ban = server["registration"]["ban"]
+            self.bypass = server["registration"]["bypass"]
             self.gamemode = server["registration"]["gamemode"]
             self.mode = server["registration"]["mode"]
             self.roles = server["registration"]["roles"]
@@ -167,7 +170,7 @@ class ModeSelect(nextcord.ui.View):
         self.stop()
 
 
-class BanSelect(nextcord.ui.View):
+class TrueFalseSelect(nextcord.ui.View):
     """A view to select the ban for registration."""
 
     def __init__(self):

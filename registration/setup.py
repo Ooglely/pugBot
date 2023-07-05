@@ -9,7 +9,7 @@ from registration import (
     RegistrationRoles,
     GamemodeSelect,
     ModeSelect,
-    BanSelect,
+    TrueFalseSelect,
     ChannelSelect,
 )
 from util import is_runner, is_setup
@@ -37,6 +37,18 @@ class RegistrationSetupCog(commands.Cog):
             color=BOT_COLOR,
             description="Registration allows for you to link new members of the server to https://tf.oog.pw/register, which can give them division roles based on their RGL experience.\n\nYou can have it go off either their current or highest division played, in either 6s or Highlander.\n\nYou will need to create your own division roles. You will match the divisions with the role you would like to be assigned in the setup menu.",
         )
+        setup_embed.add_field(
+            name="Current Settings",
+            value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
+        )
+        setup_embed.add_field(
+            name="Roles",
+            value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>",
+        )
+        setup_embed.add_field(
+            name="Channels",
+            value=f"Registration: <#{settings.channels['registration']}>\nLogs: <#{settings.channels['logs']}>",
+        )
         introduction = RegistrationIntroduction()
         await interaction.send(embed=setup_embed, view=introduction, ephemeral=True)
         await introduction.wait()
@@ -54,6 +66,7 @@ class RegistrationSetupCog(commands.Cog):
             return
         settings.enabled = True
 
+        setup_embed.clear_fields()
         roles_view = RegistrationRoles(
             ["newcomer", "amateur", "intermediate"], settings.roles
         )
@@ -95,8 +108,25 @@ class RegistrationSetupCog(commands.Cog):
         await mode_view.wait()
         settings.mode = mode_view.selection
 
+        # Bypass select
+        bypass_view = TrueFalseSelect()
+        setup_embed.description = "Do you want a role that will block any role updates for anyone who has it? This is useful for if you need to manually assign roles to someone, or if you want to block someone from getting roles."
+        await interaction.edit_original_message(embed=setup_embed, view=bypass_view)
+        await bypass_view.wait()
+        settings.bypass = bypass_view.selection
+        if bypass_view.selection:
+            bypass_role_view = RegistrationRoles(["bypass"], settings.roles)
+            setup_embed.description = (
+                "Please select the role you would like to be assigned for bypasses."
+            )
+            await interaction.edit_original_message(
+                embed=setup_embed, view=bypass_role_view
+            )
+            await bypass_role_view.wait()
+            settings.roles = bypass_role_view.roles
+
         # Ban select
-        ban_view = BanSelect()
+        ban_view = TrueFalseSelect()
         setup_embed.description = "Would you like to automatically ban players that are RGL banned? If you select yes, you will have to select a ban role to be used."
         await interaction.edit_original_message(embed=setup_embed, view=ban_view)
         await ban_view.wait()
@@ -118,8 +148,19 @@ class RegistrationSetupCog(commands.Cog):
         settings.channels["registration"] = channel_view.registration
         settings.channels["logs"] = channel_view.logs
 
-        print(settings.__dict__)
         setup_embed.description = "Registration setup complete! Use /updateall to update all current members of the server, or wait for the bots daily update."
+        setup_embed.add_field(
+            name="Current Settings",
+            value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
+        )
+        setup_embed.add_field(
+            name="Roles",
+            value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>",
+        )
+        setup_embed.add_field(
+            name="Channels",
+            value=f"Registration: <#{settings.channels['registration']}>\nLogs: <#{settings.channels['logs']}>",
+        )
         settings.export_to_db(interaction.guild.id)
         await interaction.edit_original_message(embed=setup_embed, view=None)
-        await interaction.delete_original_message(delay=10)
+        await interaction.delete_original_message(delay=20)
