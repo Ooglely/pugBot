@@ -55,6 +55,21 @@ def get_server(guild: int):
     return database.find_one({"guild": guild})
 
 
+def set_registration_settings(guild: int, registration):
+    """Set the registration settings for a guild.
+
+    Args:
+        guild (int): The guild ID to set.
+        registration (dict): The registration settings to set.
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$set": {"registration": registration}},
+        upsert=True,
+    )
+
+
 def set_guild_serveme(guild: int, serveme: str):
     """Set the serveme key for a guild.
 
@@ -160,7 +175,11 @@ def get_divisions(discord: int):
     database = client.players.data
     if database.find_one({"discord": str(discord)}) is None:
         return None
-    return database.find_one({"discord": str(discord)})["divison"]
+    try:
+        division = database.find_one({"discord": str(discord)})["divison"]
+        return division
+    except KeyError:
+        return None
 
 
 async def update_divisons(steam: int, divisons):
