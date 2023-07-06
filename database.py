@@ -196,6 +196,9 @@ async def update_divisons(steam: int, divisons):
         divisons (dict): The divisons to set for the player.
     """
     database = client.players.data
+    if divisons["hl"]["highest"] == -1:
+        print("Skipping updating divs as there is no data.")
+        return
     database.update_one(
         {"steam": str(steam)},
         {"$set": {"divison": divisons}},
@@ -216,7 +219,7 @@ async def update_rgl_ban_status(steam: int) -> bool:
     try:
         ban_status = await RGL.check_banned(steam)
     except LookupError:
-        ban_status = False
+        return False
     database.update_one(
         {"steam": str(steam)},
         {"$set": {"rgl_ban": ban_status}},

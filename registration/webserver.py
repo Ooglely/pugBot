@@ -8,7 +8,7 @@ import agg
 import util
 from agg.stats import get_total_logs
 from constants import API_PASSWORD, BOT_COLOR, PORT
-from database import add_player, get_all_servers
+from database import add_player, get_all_servers, update_divisons
 from registration import RegistrationSettings
 from rgl_api import RGL_API
 
@@ -66,6 +66,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             steam_id (int): Steam ID of the player
         """
         player_divs = await RGL.get_div_data(steam_id)
+        await update_divisons(steam_id, player_divs)
         print(player_divs)
         all_servers = get_all_servers()
         for server in all_servers:
@@ -110,8 +111,10 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
             player: nextcord.Member = guild.get_member(discord_id)
 
-            if player.get_role(reg_settings.roles["bypass"]) is not None:
-                continue
+            if reg_settings.bypass:
+                if reg_settings.roles["bypass"] is not None:
+                    if player.get_role(reg_settings.roles["bypass"]) is not None:
+                        continue
 
             # Setup an embed to send to the registrations channel:
             registration_embed = nextcord.Embed(

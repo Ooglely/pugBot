@@ -10,8 +10,8 @@ from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
-from agg.update_roles import UpdateRolesCog
 from registration.setup import RegistrationSetupCog
+from registration.update_roles import UpdateRolesCog
 from registration.webserver import WebserverCog
 
 intents = nextcord.Intents.default()
@@ -257,7 +257,9 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
     help_embed.add_field(
         name="Global Commands",
         value="""/setup - Used to setup the bot for a guild (Admin only)
-                 /serveme - Used to set the serveme api key for a guild(Admin only)
+                 /serveme - Used to set the serveme api key for a guild (Admin only)
+                 /registration - Sets up tf.oog.pw registration (Admin only)
+                 /register - Registers a player in the bot's database
                  /search - Search for a player's RGL profile
                  /reserve - Get a new reservation from na.serveme.tf
                  /map - Change the map on a running reservation
@@ -268,7 +270,6 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
         help_embed.add_field(
             name="AGG Commands",
             value="""/stats - Show a player's pug stats
-                     /register - Register a new user in the database
                      /move - Move all players after a pug is over
                      /pug - Not implemented yet""",
             inline=False,

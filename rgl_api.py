@@ -175,16 +175,24 @@ class RGL_API:
             "hl": {"highest": -1, "current": -1},
         }
         if player is None:
-            return player_divs
+            return player_divs  # Return -1 if the player is not found, so that it won't be updated in the db
+        player_divs = {
+            "sixes": {"highest": 0, "current": 0},
+            "hl": {"highest": 0, "current": 0},
+        }
         for season in player["sixes"]:
             division_name: str = season["divisionName"].replace("RGL-", "")
-            if division_name in divs:
+            if division_name in divs:  # Getting the highest division played here
                 if divs[division_name] > player_divs["sixes"]["highest"]:
                     player_divs["sixes"]["highest"] = divs[division_name]
             else:
                 print(f"Division not found: {division_name}")
-            if player_divs["sixes"]["current"] == -1:
-                if divs[division_name] > 0:
+            if (
+                player_divs["sixes"]["current"] == 0
+            ):  # If the current div hasn't been set yet
+                if (
+                    divs[division_name] > 0
+                ):  # We only want to set the current div if it's not an admin placement team
                     player_divs["sixes"]["current"] = divs[division_name]
         for season in player["hl"]:
             division_name = season["divisionName"].replace("RGL-", "")
@@ -193,7 +201,7 @@ class RGL_API:
                     player_divs["hl"]["highest"] = divs[division_name]
             else:
                 print(f"Division not found: {division_name}")
-            if player_divs["hl"]["current"] == -1:
+            if player_divs["hl"]["current"] == 0:
                 if divs[division_name] > 0:
                     player_divs["hl"]["current"] = divs[division_name]
         return player_divs
