@@ -167,6 +167,8 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
             checks_field += "\n✅ RGL team history exists"
 
+            await asyncio.sleep(5)  # Sleep for 5 seconds to avoid rate limiting
+
             # Check if they are banned.
             if await RGL.check_banned(steam_id):
                 checks_field += "\n❌ Currently banned from RGL"
