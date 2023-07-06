@@ -14,6 +14,7 @@ class RegistrationSettings:
         self.gamemode: str = ""
         self.mode: str = ""
         self.roles: dict[str, int | None] = {
+            "noexp": None,
             "newcomer": None,
             "amateur": None,
             "intermediate": None,
@@ -114,7 +115,10 @@ class DivisionRoleSelect(nextcord.ui.RoleSelect):
     """A role select for division roles."""
 
     def __init__(self, division: str):
-        super().__init__(placeholder=f"{division} role", max_values=1)
+        if division == "noexp":
+            super().__init__(placeholder="No Experience", max_values=1)
+        else:
+            super().__init__(placeholder=f"{division.capitalize()} role", max_values=1)
         self.division = division
 
     async def callback(self, _interaction: nextcord.Interaction):

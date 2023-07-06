@@ -68,9 +68,9 @@ class RegistrationSetupCog(commands.Cog):
 
         setup_embed.clear_fields()
         roles_view = RegistrationRoles(
-            ["newcomer", "amateur", "intermediate"], settings.roles
+            ["noexp", "newcomer", "amateur", "intermediate"], settings.roles
         )
-        setup_embed.description = "Please select the roles you would like to be assigned to each division. You can select one role for multiple divisions, but you must select at least one role for each division.\n\n**Note: Due to client-side discord limitations, you may need to SEARCH for the role in the select menu.**"
+        setup_embed.description = "Please select the roles you would like to be assigned to each division. You can select one role for multiple divisions.\n\n**Note: Due to client-side discord limitations, you may need to SEARCH for the role in the select menu.**"
         await interaction.edit_original_message(embed=setup_embed, view=roles_view)
         await roles_view.wait()
         if roles_view.action == "cancel":
@@ -148,7 +148,7 @@ class RegistrationSetupCog(commands.Cog):
         settings.channels["registration"] = channel_view.registration
         settings.channels["logs"] = channel_view.logs
 
-        setup_embed.description = "Registration setup complete! Use /updateall to update all current members of the server, or wait for the bots daily update."
+        setup_embed.description = "Registration setup complete! You can now link new members of the server to https://tf.oog.pw/register, and roles will be assigned from the bot.\n\nUse /updateall to update all current members of the server, or wait for the bots daily update."
         setup_embed.add_field(
             name="Current Settings",
             value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
