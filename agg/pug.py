@@ -140,7 +140,6 @@ class PugCog(commands.Cog):
     @tasks.loop(minutes=1, reconnect=True)
     async def logs(self):
         """Checks for new logs every minute, and sends it to the log channel if it is completed."""
-        print("Checking for new logs...")
         guild_data = get_server(AGG_SERVER_ID[0])
         serveme_api_key: str = guild_data["serveme"]
         current_reservations: dict = await serveme.get_current_reservations(
