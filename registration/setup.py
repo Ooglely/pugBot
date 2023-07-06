@@ -2,7 +2,7 @@
 import nextcord
 from nextcord.ext import commands
 
-from constants import TESTING_GUILDS, BOT_COLOR
+from constants import BOT_COLOR
 from registration import (
     RegistrationIntroduction,
     RegistrationSettings,
@@ -12,7 +12,7 @@ from registration import (
     TrueFalseSelect,
     ChannelSelect,
 )
-from util import is_runner, is_setup
+from util import is_setup
 
 
 class RegistrationSetupCog(commands.Cog):
@@ -22,11 +22,10 @@ class RegistrationSetupCog(commands.Cog):
         self.bot = bot
 
     @is_setup()
-    @is_runner()
     @nextcord.slash_command(
         name="registration",
         description="Setup tf.oog.pw registration for this server.",
-        guild_ids=TESTING_GUILDS,
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
     )
     async def setup_registration(self, interaction: nextcord.Interaction):
         """Setup tf.oog.pw registration for this server."""
