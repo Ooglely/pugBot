@@ -24,7 +24,7 @@ class UpdateRolesCog(commands.Cog):
         print("Updating RGL divisions and roles for all registered players...")
         players = db.get_all_players()
         for player in players:
-            await asyncio.sleep(20)
+            await asyncio.sleep(5)
             print(player)
             agg_server: nextcord.Guild = self.bot.get_guild(agg.AGG_SERVER_ID[0])
 
@@ -50,20 +50,20 @@ class UpdateRolesCog(commands.Cog):
             hl_div_ban: nextcord.Role = agg_server.get_role(1060020104462606396)
             ban_role: nextcord.Role = agg_server.get_role(997607002299707432)
 
-            await db.update_divisons(player["steam"])
-            print(db.get_divisions(player["discord"]))
-            if db.get_divisions(player["discord"]) is None:
-                print(f"Player {player['discord']} not found, skipping...")
-                continue
-
             try:
                 await RGL.get_player(int(player["steam"]))
             except LookupError:
                 print(f"Player {player['discord']} not found in RGL, skipping...")
                 continue
 
-            _sixes_top, hl_top = await RGL.get_top_div(int(player["steam"]))
-            top_div = hl_top[0]
+            await asyncio.sleep(5)
+
+            try:
+                player_divs = await RGL.get_div_data(int(player["steam"]))
+            except LookupError:
+                print("Rate limited by RGL API, skipping...")
+                continue
+            top_div = player_divs["hl"]["highest"]
             print(top_div)
 
             if top_div == -1:
@@ -71,6 +71,8 @@ class UpdateRolesCog(commands.Cog):
                     f"RGL api timed out while searching player {player['discord']}, skipping..."
                 )
                 continue
+
+            await db.update_divisons(player["steam"], player_divs)
 
             if discord_user is not None:
                 if top_div >= 5:  # Advanced+
@@ -83,7 +85,7 @@ class UpdateRolesCog(commands.Cog):
                         await div_appeal_channel.send(
                             f"<@{player['discord']}> You have been automatically restricted from pugs due to having Advanced/Invite experience in Highlander or 6s.\nIf you believe that you should be let in (for example, you roster rode on your Advanced seasons or you've played in here before), please let us know."
                         )
-                        if hl_top[0] >= 5:
+                        if top_div >= 5:
                             await discord_user.add_roles(hl_div_ban)
 
                 elif top_div >= 4:  # Main+

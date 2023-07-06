@@ -55,6 +55,12 @@ def get_server(guild: int):
     return database.find_one({"guild": guild})
 
 
+def get_all_servers():
+    """Get all servers from the database."""
+    database = client.guilds.config
+    return database.find()
+
+
 def set_registration_settings(guild: int, registration):
     """Set the registration settings for a guild.
 

@@ -92,7 +92,6 @@ class RGL_API:
         if "statusCode" in all_teams:
             if all_teams["statusCode"] == 429:
                 raise LookupError("Rate limit exceeded")
-        print(all_teams)
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
@@ -138,7 +137,6 @@ class RGL_API:
             list: A list containing the highest division for 6s and HL.
         """
         player = await self.get_core_teams(steam_id)
-        print(player)
         if player is None:
             return [[-1, -1], [-1, -1]]
         sixesdiv = [0, 0]
@@ -172,7 +170,6 @@ class RGL_API:
             steam_id (int): The steamid of the player to get.
         """
         player = await self.get_core_teams(steam_id)
-        print(player)
         player_divs = {
             "sixes": {"highest": -1, "current": -1},
             "hl": {"highest": -1, "current": -1},
