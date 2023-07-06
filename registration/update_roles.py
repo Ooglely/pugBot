@@ -23,7 +23,7 @@ class UpdateRolesCog(commands.Cog):
         self.bot: nextcord.Client = bot
         self.update_rgl.start()  # pylint: disable=no-member
 
-    @tasks.loop(hours=24)  # time=update_time
+    @tasks.loop(time=update_time)  # time=update_time
     async def update_rgl(self):
         """Updates RGL divisions and roles for all registered players"""
         print("Updating RGL divisions and roles for all registered players...")
