@@ -1,4 +1,5 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
+import asyncio
 import aiohttp
 
 divs = {
@@ -218,6 +219,7 @@ class RGL_API:
         sixes = []
         highlander = []
         player_data = await self.get_player(steam_id)
+        await asyncio.sleep(2)
         team_data = await self.get_core_teams(steam_id)
 
         for season in team_data["sixes"]:

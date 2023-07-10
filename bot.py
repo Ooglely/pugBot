@@ -218,10 +218,14 @@ async def player_listener(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
-    if message.content.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
-        rgl = await RGL.create_player(int(get_steam64(message.content)))
-        embed = await create_player_embed(rgl)
-        await message.channel.send(embed=embed)
+    if "https://rgl.gg/Public/PlayerProfile.aspx?" in message.content:
+        words = message.content.split()
+        for word in words:
+            print(word)
+            if "https://rgl.gg/Public/PlayerProfile.aspx?" in word:
+                rgl = await RGL.create_player(int(get_steam64(word)))
+                embed = await create_player_embed(rgl)
+                await message.channel.send(embed=embed)
 
 
 @bot.slash_command(
@@ -256,22 +260,13 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
     help_embed.set_thumbnail("https://ooglely.github.io/53EWxbz.jpeg")
     help_embed.add_field(
         name="Global Commands",
-        value="""/setup - Used to setup the bot for a guild (Admin only)
-                 /serveme - Used to set the serveme api key for a guild (Admin only)
-                 /registration - Sets up tf.oog.pw registration (Admin only)
-                 /register - Registers a player in the bot's database
-                 /search - Search for a player's RGL profile
-                 /reserve - Get a new reservation from na.serveme.tf
-                 /map - Change the map on a running reservation
-                 /rcon - Run an rcon command on an active reservation""",
+        value="/setup - Used to setup the bot for a guild (Admin only)\n/serveme - Used to set the serveme api key for a guild (Admin only)\n/registration - Sets up tf.oog.pw registration (Admin only)\n/register - Registers a player in the bot's database\n/search - Search for a player's RGL profile\n/reserve - Get a new reservation from na.serveme.tf\n/map - Change the map on a running reservation\n/rcon - Run an rcon command on an active reservation",
         inline=False,
     )
     if interaction.guild_id == 952817189893865482:
         help_embed.add_field(
             name="AGG Commands",
-            value="""/stats - Show a player's pug stats
-                     /move - Move all players after a pug is over
-                     /pug - Not implemented yet""",
+            value="/stats - Show a player's pug stats\n/move - Move all players after a pug is over\n/pug - Not implemented yet",
             inline=False,
         )
     help_embed.set_footer(text=VERSION)
