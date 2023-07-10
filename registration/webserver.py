@@ -77,6 +77,9 @@ class WebserverCog(nextcord.ext.commands.Cog):
             if not server["registration"]["enabled"]:
                 continue
             guild = self.bot.get_guild(server["guild"])
+            # If guild is not found, skip
+            if guild is None:
+                continue
             # If member is not in server, skip
             if guild.get_member(discord_id) is None:
                 continue

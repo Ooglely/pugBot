@@ -236,6 +236,17 @@ class UpdateRolesCog(commands.Cog):
             await db.update_rgl_ban_status(steam_id)
         print("Finished updating roles for all players")
 
+    @update_rgl.error
+    async def error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in update_rgl loop:\n")
+        print(exception.__class__.__name__)
+        print(exception)
+
     async def agg_update_roles(self, player, player_divs, old_ban, new_ban):
         """AGG role update function
 
@@ -494,3 +505,83 @@ class UpdateRolesCog(commands.Cog):
                     await logs_channel.send(embed=ban_embed)
             print(f"Finished updating roles for {discord_id}")
             print(player_divs)
+
+    @commands.Cog.listener("on_member_join")
+    async def new_member(self, member: nextcord.Member):
+        """ASsigns roles to new members of a server if they are registered."""
+        server = db.get_server(member.guild.id)
+        try:
+            player = db.get_player_from_discord(member.id)
+        except LookupError:
+            return
+
+        # If registration settings are not set up, skip
+        if "registration" not in server:
+            return
+        # If registration is disabled, skip
+        if not server["registration"]["enabled"]:
+            return
+
+        guild = member.guild
+
+        reg_settings = RegistrationSettings()
+        reg_settings.import_from_db(member.guild.id)
+
+        gamemode: str
+        if reg_settings.gamemode == "sixes":
+            gamemode = "sixes"
+        elif reg_settings.gamemode == "highlander":
+            gamemode = "hl"
+
+        division = player["divison"][gamemode][reg_settings.mode]
+
+        no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
+        nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
+        am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
+        im_role: nextcord.Role = guild.get_role(reg_settings.roles["intermediate"])
+        main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
+        adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
+        inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
+        ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
+
+        logs_channel: nextcord.TextChannel = guild.get_channel(
+            reg_settings.channels["logs"]
+        )
+
+        divison_roles: list[nextcord.Role] = [
+            no_exp_role,
+            nc_role,
+            am_role,
+            im_role,
+            main_role,
+            adv_role,
+            adv_role,
+            inv_role,
+        ]
+
+        await member.add_roles(divison_roles[division])
+        log_embed = nextcord.Embed(
+            title="New Member",
+            url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(player["steam"]),
+            color=BOT_COLOR,
+        )
+        log_embed.add_field(
+            name="Discord", value=f"<@{player['discord']}>", inline=True
+        )
+        log_embed.add_field(name="Steam", value=str(player["steam"]), inline=True)
+
+        if reg_settings.ban and player["rgl_ban"]:
+            await member.add_roles(ban_role)
+            log_embed.add_field(
+                name="Roles Added",
+                value=f"<@&{ban_role.id}>",
+                inline=False,
+            )
+        else:
+            log_embed.add_field(
+                name="Roles Added",
+                value=f"<@&{divison_roles[division].id}>",
+                inline=False,
+            )
+
+        await logs_channel.send(embed=log_embed)

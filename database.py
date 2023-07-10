@@ -162,6 +162,21 @@ def get_player_from_steam(steam: int):
     return database.find_one({"steam": str(steam)})
 
 
+def get_player_from_discord(discord: int):
+    """Get the player from the database.
+
+    Args:
+        discord (int): The discord ID to get.
+
+    Returns:
+        dict: Player data
+    """
+    database = client.players.data
+    if database.find_one({"discord": str(discord)}) is None:
+        raise LookupError("Player not found in database")
+    return database.find_one({"discord": str(discord)})
+
+
 def get_all_players():
     """Get all players from the database."""
     database = client.players.data
