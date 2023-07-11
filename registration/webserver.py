@@ -65,6 +65,16 @@ class WebserverCog(nextcord.ext.commands.Cog):
             discord_id (int): Discord ID of the player
             steam_id (int): Steam ID of the player
         """
+        # If the user doesn't have an RGL profile, don't bother registering
+        member = self.bot.get_user(discord_id)
+        try:
+            player_data = await RGL.get_player(steam_id)
+        except LookupError:
+            await member.send(
+                content="Registration failed: Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
+            )
+
+        await asyncio.sleep(2)
         player_divs = await RGL.get_div_data(steam_id)
         await update_divisons(steam_id, player_divs)
         print(player_divs)
@@ -139,21 +149,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 checks_field += "✅ Logs: " + str(log_num)
             else:
                 checks_field += "❌ Logs: " + str(log_num)
-
-            # RGL profile check.
-            try:
-                player_data = await RGL.get_player(steam_id)
-            except LookupError:
-                checks_field += "\n❌ RGL Profile does not exist"
-                await player.add_roles(no_exp_role)
-                registration_embed.add_field(
-                    name="Checks", value=checks_field, inline=False
-                )
-                registration_embed.add_field(
-                    name="Roles Added", value=f"<@&{no_exp_role.id}>", inline=False
-                )
-                await registration_channel.send(embed=registration_embed)
-                continue
 
             registration_embed.set_thumbnail(url=player_data["avatar"])
             checks_field += "\n✅ RGL Profile exists"
