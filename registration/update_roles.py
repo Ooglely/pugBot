@@ -28,11 +28,15 @@ class UpdateRolesCog(commands.Cog):
         """Updates RGL divisions and roles for all registered players"""
         print("Updating RGL divisions and roles for all registered players...")
         players = db.get_all_players()
+        all_players = []
         server_cursor = db.get_all_servers()
         all_servers = []
         for server in server_cursor:
             all_servers.append(server)
         for player in players:
+            # Does this suck? Yes. But mongoDB cursors time out after a while
+            all_players.append(player)
+        for player in all_players:
             await asyncio.sleep(20)
             print(player)
             steam_id = int(player["steam"])
