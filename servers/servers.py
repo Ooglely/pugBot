@@ -482,3 +482,14 @@ class ServerCog(commands.Cog):
                     await message.delete()
                 self.servers.remove(server)
         return
+
+    @server_status.error
+    async def error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in server_status loop:\n")
+        print(exception.__class__.__name__)
+        print(exception)
