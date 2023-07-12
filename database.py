@@ -180,8 +180,13 @@ def get_player_from_discord(discord: int):
 def get_all_players():
     """Get all players from the database."""
     database = client.players.data
-    print(database.count_documents({}))
     return database.find()
+
+
+def player_count():
+    """Returns the amount of players in the database."""
+    database = client.players.data
+    return database.count_documents({})
 
 
 def get_divisions(discord: int):
@@ -241,3 +246,18 @@ async def update_rgl_ban_status(steam: int) -> bool:
         upsert=True,
     )
     return ban_status
+
+
+async def add_pug_categories(guild: int, category: int):
+    """Add a pug category to the database.
+
+    Args:
+        guild (int): The guild ID to add.
+        category (int): The category ID to add.
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$push": {"pug_categories": category}},
+        upsert=True,
+    )

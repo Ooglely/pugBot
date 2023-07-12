@@ -1,7 +1,8 @@
 """Main file for running and starting the bot, with general global commands."""
+import random
 import logging
 import nextcord
-from nextcord.ext import commands
+from nextcord.ext import commands, tasks
 
 import database
 from rgl_api import RGL_API, Player
@@ -43,6 +44,7 @@ async def on_ready():
     # Need to add cog on ready instead of before for webserver async to be friendly
     bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
+    update_status.start()
 
 
 class SetupView(nextcord.ui.View):
@@ -271,6 +273,23 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
         )
     help_embed.set_footer(text=VERSION)
     await interaction.send(embed=help_embed)
+
+
+@tasks.loop(minutes=1)
+async def update_status():
+    """Updates the bot's status with the current number of guilds."""
+    statuses = [
+        f"{len(bot.guilds)} guilds",
+        f"{len(bot.users)} users",
+        "tf.oog.pw :3",
+        f"{database.player_count()} registered players",
+    ]
+    await bot.change_presence(
+        activity=nextcord.Activity(
+            type=nextcord.ActivityType.watching,
+            name=random.choice(statuses),
+        )
+    )
 
 
 bot.run(DISCORD_TOKEN)
