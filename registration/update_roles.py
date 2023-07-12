@@ -98,7 +98,10 @@ class UpdateRolesCog(commands.Cog):
                     gamemode = "hl"
 
                 division = player_divs[gamemode][reg_settings.mode]
-                old_divison = player["divison"][gamemode][reg_settings.mode]
+                try:
+                    old_divison = player["divison"][gamemode][reg_settings.mode]
+                except TypeError:
+                    old_divison = player["divison"][gamemode]
 
                 no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
                 nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
@@ -249,6 +252,7 @@ class UpdateRolesCog(commands.Cog):
         """
         print("Error in update_rgl loop:\n")
         print(exception.__class__.__name__)
+        print(exception.__cause__)
         print(exception)
 
     async def agg_update_roles(self, player, player_divs, old_ban, new_ban):

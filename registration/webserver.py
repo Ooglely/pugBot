@@ -67,13 +67,14 @@ class WebserverCog(nextcord.ext.commands.Cog):
         """
         # If the user doesn't have an RGL profile, don't bother registering
         member = self.bot.get_user(discord_id)
+        player_data = {}
         try:
             player_data = await RGL.get_player(steam_id)
         except LookupError:
             await member.send(
                 content="Registration failed: Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
             )
-
+            return
         await asyncio.sleep(2)
         player_divs = await RGL.get_div_data(steam_id)
         await update_divisons(steam_id, player_divs)

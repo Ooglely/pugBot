@@ -479,7 +479,11 @@ class ServerCog(commands.Cog):
             status: bool = await server.is_active()
             if not status:
                 for message in server.messages:
-                    await message.delete()
+                    try:
+                        await message.delete()
+                    except nextcord.HTTPException:
+                        self.servers.remove(server)
+                        continue
                 self.servers.remove(server)
         return
 
