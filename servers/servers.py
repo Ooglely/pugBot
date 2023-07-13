@@ -1,5 +1,4 @@
 """Files containing the server cog with commands for reserving/managing servers."""
-import asyncio
 import json
 import string
 import random
@@ -133,6 +132,7 @@ class ServerCog(commands.Cog):
             tf_map (str): The map to set on the server
             gamemode (str): The gamemode config to set on the server
         """
+        await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         servers, times = await ServemeAPI().get_new_reservation(serveme_api_key)
@@ -164,7 +164,6 @@ class ServerCog(commands.Cog):
         )
 
         if gamemode == "sixes":
-            whitelist_id = 20  # 6s whitelist ID
             if tf_map not in maps["sixes"].values():
                 await interaction.send("Invalid map.")
                 return
@@ -173,7 +172,6 @@ class ServerCog(commands.Cog):
             else:
                 server_config_id = 68  # rgl_6s_koth_bo5
         else:
-            whitelist_id = 22  # HL whitelist ID
             if tf_map not in maps["hl"].values():
                 await interaction.send("Invalid map.")
                 return
@@ -193,8 +191,8 @@ class ServerCog(commands.Cog):
                 "enable_demos_tf": True,
                 "first_map": tf_map,
                 "server_config_id": server_config_id,
-                "whitelist_id": whitelist_id,
-                "custom_whitelist_id": None,
+                "whitelist_id": None,
+                "custom_whitelist_id": whitelist,
                 "auto_end": True,
             }
         }
@@ -266,21 +264,12 @@ class ServerCog(commands.Cog):
             connect_channel = self.bot.get_channel(guild_data["connect"])
 
         connect_msg = await connect_channel.send(embed=connect_embed)
-        reserve_id = await reserve_msg.fetch()
 
         self.servers.append(
-            Reservation(server_id, serveme_api_key, [reserve_id, rcon_msg, connect_msg])
+            Reservation(
+                server_id, serveme_api_key, [reserve_msg, rcon_msg, connect_msg]
+            )
         )
-
-        await asyncio.sleep(20)  # wait for server to start
-
-        # run correct whitelist command
-        with Client(
-            reserve["ip"],
-            int(reserve["port"]),
-            passwd=rcon_password,
-        ) as client:
-            client.run(f"tftrue_whitelist_id {whitelist}")
 
     @util.is_setup()
     @util.is_runner()
