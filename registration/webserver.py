@@ -159,10 +159,10 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 checks_field += "\n❌ No RGL team history"
                 await player.add_roles(no_exp_role)
                 registration_embed.add_field(
-                    name="Checks", value=checks_field, inline=False
+                    name="Roles Added", value=f"<@&{no_exp_role.id}>", inline=False
                 )
                 registration_embed.add_field(
-                    name="Roles Added", value=f"<@&{no_exp_role.id}>", inline=False
+                    name="Checks", value=checks_field, inline=False
                 )
                 await registration_channel.send(embed=registration_embed)
                 continue
@@ -177,10 +177,10 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 if reg_settings.ban:
                     await player.add_roles(ban_role)
                     registration_embed.add_field(
-                        name="Checks", value=checks_field, inline=False
+                        name="Roles Added", value=f"<@&{ban_role.id}>", inline=False
                     )
                     registration_embed.add_field(
-                        name="Roles Added", value=f"<@&{ban_role.id}>", inline=False
+                        name="Checks", value=checks_field, inline=False
                     )
                     await registration_channel.send(embed=registration_embed)
                     continue

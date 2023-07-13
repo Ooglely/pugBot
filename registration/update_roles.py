@@ -98,10 +98,14 @@ class UpdateRolesCog(commands.Cog):
                     gamemode = "hl"
 
                 division = player_divs[gamemode][reg_settings.mode]
-                try:
-                    old_divison = player["divison"][gamemode][reg_settings.mode]
-                except TypeError:
-                    old_divison = player["divison"][gamemode]
+                old_divison: int
+                if "divison" not in player:
+                    old_divison = 0
+                else:
+                    try:
+                        old_divison = player["divison"][gamemode][reg_settings.mode]
+                    except TypeError:
+                        old_divison = player["divison"][gamemode]
 
                 no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
                 nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])

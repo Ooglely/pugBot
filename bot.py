@@ -277,12 +277,14 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
 
 @tasks.loop(minutes=1)
 async def update_status():
-    """Updates the bot's status with the current number of guilds."""
+    """Updates the bot's status with various data."""
     statuses = [
         f"{len(bot.guilds)} guilds",
-        f"{len(bot.users)} users",
         "tf.oog.pw :3",
+        f"{len(bot.users)} users",
+        "sea otters :D",
         f"{database.player_count()} registered players",
+        "meds drop :(",
     ]
     await bot.change_presence(
         activity=nextcord.Activity(
