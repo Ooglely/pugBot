@@ -248,16 +248,16 @@ async def update_rgl_ban_status(steam: int) -> bool:
     return ban_status
 
 
-async def add_pug_categories(guild: int, category: int):
+async def add_pug_categories(guild: int, categories):
     """Add a pug category to the database.
 
     Args:
         guild (int): The guild ID to add.
-        category (int): The category ID to add.
+        category (list): The categories to add
     """
     database = client.guilds.config
     database.update_one(
         {"guild": guild},
-        {"$push": {"pug_categories": category}},
+        {"$set": {"pug_categories": categories}},
         upsert=True,
     )
