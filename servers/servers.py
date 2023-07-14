@@ -164,6 +164,7 @@ class ServerCog(commands.Cog):
         )
 
         if gamemode == "sixes":
+            whitelist_id = 20  # 6s whitelist ID
             if tf_map not in maps["sixes"].values():
                 await interaction.send("Invalid map.")
                 return
@@ -172,6 +173,7 @@ class ServerCog(commands.Cog):
             else:
                 server_config_id = 68  # rgl_6s_koth_bo5
         else:
+            whitelist_id = 22  # HL whitelist ID
             if tf_map not in maps["hl"].values():
                 await interaction.send("Invalid map.")
                 return
@@ -191,7 +193,7 @@ class ServerCog(commands.Cog):
                 "enable_demos_tf": True,
                 "first_map": tf_map,
                 "server_config_id": server_config_id,
-                "whitelist_id": None,
+                "whitelist_id": whitelist_id,
                 "custom_whitelist_id": whitelist,
                 "auto_end": True,
             }
