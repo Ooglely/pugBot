@@ -473,9 +473,15 @@ class ServerCog(commands.Cog):
                     try:
                         await message.delete()
                     except nextcord.HTTPException:
-                        self.servers.remove(server)
+                        try:
+                            self.servers.remove(server)
+                        except ValueError:
+                            continue
                         continue
-                self.servers.remove(server)
+                try:
+                    self.servers.remove(server)
+                except ValueError:
+                    continue
         return
 
     @server_status.error
