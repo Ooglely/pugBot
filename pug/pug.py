@@ -69,7 +69,9 @@ class PugRunningCog(commands.Cog):
             next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
                 category["next_pug"]
             )
-            if len(add_up_channel.members) < team_size * 2:
+            if (
+                len(add_up_channel.members) + len(next_pug_channel.members)
+            ) < team_size * 2:
                 disabled = True
                 name += " (Not enough players)"
             if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
