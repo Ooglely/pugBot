@@ -157,6 +157,12 @@ class PugRunningCog(commands.Cog):
                         red_count += 1
                 red_team_string += f"[{divison}] <@{player['discord']}>\n"
 
+            teams["blu"].sort(
+                key=lambda x: x
+                if balancing_disabled
+                else x["divison"][gamemode][reg_settings.mode],
+                reverse=False,
+            )
             blu_team_string = ""
             blu_level = 0
             blu_count = 0
