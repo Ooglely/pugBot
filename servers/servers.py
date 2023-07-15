@@ -476,11 +476,15 @@ class ServerCog(commands.Cog):
                         try:
                             self.servers.remove(server)
                         except ValueError:
+                            print("Server not in list")
+                            print(self.servers)
                             continue
                         continue
                 try:
                     self.servers.remove(server)
                 except ValueError:
+                    print("Server not in list")
+                    print(self.servers)
                     continue
         return
 

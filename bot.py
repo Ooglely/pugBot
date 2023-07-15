@@ -11,6 +11,8 @@ from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
+from pug.pug import PugRunningCog
+from pug.setup import PugSetupCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
 from registration.webserver import WebserverCog
@@ -28,6 +30,8 @@ bot.add_cog(StatsCog(bot))
 bot.add_cog(PugCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
+bot.add_cog(PugSetupCog(bot))
+bot.add_cog(PugRunningCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()

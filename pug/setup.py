@@ -35,7 +35,13 @@ class PugSetupCog(commands.Cog):
     @category.subcommand(name="add", description="Add a pug category to the server.")
     @is_setup()
     @is_runner()
-    async def pug_category_add(self, interaction: nextcord.Interaction, name: str):
+    async def pug_category_add(
+        self,
+        interaction: nextcord.Interaction,
+        name: str = nextcord.SlashOption(
+            name="name", description="The name for the category.", required=True
+        ),
+    ):
         """Add a pug category to the server.
 
         Args:
@@ -64,8 +70,15 @@ class PugSetupCog(commands.Cog):
         first_to = {
             "enabled": False,
             "num": 0,
-            "channel": None,
         }
+
+        first_to_channel = FirstToChannelSelect()
+        setup_embed.description = "Please select the In Next Pug channel. This is the channel that the waiting players will be moved to, and the first x players if it is enabled."
+        await interaction.edit_original_message(
+            embed=setup_embed, view=first_to_channel
+        )
+        await first_to_channel.wait()
+        pug_category.next_pug = first_to_channel.first_to
 
         first_to_view = FirstToSelect()
         setup_embed.description = "If you would like to use the first to x system, please select the number of players required to add up.\nThis will move the first x players to the chosen In Next Pug channel.\n\n**Not Implemented Yet**"
@@ -73,16 +86,6 @@ class PugSetupCog(commands.Cog):
         await first_to_view.wait()
         first_to["enabled"] = first_to_view.selection
         first_to["num"] = first_to_view.num
-        if first_to_view.selection:
-            first_to_channel = FirstToChannelSelect()
-            setup_embed.description = (
-                "Please select the channel to move the first x players to."
-            )
-            await interaction.edit_original_message(
-                embed=setup_embed, view=first_to_channel
-            )
-            await first_to_channel.wait()
-            first_to["channel"] = first_to_channel.first_to
 
         pug_category.first_to = first_to
 
@@ -93,7 +96,7 @@ class PugSetupCog(commands.Cog):
         )
         setup_embed.add_field(
             name="First To",
-            value=f"Enabled: {pug_category.first_to['enabled']}\nMode: {pug_category.first_to['num']}\nChannel: <#{pug_category.first_to['channel']}>",
+            value=f"Enabled: {pug_category.first_to['enabled']}\nMode: {pug_category.first_to['num']}\nChannel: <#{pug_category.next_pug}>",
         )
 
         server = get_server(interaction.guild.id)
@@ -142,15 +145,18 @@ class PugSetupCog(commands.Cog):
 
         await interaction.send(embed=setup_embed, view=select_view)
         await select_view.wait()
-        server_to_remove = select_view.name
+        category_to_remove = select_view.name
+
+        if category_to_remove == "cancel":
+            return
 
         for category in categories:
-            if category["name"] == server_to_remove:
+            if category["name"] == category_to_remove:
                 categories.remove(category)
                 break
 
         await add_pug_categories(interaction.guild.id, categories)
 
-        setup_embed.description = f"Removed pug category {server_to_remove}."
+        setup_embed.description = f"Removed pug category {category_to_remove}."
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)

@@ -6,6 +6,7 @@ default_category = {
     "add_up": None,
     "red_team": None,
     "blu_team": None,
+    "next_pug": None,
     "first_to": {
         "enabled": False,
         "num": 0,
@@ -23,6 +24,7 @@ class PugCategory:
         self.add_up: int = category["add_up"]
         self.red_team: int = category["red_team"]
         self.blu_team: int = category["blu_team"]
+        self.next_pug: int = category["next_pug"]
         self.first_to = category["first_to"]
 
 
@@ -151,11 +153,9 @@ class FirstToChannelSelect(nextcord.ui.View):
 
     def __init__(self):
         super().__init__()
-        self.first_to = None
+        self.first_to: int = 0
 
-    @nextcord.ui.channel_select(
-        custom_id="first_to", placeholder="Select a channel to move players to"
-    )
+    @nextcord.ui.channel_select(custom_id="first_to", placeholder="In Next Pug channel")
     async def first_to_select(
         self, channel: nextcord.ui.ChannelSelect, _interaction: nextcord.Interaction
     ):
@@ -176,6 +176,15 @@ class CategorySelect(nextcord.ui.View):
         super().__init__()
         self.name = None
 
+    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red, row=4)
+    async def cancel(
+        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
+    ):
+        """Cancels the view"""
+        await interaction.message.delete()
+        self.name = "cancel"
+        self.stop()
+
 
 class CategoryButton(nextcord.ui.Button):
     """A button representing a server."""
@@ -192,3 +201,63 @@ class CategoryButton(nextcord.ui.Button):
         """Callback for when the button is pressed."""
         super().view.name = self.name
         super().view.stop()
+
+
+class TeamGenerationView(nextcord.ui.View):
+    """View to show generated teams."""
+
+    def __init__(self, balancing_disabled):
+        super().__init__()
+        self.balancing_disabled = balancing_disabled
+        if balancing_disabled:
+            self.children[1].disabled = True
+        self.action = None
+
+    @nextcord.ui.button(label="Move", style=nextcord.ButtonStyle.green)
+    async def move(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Moves the players"""
+        self.action = "move"
+        self.stop()
+
+    @nextcord.ui.button(label="Reroll Balanced Teams", style=nextcord.ButtonStyle.gray)
+    async def balance(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Rerolls new balanced teams"""
+        self.action = "balance"
+        self.stop()
+
+    @nextcord.ui.button(label="Reroll Random Teams", style=nextcord.ButtonStyle.gray)
+    async def random(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        "Rerolls new random teams"
+        self.action = "random"
+        self.stop()
+
+
+class MoveView(nextcord.ui.View):
+    """View to show moving users back."""
+
+    def __init__(self):
+        super().__init__()
+        self.action = None
+
+    @nextcord.ui.button(label="Move Back", style=nextcord.ButtonStyle.gray)
+    async def move_back(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Moves the players"""
+        self.action = "move"
+        self.stop()
+
+    @nextcord.ui.button(label="Done", style=nextcord.ButtonStyle.green)
+    async def done(
+        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
+    ):
+        """Rerolls new balanced teams"""
+        await interaction.message.delete()
+        self.action = "done"
+        self.stop()
