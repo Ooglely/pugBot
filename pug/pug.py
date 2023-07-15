@@ -91,7 +91,9 @@ class PugRunningCog(commands.Cog):
             description="Select the category you would like to generate teams for.",
         )
         await interaction.send(embed=pug_embed, view=select_view)
-        await select_view.wait()
+        embed_status = await select_view.wait()
+        if embed_status:
+            return
 
         if select_view.name == "cancel":
             return
@@ -394,7 +396,9 @@ class PugRunningCog(commands.Cog):
             description="Select the category to move users in.",
         )
         await interaction.send(embed=pug_embed, view=select_view)
-        await select_view.wait()
+        status = await select_view.wait()
+        if status:
+            return
 
         if select_view.name == "cancel":
             return
