@@ -290,6 +290,7 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             tf_map (str): The map to set on the server
         """
+        await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
@@ -298,25 +299,6 @@ class ServerCog(commands.Cog):
             await interaction.send(
                 "There are no active reservations with the associated serveme account."
             )
-            return
-        if len(reservations) == 1:
-            try:
-                command: str = await util.get_exec_command(reservations[0], tf_map)
-            except Exception:
-                await interaction.send(
-                    """Unable to detect the current gamemode.
-                    The whitelist on the server is not associated with a gamemode."""
-                )
-                return
-
-            with Client(
-                reservations[0]["server"]["ip"],
-                int(reservations[0]["server"]["port"]),
-                passwd=reservations[0]["rcon"],
-            ) as client:
-                client.run(command)
-
-            await interaction.send("Changing map to `" + tf_map + "`.")
             return
 
         server_view = Servers()
@@ -366,6 +348,7 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             command (str): The command to run on the TF2 server.
         """
+        await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
@@ -375,37 +358,29 @@ class ServerCog(commands.Cog):
                 "There are no active reservations with the associated serveme account."
             )
             return
-        if len(reservations) == 1:
-            with Client(
-                reservations[0]["server"]["ip"],
-                int(reservations[0]["server"]["port"]),
-                passwd=reservations[0]["rcon"],
-            ) as client:
-                client.run(command)
-            await interaction.send("Ran command `" + command + "`")
-        else:
-            server_view = Servers()
 
-            for num, reservation in enumerate(reservations):
-                button = ServerButton(reservation, num)
-                server_view.add_item(button)
+        server_view = Servers()
 
-            await interaction.send(
-                "Select a reservation to run the command on.", view=server_view
-            )
-            await server_view.wait()
-            server_id = server_view.server_chosen
+        for num, reservation in enumerate(reservations):
+            button = ServerButton(reservation, num)
+            server_view.add_item(button)
 
-            with Client(
-                reservations[server_id]["server"]["ip"],
-                int(reservations[server_id]["server"]["port"]),
-                passwd=reservations[server_id]["rcon"],
-            ) as client:
-                client.run(command)
+        await interaction.send(
+            "Select a reservation to run the command on.", view=server_view
+        )
+        await server_view.wait()
+        server_id = server_view.server_chosen
 
-            await interaction.edit_original_message(
-                content="Ran command `" + command + "`", view=None
-            )
+        with Client(
+            reservations[server_id]["server"]["ip"],
+            int(reservations[server_id]["server"]["port"]),
+            passwd=reservations[server_id]["rcon"],
+        ) as client:
+            client.run(command)
+
+        await interaction.edit_original_message(
+            content="Ran command `" + command + "`", view=None
+        )
 
     @util.is_setup()
     @util.is_runner()
@@ -416,6 +391,7 @@ class ServerCog(commands.Cog):
         Args:
             interaction (nextcord.Interaction): Interaction object from invoking the command.
         """
+        await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
@@ -426,42 +402,30 @@ class ServerCog(commands.Cog):
                     "There are no active reservations with the associated serveme account."
                 )
                 return
-            if len(reservations) == 1:
-                async with session.delete(
-                    f"https://na.serveme.tf/api/reservations/{reservations[0]['id']}?api_key={serveme_api_key}",
-                ) as resp:
-                    if resp.status == 200:
-                        await interaction.send(
-                            f"Ending reservation `#{reservations[0]['id']}`."
-                        )
-                    else:
-                        await interaction.send(
-                            f"Failed to end reservation `#{reservations[0]['id']}`.\nStatus code: {resp.status}"
-                        )
-            else:
-                server_view = Servers()
 
-                for num, reservation in enumerate(reservations):
-                    button = ServerButton(reservation, num)
-                    server_view.add_item(button)
+            server_view = Servers()
 
-                await interaction.send("Select a reservation to end.", view=server_view)
-                await server_view.wait()
-                server_id = server_view.server_chosen
+            for num, reservation in enumerate(reservations):
+                button = ServerButton(reservation, num)
+                server_view.add_item(button)
 
-                async with session.delete(
-                    f"https://na.serveme.tf/api/reservations/{reservations[server_id]['id']}?api_key={serveme_api_key}",
-                ) as resp:
-                    if resp.status == 200:
-                        await interaction.edit_original_message(
-                            content=f"Ending reservation `#{reservations[server_id]['id']}`.",
-                            view=None,
-                        )
-                    else:
-                        await interaction.edit_original_message(
-                            content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
-                            view=None,
-                        )
+            await interaction.send("Select a reservation to end.", view=server_view)
+            await server_view.wait()
+            server_id = server_view.server_chosen
+
+            async with session.delete(
+                f"https://na.serveme.tf/api/reservations/{reservations[server_id]['id']}?api_key={serveme_api_key}",
+            ) as resp:
+                if resp.status == 200:
+                    await interaction.edit_original_message(
+                        content=f"Ending reservation `#{reservations[server_id]['id']}`.",
+                        view=None,
+                    )
+                else:
+                    await interaction.edit_original_message(
+                        content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
+                        view=None,
+                    )
 
     @tasks.loop(minutes=1)
     async def server_status(self):
