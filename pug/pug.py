@@ -437,7 +437,10 @@ class PugRunningCog(commands.Cog):
         await interaction.edit_original_message(embed=pug_embed, view=None)
         for member in add_up.members:
             waiting_players.append(member)
-            await member.move_to(next_pug)
+            try:
+                await member.move_to(next_pug)
+            except nextcord.HTTPException:
+                continue
         moving_string += (
             f"\nDone!\n\nMoving players from <#{red_team.id}> to <#{add_up.id}>..."
         )
@@ -445,7 +448,10 @@ class PugRunningCog(commands.Cog):
         await interaction.edit_original_message(embed=pug_embed, view=None)
         for member in red_team.members:
             red_players.append(member)
-            await member.move_to(add_up)
+            try:
+                await member.move_to(add_up)
+            except nextcord.HTTPException:
+                continue
         moving_string += (
             f"\nDone!\n\nMoving players from <#{blu_team.id}> to <#{add_up.id}>..."
         )
@@ -453,7 +459,10 @@ class PugRunningCog(commands.Cog):
         await interaction.edit_original_message(embed=pug_embed, view=None)
         for member in blu_team.members:
             blu_players.append(member)
-            await member.move_to(add_up)
+            try:
+                await member.move_to(add_up)
+            except nextcord.HTTPException:
+                continue
         moving_string += "\nDone!"
 
         move_view = MoveView()
@@ -470,21 +479,30 @@ class PugRunningCog(commands.Cog):
             pug_embed.description = moving_string
             await interaction.edit_original_message(embed=pug_embed, view=None)
             for member in waiting_players:
-                await member.move_to(add_up)
+                try:
+                    await member.move_to(add_up)
+                except nextcord.HTTPException:
+                    continue
             moving_string += (
                 f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{red_team.id}>..."
             )
             pug_embed.description = moving_string
             await interaction.edit_original_message(embed=pug_embed, view=None)
             for member in red_players:
-                await member.move_to(red_team)
+                try:
+                    await member.move_to(red_team)
+                except nextcord.HTTPException:
+                    continue
             moving_string += (
                 f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{blu_team.id}>..."
             )
             pug_embed.description = moving_string
             await interaction.edit_original_message(embed=pug_embed, view=None)
             for member in blu_players:
-                await member.move_to(blu_team)
+                try:
+                    await member.move_to(blu_team)
+                except nextcord.HTTPException:
+                    continue
             moving_string += "\nDone!"
 
             pug_embed.title = "Done moving players back."
