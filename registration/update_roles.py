@@ -142,6 +142,13 @@ class UpdateRolesCog(commands.Cog):
                     inv_role,
                 ]
 
+                # If the player already has a div role, use that to
+                # compare older divs instead of the db
+                for role in divison_roles:
+                    if role in member.roles:
+                        old_divison = divison_roles.index(role)
+                        break
+
                 # If the player has no division role at all, we want to update as well
                 matching_roles = [i for i in divison_roles if i in member.roles]
                 if matching_roles == []:
@@ -172,9 +179,7 @@ class UpdateRolesCog(commands.Cog):
 
                 if old_divison != division:
                     print("Updating roles...")
-                    await member.remove_roles(
-                        nc_role, am_role, im_role, main_role, adv_role, inv_role
-                    )
+                    await member.remove_roles(divison_roles[old_divison])
                     await member.add_roles(divison_roles[division])
                     log_embed = nextcord.Embed(
                         title="Updated Division",
@@ -426,6 +431,13 @@ class UpdateRolesCog(commands.Cog):
                 inv_role,
             ]
 
+            # If the player already has a div role, use that to
+            # compare older divs instead of the db
+            for role in divison_roles:
+                if role in member.roles:
+                    old_divison = divison_roles.index(role)
+                    break
+
             # If the player has no division role at all, we want to update as well
             matching_roles = [i for i in divison_roles if i in member.roles]
             if matching_roles == []:
@@ -453,7 +465,7 @@ class UpdateRolesCog(commands.Cog):
                 await logs_channel.send(embed=log_embed)
 
             if old_divison != division:
-                await member.remove_roles(divison_roles)
+                await member.remove_roles(divison_roles[old_divison])
                 await member.add_roles(divison_roles[division])
                 log_embed = nextcord.Embed(
                     title="Updated Division",
