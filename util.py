@@ -107,6 +107,7 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
         str: The exec command to run.
     """
     whitelist_id: int = reservation["whitelist_id"]
+    custom_whitelist: str = reservation["custom_whitelist_id"]
     new_config: str
 
     if whitelist_id == 20:  # 6s whitelist ID
@@ -121,6 +122,13 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
             new_config = "rgl_hl_stopwatch"
         elif tf_map.startswith("koth_"):
             new_config = "rgl_hl_koth_bo5"
+        else:
+            new_config = "rgl_off"
+    elif custom_whitelist == ("13798" or "13797"):
+        if tf_map.startswith("cp_"):
+            return f"changelevel {tf_map}"
+        if tf_map.startswith("koth_"):
+            new_config = "rgl_6s_koth_bo5"
         else:
             new_config = "rgl_off"
     else:
