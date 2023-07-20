@@ -182,6 +182,10 @@ class ServerCog(commands.Cog):
             else:
                 server_config_id = 54
 
+        # Fix custom whitelists not working
+        if whitelist in (13798, 13797):
+            whitelist_id = None  # type: ignore
+
         reserve_string = {
             "reservation": {
                 "starts_at": times["reservation"]["starts_at"],
@@ -199,6 +203,7 @@ class ServerCog(commands.Cog):
             }
         }
 
+        print(reserve_string)
         reserve_json = json.dumps(reserve_string)
 
         server_id: int
