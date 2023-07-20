@@ -216,7 +216,7 @@ async def update_divisons(steam: int, divisons):
         divisons (dict): The divisons to set for the player.
     """
     database = client.players.data
-    if divisons["hl"]["highest"] == -1:
+    if divisons["hl"]["highest"] == -1 and get_divisions(steam) is not None:
         print("Skipping updating divs as there is no data.")
         return
     database.update_one(
