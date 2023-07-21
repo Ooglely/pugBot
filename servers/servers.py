@@ -261,11 +261,13 @@ class ServerCog(commands.Cog):
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
         connect_channel: nextcord.TextChannel
         if interaction.guild_id == 727627956058325052:  # TF2CC
-            if whitelist == 13797:  # Normal whitelist
-                connect_channel = self.bot.get_channel(934275639291310121)
-            elif whitelist == 13798:  # Newbie whitelist
-                connect_channel = self.bot.get_channel(958053551073021972)
-            else:
+            category = interaction.user.voice.channel.category
+            for channel in category.channels:
+                print(channel.name)
+                if "connect" in channel.name:
+                    connect_channel = channel
+                    break
+            if connect_channel is None:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
