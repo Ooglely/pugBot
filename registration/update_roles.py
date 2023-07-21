@@ -177,7 +177,10 @@ class UpdateRolesCog(commands.Cog):
 
                     await logs_channel.send(embed=log_embed)
 
-                if old_divison != division:
+                if (
+                    old_divison != division
+                    and divison_roles[old_divison] != divison_roles[division]
+                ):
                     print("Updating roles...")
                     await member.remove_roles(divison_roles[old_divison])
                     await member.add_roles(divison_roles[division])
