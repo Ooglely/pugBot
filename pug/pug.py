@@ -205,10 +205,21 @@ class PugRunningCog(commands.Cog):
                 await interaction.edit_original_message(embed=pug_embed, view=None)
                 for player in teams["red"]:
                     member = await interaction.guild.fetch_member(player["discord"])
-                    await member.move_to(red_team)
+                    try:
+                        await member.move_to(red_team)
+                    except nextcord.HTTPException:
+                        await interaction.send(
+                            f"<@{player['discord']}> + could not be moved to the RED team."
+                        )
+
                 for player in teams["blu"]:
                     member = await interaction.guild.fetch_member(player["discord"])
-                    await member.move_to(blu_team)
+                    try:
+                        await member.move_to(blu_team)
+                    except nextcord.HTTPException:
+                        await interaction.send(
+                            f"<@{player['discord']}> + could not be moved to the BLU team."
+                        )
                 pug_embed.description = "Done moving players!"
                 await interaction.edit_original_message(embed=pug_embed, view=None)
                 break

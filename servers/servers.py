@@ -263,7 +263,6 @@ class ServerCog(commands.Cog):
         if interaction.guild_id == 727627956058325052:  # TF2CC
             category = interaction.user.voice.channel.category
             for channel in category.channels:
-                print(channel.name)
                 if "connect" in channel.name:
                     connect_channel = channel
                     break
