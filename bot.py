@@ -1,5 +1,7 @@
 """Main file for running and starting the bot, with general global commands."""
 import random
+from typing import Optional
+
 import logging
 import nextcord
 from nextcord.ext import commands, tasks
@@ -237,14 +239,33 @@ async def player_listener(message: nextcord.Message):
 @bot.slash_command(
     name="search", description="Search for an RGL profile and display it."
 )
-async def search(interaction: nextcord.Interaction, steamid: str):
+async def search(
+    interaction: nextcord.Interaction,
+    discord_user: Optional[nextcord.User] = nextcord.SlashOption(
+        name="discord", description="The user to look up.", required=False
+    ),
+    steamid: Optional[str] = nextcord.SlashOption(
+        name="steam", description="The steam ID to look up.", required=False
+    ),
+):
     """Search for a players RGL profile and generate the embed.
 
     Args:
         interaction (nextcord.Interaction): The interaction to respond to.
         steamid (str): The player to search for.
     """
-    rgl = await RGL.create_player(int(get_steam64(steamid)))
+    await interaction.response.defer()
+    print(discord_user)
+    print(steamid)
+    if discord_user is not None:
+        steam_id = database.get_steam_from_discord(discord_user.id)
+        print(steam_id)
+        rgl = await RGL.create_player(int(get_steam64(steam_id)))
+    elif steamid is not None:
+        rgl = await RGL.create_player(int(get_steam64(steamid)))
+    else:
+        await interaction.send("You must specify a user or steam ID.", ephemeral=True)
+        return
     embed = await create_player_embed(rgl)
     await interaction.send(embed=embed)
 
