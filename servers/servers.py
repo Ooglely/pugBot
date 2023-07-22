@@ -327,7 +327,7 @@ class ServerCog(commands.Cog):
             )
         except Exception:
             await interaction.edit_original_message(
-                "Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
+                content="Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
             )
             return
 

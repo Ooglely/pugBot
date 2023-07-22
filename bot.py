@@ -229,7 +229,6 @@ async def player_listener(message: nextcord.Message):
     if "https://rgl.gg/Public/PlayerProfile.aspx?" in message.content:
         words = message.content.split()
         for word in words:
-            print(word)
             if "https://rgl.gg/Public/PlayerProfile.aspx?" in word:
                 rgl = await RGL.create_player(int(get_steam64(word)))
                 embed = await create_player_embed(rgl)
