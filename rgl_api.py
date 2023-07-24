@@ -1,6 +1,9 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
 import asyncio
+from datetime import datetime, timedelta
+
 import aiohttp
+
 
 divs = {
     "Newcomer": 1,
@@ -96,22 +99,27 @@ class RGL_API:
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
-        try:
-            for season in all_teams:
-                if (
-                    season["formatId"] == 3 and season["regionId"] == 40
-                ):  # NA Sixes region code
-                    sixes_teams.append(season)
-                elif (
-                    season["formatId"] == 2 and season["regionId"] == 24
-                ):  # NA HL region code
-                    hl_teams.append(season)
-            core_seasons["sixes"] = sixes_teams
-            core_seasons["hl"] = hl_teams
-            return core_seasons
-        except ValueError:
-            print(f"Error getting core teams for {steam_id}: {all_teams}")
-            return None
+        for season in all_teams:
+            if season["leftAt"] is None:
+                pass
+            else:  # Check if the team lasted at least 30 days
+                print(season)
+                team_start = datetime.fromisoformat(season["startedAt"])
+                team_end = datetime.fromisoformat(season["leftAt"])
+                team_length = team_end - team_start
+                if team_length < timedelta(days=30):
+                    continue
+            if (
+                season["formatId"] == 3 and season["regionId"] == 40
+            ):  # NA Sixes region code
+                sixes_teams.append(season)
+            elif (
+                season["formatId"] == 2 and season["regionId"] == 24
+            ):  # NA HL region code
+                hl_teams.append(season)
+        core_seasons["sixes"] = sixes_teams
+        core_seasons["hl"] = hl_teams
+        return core_seasons
 
     async def check_banned(self, steam_id: int):
         """Checks if a player is currently banned.
