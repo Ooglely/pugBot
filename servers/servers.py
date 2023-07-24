@@ -259,14 +259,16 @@ class ServerCog(commands.Cog):
         )
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
-        connect_channel: nextcord.TextChannel
+
         if interaction.guild_id == 727627956058325052:  # TF2CC
-            category = interaction.user.voice.channel.category
-            for channel in category.channels:
-                if "connect" in channel.name:
-                    connect_channel = channel
-                    break
-            if connect_channel is None:
+            if interaction.user.voice is not None:
+                category = interaction.user.voice.channel.category
+
+                for channel in category.channels:
+                    if "connect" in channel.name:
+                        connect_channel = channel
+                        break
+            if category is None:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
