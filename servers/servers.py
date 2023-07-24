@@ -214,6 +214,7 @@ class ServerCog(commands.Cog):
                 headers={"Content-type": "application/json"},
             ) as resp:
                 server_data = await resp.json()
+                print(server_data)
                 server_id = server_data["reservation"]["id"]
                 print(await resp.text())
 
@@ -418,7 +419,9 @@ class ServerCog(commands.Cog):
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
-            await server_view.wait()
+            status = await server_view.wait()
+            if status:
+                return
             server_id = server_view.server_chosen
 
             async with session.delete(

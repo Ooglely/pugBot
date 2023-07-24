@@ -103,7 +103,6 @@ class RGL_API:
             if season["leftAt"] is None:
                 pass
             else:  # Check if the team lasted at least 30 days
-                print(season)
                 team_start = datetime.fromisoformat(season["startedAt"])
                 team_end = datetime.fromisoformat(season["leftAt"])
                 team_length = team_end - team_start
