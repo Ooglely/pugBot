@@ -138,12 +138,11 @@ class PugRunningCog(commands.Cog):
 
         while True:
             team_generation_view = TeamGenerationView(balancing_disabled)
-            teams["red"].sort(
-                key=lambda x: x
-                if balancing_disabled
-                else x["divison"][gamemode][reg_settings.mode],
-                reverse=False,
-            )
+            if not balancing_disabled:
+                teams["red"].sort(
+                    key=lambda x: x["divison"][gamemode][reg_settings.mode],
+                    reverse=False,
+                )
             red_team_string = ""
             red_level = 0
             red_count = 0
@@ -159,12 +158,11 @@ class PugRunningCog(commands.Cog):
                         red_count += 1
                 red_team_string += f"[{divison}] <@{player['discord']}>\n"
 
-            teams["blu"].sort(
-                key=lambda x: x
-                if balancing_disabled
-                else x["divison"][gamemode][reg_settings.mode],
-                reverse=False,
-            )
+            if not balancing_disabled:
+                teams["blu"].sort(
+                    key=lambda x: x["divison"][gamemode][reg_settings.mode],
+                    reverse=False,
+                )
             blu_team_string = ""
             blu_level = 0
             blu_count = 0
