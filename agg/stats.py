@@ -141,7 +141,7 @@ async def get_total_logs(steam_id: str):
     """
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            "https://logs.tf/api/v1/log?player=" + str(steam_id)
+            "https://logs.tf/api/v1/log?limit=10000&player=" + str(steam_id)
         ) as resp:
             logs = await resp.json()
             return logs["results"]
