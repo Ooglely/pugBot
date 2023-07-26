@@ -214,6 +214,7 @@ class ServerCog(commands.Cog):
                 headers={"Content-type": "application/json"},
             ) as resp:
                 server_data = await resp.json()
+                print(server_data)
                 server_id = server_data["reservation"]["id"]
                 print(await resp.text())
 
@@ -259,14 +260,16 @@ class ServerCog(commands.Cog):
         )
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
-        connect_channel: nextcord.TextChannel
+
         if interaction.guild_id == 727627956058325052:  # TF2CC
-            category = interaction.user.voice.channel.category
-            for channel in category.channels:
-                if "connect" in channel.name:
-                    connect_channel = channel
-                    break
-            if connect_channel is None:
+            if interaction.user.voice is not None:
+                category = interaction.user.voice.channel.category
+
+                for channel in category.channels:
+                    if "connect" in channel.name:
+                        connect_channel = channel
+                        break
+            if category is None:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
@@ -416,7 +419,9 @@ class ServerCog(commands.Cog):
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
-            await server_view.wait()
+            status = await server_view.wait()
+            if status:
+                return
             server_id = server_view.server_chosen
 
             async with session.delete(
