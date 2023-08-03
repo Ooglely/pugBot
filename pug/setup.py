@@ -3,7 +3,7 @@ import nextcord
 from nextcord.ext import commands
 
 from constants import BOT_COLOR
-from database import add_pug_categories, get_server
+from database import BotCollection
 from pug import (
     PugChannelSelect,
     FirstToChannelSelect,
@@ -13,6 +13,8 @@ from pug import (
     CategoryButton,
 )
 from util import is_setup, is_runner
+
+category_db = BotCollection("guilds", "categories")
 
 
 class PugSetupCog(commands.Cog):
@@ -52,8 +54,7 @@ class PugSetupCog(commands.Cog):
             color=BOT_COLOR,
             description="Adding a pug category allows you to setup team generation and move commands.\n\nPlease select the add up/selecting channel, and the RED and BLU team channels.\nYou may need to search for them.",
         )
-        pug_category = PugCategory()
-        pug_category.name = name
+        pug_category = PugCategory(name)
 
         # Add a pug category to the server
         channel_select_view = PugChannelSelect()
@@ -89,6 +90,9 @@ class PugSetupCog(commands.Cog):
 
         pug_category.first_to = first_to
 
+        # Add the category to the database
+        await pug_category.add_to_db(interaction.guild.id)
+
         setup_embed.description = "Pug category setup complete! You can now use team generation and move commands in these channels."
         setup_embed.add_field(
             name="Channels",
@@ -99,14 +103,6 @@ class PugSetupCog(commands.Cog):
             value=f"Enabled: {pug_category.first_to['enabled']}\nMode: {pug_category.first_to['num']}\nChannel: <#{pug_category.next_pug}>",
         )
 
-        server = get_server(interaction.guild.id)
-        print(pug_category.__dict__)
-        if "pug_categories" not in server:
-            addition = [pug_category.__dict__]
-        else:
-            addition = server["pug_categories"]
-            addition.append(pug_category.__dict__)
-        await add_pug_categories(interaction.guild.id, addition)
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)
 
@@ -122,11 +118,17 @@ class PugSetupCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
         await interaction.response.defer()
-        server = get_server(interaction.guild.id)
-        if "pug_categories" not in server:
+
+        # Get a list of pug categories
+        try:
+            result = await category_db.find_item({"_id": interaction.guild.id})
+        except LookupError:
             await interaction.send("There are no pug categories to remove.")
             return
-        if len(server["pug_categories"]) == 0:
+
+        categories = result["categories"]
+
+        if len(categories) == 0:
             await interaction.send("There are no pug categories to remove.")
             return
 
@@ -135,27 +137,23 @@ class PugSetupCog(commands.Cog):
             color=BOT_COLOR,
             description="Select a pug category to remove.",
         )
-        categories = server["pug_categories"]
 
         select_view = CategorySelect()
 
-        for category in categories:
-            button = CategoryButton(name=category["name"])
+        for category in categories.keys():
+            print(category)
+            button = CategoryButton(name=category)
             select_view.add_item(button)
 
         await interaction.send(embed=setup_embed, view=select_view)
         await select_view.wait()
-        category_to_remove = select_view.name
+        category_to_remove: str = select_view.name
 
         if category_to_remove == "cancel":
             return
 
-        for category in categories:
-            if category["name"] == category_to_remove:
-                categories.remove(category)
-                break
-
-        await add_pug_categories(interaction.guild.id, categories)
+        category = PugCategory(category_to_remove)
+        await category.remove_from_db(interaction.guild.id)
 
         setup_embed.description = f"Removed pug category {category_to_remove}."
         await interaction.edit_original_message(embed=setup_embed, view=None)

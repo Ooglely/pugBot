@@ -1,16 +1,25 @@
 """Commands for generating teams in pugs."""
 import random
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import nextcord
 from nextcord.ext import commands
 
 from constants import BOT_COLOR
-from database import get_server, get_player_from_discord
-from pug import CategorySelect, CategoryButton, TeamGenerationView, MoveView
+from database import BotCollection
+from pug import (
+    CategorySelect,
+    CategoryButton,
+    TeamGenerationView,
+    MoveView,
+    Player,
+    PugCategory,
+)
 from pug.setup import PugSetupCog
 from registration import RegistrationSettings
 from util import is_setup, is_runner
+
+category_db = BotCollection("guilds", "categories")
 
 
 class PugRunningCog(commands.Cog):
@@ -35,13 +44,19 @@ class PugRunningCog(commands.Cog):
     ):
         """Generate teams for a pug."""
         await interaction.response.defer()
-        server = get_server(interaction.guild.id)
-        if "pug_categories" not in server:
+
+        # Get a list of pug categories
+        try:
+            result = await category_db.find_item({"_id": interaction.guild.id})
+        except LookupError:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
             return
-        if len(server["pug_categories"]) == 0:
+
+        categories = result["categories"]
+
+        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
@@ -51,10 +66,8 @@ class PugRunningCog(commands.Cog):
             team_size = 6
 
         select_view = CategorySelect()
-        categories = server["pug_categories"]
 
-        for category in categories:
-            name: str = category["name"]
+        for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
             add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
@@ -100,21 +113,21 @@ class PugRunningCog(commands.Cog):
         if select_view.name == "cancel":
             return
 
-        for category in categories:
-            if category["name"] == select_view.name:
-                chosen_category = category
+        chosen_category: PugCategory = PugCategory(
+            select_view.name, categories[select_view.name]
+        )
 
         add_up: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["add_up"]
+            chosen_category.add_up
         )
         red_team: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["red_team"]
+            chosen_category.red_team
         )
         blu_team: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["blu_team"]
+            chosen_category.blu_team
         )
         next_pug: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["next_pug"]
+            chosen_category.next_pug
         )
 
         pug_embed.description = None
@@ -140,7 +153,7 @@ class PugRunningCog(commands.Cog):
             team_generation_view = TeamGenerationView(balancing_disabled)
             if not balancing_disabled:
                 teams["red"].sort(
-                    key=lambda x: x["divison"][gamemode][reg_settings.mode],
+                    key=lambda x: x.division[gamemode][reg_settings.mode],
                     reverse=False,
                 )
             red_team_string = ""
@@ -148,19 +161,19 @@ class PugRunningCog(commands.Cog):
             red_count = 0
             for player in teams["red"]:
                 if balancing_disabled:
-                    divison = "?"
+                    division = "?"
                 else:
-                    if player["divison"][gamemode][reg_settings.mode] == -1:
-                        divison = "?"
+                    if player.division[gamemode][reg_settings.mode] == -1:
+                        division = "?"
                     else:
-                        divison = player["divison"][gamemode][reg_settings.mode]
-                        red_level += player["divison"][gamemode][reg_settings.mode]
+                        division = str(player.division[gamemode][reg_settings.mode])
+                        red_level += player.division[gamemode][reg_settings.mode]
                         red_count += 1
-                red_team_string += f"[{divison}] <@{player['discord']}>\n"
+                red_team_string += f"[{division}] <@{player.discord}>\n"
 
             if not balancing_disabled:
                 teams["blu"].sort(
-                    key=lambda x: x["divison"][gamemode][reg_settings.mode],
+                    key=lambda x: x.division[gamemode][reg_settings.mode],
                     reverse=False,
                 )
             blu_team_string = ""
@@ -170,13 +183,13 @@ class PugRunningCog(commands.Cog):
                 if balancing_disabled:
                     divison = "?"
                 else:
-                    if player["divison"][gamemode][reg_settings.mode] == -1:
+                    if player.division[gamemode][reg_settings.mode] == -1:
                         divison = "?"
                     else:
-                        divison = player["divison"][gamemode][reg_settings.mode]
-                        blu_level += player["divison"][gamemode][reg_settings.mode]
+                        divison = str(player.division[gamemode][reg_settings.mode])
+                        blu_level += player.division[gamemode][reg_settings.mode]
                         blu_count += 1
-                blu_team_string += f"[{divison}] <@{player['discord']}>\n"
+                blu_team_string += f"[{divison}] <@{player.discord}>\n"
 
             pug_embed.clear_fields()
             if red_count != 0 and blu_count != 0:
@@ -202,24 +215,31 @@ class PugRunningCog(commands.Cog):
                 pug_embed.description = "Moving players..."
                 await interaction.edit_original_message(embed=pug_embed, view=None)
                 for player in teams["red"]:
-                    member = await interaction.guild.fetch_member(player["discord"])
+                    member = await interaction.guild.fetch_member(player.discord)
                     try:
                         await member.move_to(red_team)
                     except nextcord.HTTPException:
                         await interaction.send(
-                            f"<@{player['discord']}> + could not be moved to the RED team."
+                            f"<@{player.discord}> could not be moved to the RED team."
                         )
 
                 for player in teams["blu"]:
-                    member = await interaction.guild.fetch_member(player["discord"])
+                    member = await interaction.guild.fetch_member(player.discord)
                     try:
                         await member.move_to(blu_team)
                     except nextcord.HTTPException:
                         await interaction.send(
-                            f"<@{player['discord']}> + could not be moved to the BLU team."
+                            f"<@{player.discord}> could not be moved to the BLU team."
                         )
                 pug_embed.description = "Done moving players!"
                 await interaction.edit_original_message(embed=pug_embed, view=None)
+
+                # Add last players to db
+                all_players = teams["red"] + teams["blu"]
+                await chosen_category.update_last_players(
+                    interaction.guild.id, all_players
+                )
+
                 break
 
             if team_generation_view.action == "random":
@@ -238,7 +258,7 @@ class PugRunningCog(commands.Cog):
 
     async def get_player_list(
         self, next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
-    ):
+    ) -> Dict[str, List[Player]]:
         """Return a list of players in a voice channel.
 
         Args:
@@ -247,34 +267,18 @@ class PugRunningCog(commands.Cog):
         Returns:
             list: A list of players in the voice channel.
         """
-        players: Dict[str, list[Dict]] = {"next_pug": [], "add_up": []}
+        players: Dict[str, list[Player]] = {"next_pug": [], "add_up": []}
         for member in next_pug.members:
-            try:
-                player_data = get_player_from_discord(member.id)
-            except LookupError:
-                player_data = {
-                    "discord": member.id,
-                    "divison": {
-                        "sixes": {"highest": -1, "current": -1},
-                        "hl": {"highest": -1, "current": -1},
-                    },
-                }
-            players["next_pug"].append(player_data)
+            player = Player(discord=member.id)
+            players["next_pug"].append(player)
         for member in add_up.members:
-            try:
-                player_data = get_player_from_discord(member.id)
-            except LookupError:
-                player_data = {
-                    "discord": member.id,
-                    "divison": {
-                        "sixes": {"highest": -1, "current": -1},
-                        "hl": {"highest": -1, "current": -1},
-                    },
-                }
-            players["add_up"].append(player_data)
+            player = Player(discord=member.id)
+            players["add_up"].append(player)
         return players
 
-    async def generate_random_teams(self, players: dict, team_size):
+    async def generate_random_teams(
+        self, players: Dict[str, List[Player]], team_size: int
+    ) -> Dict[str, list[Player]]:
         """Generate random teams for a pug.
 
         Args:
@@ -287,21 +291,24 @@ class PugRunningCog(commands.Cog):
         """
         random.shuffle(players["next_pug"])
         random.shuffle(players["add_up"])
-        players = players["next_pug"] + players["add_up"]
+        all_players: List[Player] = players["next_pug"] + players["add_up"]
 
-        red_team: list[dict] = []
-        blu_team: list[dict] = []
+        red_team: list[Player] = []
+        blu_team: list[Player] = []
 
         while len(red_team) < team_size and len(blu_team) < team_size:
-            red_team.append(players.pop(0))
-            blu_team.append(players.pop(0))
+            red_team.append(all_players.pop(0))
+            blu_team.append(all_players.pop(0))
 
         teams = {"red": red_team, "blu": blu_team}
         return teams
 
     async def generate_balanced_teams(
-        self, players: dict, team_size, reg_settings: RegistrationSettings
-    ):
+        self,
+        players: Dict[str, List[Player]],
+        team_size,
+        reg_settings: RegistrationSettings,
+    ) -> Dict[str, List[Player]]:
         """Generate balanced teams for a pug.
 
         Args:
@@ -326,29 +333,29 @@ class PugRunningCog(commands.Cog):
         random.shuffle(players["add_up"])
         players["next_pug"].sort(
             key=lambda x: 10
-            if x["divison"][gamemode][reg_settings.mode] == -1
-            else x["divison"][gamemode][reg_settings.mode],
+            if x.division[gamemode][reg_settings.mode] == -1
+            else x.division[gamemode][reg_settings.mode],
             reverse=False,
         )
         players["add_up"].sort(
             key=lambda x: 10
-            if x["divison"][gamemode][reg_settings.mode] == -1
-            else x["divison"][gamemode][reg_settings.mode],
+            if x.division[gamemode][reg_settings.mode] == -1
+            else x.division[gamemode][reg_settings.mode],
             reverse=False,
         )
-        players = players["next_pug"] + players["add_up"]
+        all_players = players["next_pug"] + players["add_up"]
 
-        red_team: list[dict] = []
-        blu_team: list[dict] = []
+        red_team: list[Player] = []
+        blu_team: list[Player] = []
         count = 0
 
         while len(red_team) < team_size and len(blu_team) < team_size:
             if count % 2 == 0:
-                red_team.append(players.pop(0))
-                blu_team.append(players.pop(0))
+                red_team.append(all_players.pop(0))
+                blu_team.append(all_players.pop(0))
             else:
-                blu_team.append(players.pop(0))
-                red_team.append(players.pop(0))
+                blu_team.append(all_players.pop(0))
+                red_team.append(all_players.pop(0))
             count += 1
 
         teams = {"red": red_team, "blu": blu_team}
@@ -362,23 +369,27 @@ class PugRunningCog(commands.Cog):
     async def move(self, interaction: nextcord.Interaction):
         """Move players back after a pug is done."""
         await interaction.response.defer()
-        server = get_server(interaction.guild.id)
-        if "pug_categories" not in server:
+
+        # Get a list of pug categories
+        try:
+            result = await category_db.find_item({"_id": interaction.guild.id})
+        except LookupError:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
             return
-        if len(server["pug_categories"]) == 0:
+
+        categories = result["categories"]
+
+        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
             return
 
         select_view = CategorySelect()
-        categories = server["pug_categories"]
 
-        for category in categories:
-            name: str = category["name"]
+        for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
             add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
@@ -420,21 +431,21 @@ class PugRunningCog(commands.Cog):
         if select_view.name == "cancel":
             return
 
-        for category in categories:
-            if category["name"] == select_view.name:
-                chosen_category = category
+        chosen_category: PugCategory = PugCategory(
+            select_view.name, categories[select_view.name]
+        )
 
         add_up: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["add_up"]
+            chosen_category.add_up
         )
         red_team: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["red_team"]
+            chosen_category.red_team
         )
         blu_team: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["blu_team"]
+            chosen_category.blu_team
         )
         next_pug: nextcord.VoiceChannel = interaction.guild.get_channel(
-            chosen_category["next_pug"]
+            chosen_category.next_pug
         )
 
         red_players = []

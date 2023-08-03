@@ -5,7 +5,56 @@ from rgl_api import RGL_API
 
 RGL: RGL_API = RGL_API()
 
-client = pymongo.MongoClient(constants.DB_URL + "/?w=majority")
+
+class BotDatabase(pymongo.MongoClient):
+    """Class that represents the bot's database."""
+
+    def __init__(self):
+        super().__init__(constants.DB_URL + "/?w=majority")
+
+
+class BotCollection:
+    """Class used to interact with different parts of the bots database in an easier way."""
+
+    def __init__(
+        self,
+        database: str,
+        collection: str,
+        mongo_client: pymongo.MongoClient = BotDatabase(),
+    ) -> None:
+        self.client = mongo_client
+        self.database = client[database][collection]
+
+    async def add_item(self, item: dict):
+        """Insert an item to the collection.
+
+        Args:
+            item (dict): The item to add.
+        """
+        self.database.insert_one(item)
+
+    async def update_item(self, search: dict, item: dict):
+        """Update an item in the collection.
+
+        Args:
+            search (dict): The key to look for in the collection.
+            item (dict): The thing to insert into the item.
+        """
+        self.database.update_one(search, item, upsert=True)
+
+    async def find_item(self, search: dict):
+        """Search for an item in the collection.
+
+        Args:
+            search (dict): The key to look for.
+        """
+        result = self.database.find_one(search)
+        if result is None:
+            raise LookupError
+        return result
+
+
+client = BotDatabase()
 
 
 def is_server_setup(guild: int):
@@ -246,18 +295,3 @@ async def update_rgl_ban_status(steam: int) -> bool:
         upsert=True,
     )
     return ban_status
-
-
-async def add_pug_categories(guild: int, categories):
-    """Add a pug category to the database.
-
-    Args:
-        guild (int): The guild ID to add.
-        category (list): The categories to add
-    """
-    database = client.guilds.config
-    database.update_one(
-        {"guild": guild},
-        {"$set": {"pug_categories": categories}},
-        upsert=True,
-    )

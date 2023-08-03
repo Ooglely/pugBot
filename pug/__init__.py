@@ -1,5 +1,10 @@
 """Holds classes for pug commands/setup"""
+from typing import Union, List, Dict
+
 import nextcord
+
+from database import get_player_from_discord, get_player_from_steam, BotCollection
+
 
 default_category = {
     "name": "",
@@ -13,19 +18,108 @@ default_category = {
     },
 }
 
+config_db = BotCollection("guilds", "config")
+category_db = BotCollection("guilds", "categories")
+
+
+class Player:
+    """Represents a player in the pug."""
+
+    def __init__(
+        self, steam: Union[int, None] = None, discord: Union[int, None] = None
+    ):
+        try:
+            if steam is not None:
+                player_data = get_player_from_steam(steam)
+            elif discord is not None:
+                player_data = get_player_from_discord(discord)
+            else:
+                raise KeyError
+            registered = True
+        except LookupError:
+            player_data = {
+                "steam": steam,
+                "discord": discord,
+                "divison": {
+                    "sixes": {"highest": -1, "current": -1},
+                    "hl": {"highest": -1, "current": -1},
+                },
+            }
+            registered = False
+        self.steam: int = player_data["steam"]
+        self.discord: int = player_data["discord"]
+        self.division: Dict[str, Dict[str, int]] = player_data["divison"]
+        self.registered: bool = registered
+
 
 class PugCategory:
     """Represents a pug category, settings and channel for a section of pugs"""
 
     def __init__(
-        self, category=default_category
+        self, name: str, category=default_category
     ):  # pylint: disable=dangerous-default-value
-        self.name: str = category["name"]
+        self.name: str = name
         self.add_up: int = category["add_up"]
         self.red_team: int = category["red_team"]
         self.blu_team: int = category["blu_team"]
         self.next_pug: int = category["next_pug"]
         self.first_to = category["first_to"]
+
+    def __dict__(self):
+        return {
+            "add_up": self.add_up,
+            "red_team": self.red_team,
+            "blu_team": self.blu_team,
+            "next_pug": self.next_pug,
+            "first_to": self.first_to,
+        }
+
+    async def add_to_db(self, guild: int):
+        """Adds the category to the database."""
+        print(self.__dict__())  # pylint: disable=not-callable
+        await category_db.update_item(
+            {"_id": guild},
+            {
+                "$set": {
+                    f"categories.{self.name}": self.__dict__()  # pylint: disable=not-callable
+                }
+            },
+        )
+
+    async def remove_from_db(self, guild: int):
+        """Removes the category from the database."""
+        await category_db.update_item(
+            {"_id": guild},
+            {"$unset": {f"categories.{self.name}": ""}},
+        )
+
+    async def get_last_players(self, guild: int) -> List[Player] | None:
+        """Gets the last players from the database."""
+        try:
+            result = await category_db.find_item({"_id": guild})
+        except LookupError:
+            return None
+        print(result["categories"])
+        if (
+            self.name not in result["categories"]
+            or "players" not in result["categories"][self.name]
+        ):
+            return None
+        players: List[Player] = []
+        for player in result["categories"][self.name]["players"]:
+            print(player)
+            players.append(Player(player["steam"]))
+        return players
+
+    async def update_last_players(self, guild: int, players: List[Player]) -> None:
+        """Updates the last players in the database."""
+        last_players = []
+        for player in players:
+            last_players.append(player.__dict__)
+        await category_db.update_item(
+            {"_id": guild},
+            {"$set": {f"categories.{self.name}.players": last_players}},
+        )
 
 
 class PugChannelSelect(nextcord.ui.View):
@@ -174,7 +268,7 @@ class CategorySelect(nextcord.ui.View):
 
     def __init__(self):
         super().__init__()
-        self.name = None
+        self.name: str = ""
 
     @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red, row=4)
     async def cancel(
