@@ -182,8 +182,11 @@ class UpdateRolesCog(commands.Cog):
                     and divison_roles[old_divison] != divison_roles[division]
                 ):
                     print("Updating roles...")
-                    await member.remove_roles(divison_roles[old_divison])
-                    await member.add_roles(divison_roles[division])
+                    try:
+                        await member.remove_roles(divison_roles[old_divison])
+                        await member.add_roles(divison_roles[division])
+                    except nextcord.DiscordException:
+                        print("Error adding roles.")
                     log_embed = nextcord.Embed(
                         title="Updated Division",
                         url="https://rgl.gg/Public/PlayerProfile.aspx?p="
@@ -204,8 +207,10 @@ class UpdateRolesCog(commands.Cog):
                         value=f"<@&{divison_roles[old_divison].id}>",
                         inline=True,
                     )
-
-                    await logs_channel.send(embed=log_embed)
+                    try:
+                        await logs_channel.send(embed=log_embed)
+                    except nextcord.DiscordException:
+                        print("Error sending embed message.")
 
                 if reg_settings.ban:
                     if (old_ban is False) and (new_ban is True):

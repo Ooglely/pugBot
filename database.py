@@ -53,6 +53,13 @@ class BotCollection:
             raise LookupError
         return result
 
+    async def find_all_items(self) -> list[dict]:
+        """Returns all items in the collection."""
+        results = []
+        for item in self.database.find():
+            results.append(item)
+        return results
+
 
 client = BotDatabase()
 
@@ -207,7 +214,7 @@ def get_player_from_steam(steam: int):
     """
     database = client.players.data
     if database.find_one({"steam": str(steam)}) is None:
-        return None
+        raise LookupError
     return database.find_one({"steam": str(steam)})
 
 
