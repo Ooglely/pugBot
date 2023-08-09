@@ -605,6 +605,9 @@ class UpdateRolesCog(commands.Cog):
         )
         log_embed.add_field(name="Steam", value=str(player["steam"]), inline=True)
 
+        if "rgl_ban" not in player:
+            await db.update_rgl_ban_status(player["steam"])
+        
         if reg_settings.ban and player["rgl_ban"]:
             await member.add_roles(ban_role)
             log_embed.add_field(
