@@ -178,6 +178,7 @@ class RGL_API:
             steam_id (int): The steamid of the player to get.
         """
         player = await self.get_core_teams(steam_id)
+        print(player)
         player_divs = {
             "sixes": {"highest": -1, "current": -1},
             "hl": {"highest": -1, "current": -1},

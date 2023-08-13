@@ -187,6 +187,15 @@ class UpdateRolesCog(commands.Cog):
                         await member.add_roles(divison_roles[division])
                     except nextcord.DiscordException:
                         print("Error adding roles.")
+                        error_embed = nextcord.Embed(
+                            title="Error",
+                            description="There was an error adding roles, please check that the bot has Manage Roles permissions.",
+                        )
+                        try:
+                            await logs_channel.send(embed=error_embed)
+                        except nextcord.DiscordException:
+                            continue
+                        continue
                     log_embed = nextcord.Embed(
                         title="Updated Division",
                         url="https://rgl.gg/Public/PlayerProfile.aspx?p="
@@ -211,6 +220,7 @@ class UpdateRolesCog(commands.Cog):
                         await logs_channel.send(embed=log_embed)
                     except nextcord.DiscordException:
                         print("Error sending embed message.")
+                        continue
 
                 if reg_settings.ban:
                     if (old_ban is False) and (new_ban is True):
@@ -607,7 +617,7 @@ class UpdateRolesCog(commands.Cog):
 
         if "rgl_ban" not in player:
             await db.update_rgl_ban_status(player["steam"])
-        
+
         if reg_settings.ban and player["rgl_ban"]:
             await member.add_roles(ban_role)
             log_embed.add_field(
