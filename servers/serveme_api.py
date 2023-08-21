@@ -61,7 +61,7 @@ class ServemeAPI:
                 reservations = await times.json()
                 active_servers = []
                 for reservation in reservations["reservations"]:
-                    if reservation["status"] != "Ended":
+                    if reservation["status"] != "Ended" and reservation["status"] != "Waiting to start":
                         active_servers.append(reservation)
                 active_servers.reverse()
                 return active_servers
