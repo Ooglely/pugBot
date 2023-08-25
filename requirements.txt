@@ -7,7 +7,7 @@ nextcord==2.4.2
 requests==2.31.0
 beautifulsoup4==4.11.1
 dnspython==2.2.1
-aiohttp==3.8.3
+aiohttp==3.8.5
 pydantic==1.10.4
 bs4==0.0.1
 beautifulsoup4==4.11.1
