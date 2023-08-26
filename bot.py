@@ -279,8 +279,11 @@ async def player_listener(message: nextcord.Message):
                 rgl = await RGL.create_player(int(get_steam64(word)))
                 embed = await create_player_embed(rgl)
                 await message.channel.send(embed=embed)
-    elif "https://rgl.gg/Public/Team.aspx?" in message.content:
-        team_id = int(re.search("(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content).group(0))
+    elif "https://rgl.gg/Public/Team.aspx?t=" in message.content:
+        regex = re.search("(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content)
+        if regex is None:
+            return
+        team_id = int(regex.group(0))
         team = await RGL.create_team(team_id)
         embed = await create_team_embed(team)
         await message.channel.send(embed=embed)
