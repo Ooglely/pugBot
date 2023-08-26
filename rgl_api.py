@@ -46,14 +46,17 @@ class Team:
         self.division = division
         self.seasonid = seasonid
         self.seasonname = seasonname
-        self.players = players
+        self.currentplayers = []
+        self.formerplayers = []
+        for player in players:
+            self.currentplayers.append(player) if player.leftAt is None else self.formerplayers.append(player)
         self.rank = rank
         self.linkedteams = linkedteams
 
 
     def __str__(self):
         return f"""ID: {self.teamid}\nName: {self.name}\nTag: {self.tag}\nSeason ID: {self.seasonid}
-                Season: {self.seasonname}\nDivision: {self.division}\nPlayers: {self.players}"""
+                Season: {self.seasonname}\nDivision: {self.division}\nPlayers: {self.currentplayers}"""
 
 
 class RGL_API:
