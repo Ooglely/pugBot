@@ -36,6 +36,41 @@ class Player:
                 Sixes: {self.sixes}\nHL: {self.highlander}\nBans: {self.bans}"""
 
 
+class Team:
+    """A Rgl Team"""
+
+    def __init__(
+        self,
+        teamid,
+        name,
+        tag,
+        division,
+        seasonid,
+        seasonname,
+        players,
+        rank,
+        linkedteams,
+    ):
+        self.teamid = teamid
+        self.name = name
+        self.tag = tag
+        self.division = division
+        self.seasonid = seasonid
+        self.seasonname = seasonname
+        self.currentplayers = []
+        self.formerplayers = []
+        for player in players:
+            self.currentplayers.append(
+                player
+            ) if player.leftAt is None else self.formerplayers.append(player)
+        self.rank = rank
+        self.linkedteams = linkedteams
+
+    def __str__(self):
+        return f"""ID: {self.teamid}\nName: {self.name}\nTag: {self.tag}\nSeason ID: {self.seasonid}
+                Season: {self.seasonname}\nDivision: {self.division}\nPlayers: {self.currentplayers}"""
+
+
 class RGL_API:
     """Class used to interact with the RGL API.
 
@@ -270,4 +305,60 @@ class RGL_API:
             sixes,
             highlander,
             ban_info,
+        )
+
+    async def get_team(self, team_id: int):
+        """Gets all information on a team
+
+        Args:
+            team_id (int): The RGL team ID of the team to get
+
+        Returns:
+            dict: A dictionary of the team's data
+        """
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(self.api_url + "teams/" + str(team_id)) as team_data:
+                team = await team_data.json()
+                return team
+
+    async def get_season(self, season_id: int):
+        """Get the season information
+
+        Args:
+            season_id (int): The RGL season ID to get info on
+
+        Returns:
+            dict: A dictionary of the season's data
+        """
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                self.api_url + "seasons/" + str(season_id)
+            ) as season_data:
+                season = await season_data.json()
+                return season
+
+    async def create_team(self, team_id: int):
+        """Create a Team object using a RGL team ID
+
+        Args:
+            team_id (int): the RGL team ID
+
+        Returns:
+            Team: A team object containing the teams data"""
+
+        team_json = await self.get_team(team_id)
+        season_json = await self.get_season(team_json["seasonId"])
+
+        return Team(
+            team_id,
+            team_json["name"],
+            team_json["tag"],
+            team_json["divisionName"],
+            team_json["seasonId"],
+            season_json["name"],
+            team_json["players"],
+            team_json["finalRank"],
+            team_json["linkedTeams"],
         )

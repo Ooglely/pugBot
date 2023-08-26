@@ -1,5 +1,6 @@
 """Main file for running and starting the bot, with general global commands."""
 import random
+import re
 from typing import Optional
 
 import logging
@@ -7,7 +8,7 @@ import nextcord
 from nextcord.ext import commands, tasks
 
 import database
-from rgl_api import RGL_API, Player
+from rgl_api import RGL_API, Player, Team
 from constants import BOT_COLOR, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
 from util import get_steam64
 from servers.servers import ServerCog
@@ -219,13 +220,65 @@ async def create_player_embed(player: Player) -> nextcord.Embed:
     return embed
 
 
+async def create_team_embed(team: Team) -> nextcord.Embed:
+    """Creates an embed to represent an RGL team.
+
+    Args:
+        team (Team): The team to create the embed for.
+
+    Returns:
+        embed (nextcord.Embed): The embed to represent the team.
+    """
+
+    if team.currentplayers:
+        embed_color = 0xCCCCDC
+    else:
+        embed_color = 0xFEF0C7
+
+    url = "https://rgl.gg/Public/Team.aspx?t=" + str(team.teamid)
+
+    embed = nextcord.Embed(title=team.name, url=url, color=embed_color)
+
+    embed.add_field(name=team.tag, value="", inline=True)
+    if team.rank:
+        embed.add_field(name="Team Rank", value=team.rank, inline=True)
+
+    embed.add_field(name=team.seasonname, value=team.division, inline=False)
+
+    player_text = ""
+    for player in team.currentplayers:
+        player_text += "["
+        if player["isLeader"]:
+            player_text += ":star: "
+        player_text += (
+            player["name"]
+            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        )
+        embed.add_field(name="Current Players", value=player_text, inline=False)
+
+    player_text = ""
+    for player in team.formerplayers:
+        player_text += "["
+        if player["isLeader"]:
+            player_text += ":star: "
+        player_text += (
+            player["name"]
+            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        )
+        embed.add_field(name="Former Players", value=player_text, inline=False)
+
+    embed.set_footer(text=VERSION)
+    return embed
+
+
 @bot.listen("on_message")
 async def player_listener(message: nextcord.Message):
-    """Listener for messages that contain a link to a player's rgl profile.
+    """Listener for messages that contain a link to a player's RGL profile or to a RGL team page.
 
     Args:
         message (nextcord.Message): The message to check.
     """
+
     if "https://rgl.gg/Public/PlayerProfile.aspx?" in message.content:
         words = message.content.split()
         for word in words:
@@ -233,6 +286,16 @@ async def player_listener(message: nextcord.Message):
                 rgl = await RGL.create_player(int(get_steam64(word)))
                 embed = await create_player_embed(rgl)
                 await message.channel.send(embed=embed)
+    elif "https://rgl.gg/Public/Team.aspx?" in message.content:
+        regex = re.search(
+            "(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content
+        )
+        if regex is None:
+            return
+        team_id = int(regex.group(0))
+        team = await RGL.create_team(team_id)
+        embed = await create_team_embed(team)
+        await message.channel.send(embed=embed)
 
 
 @bot.slash_command(
