@@ -39,7 +39,18 @@ class Player:
 class Team:
     """A Rgl Team"""
 
-    def __init__(self, teamid, name, tag, division, seasonid, seasonname, players, rank, linkedteams):
+    def __init__(
+        self,
+        teamid,
+        name,
+        tag,
+        division,
+        seasonid,
+        seasonname,
+        players,
+        rank,
+        linkedteams,
+    ):
         self.teamid = teamid
         self.name = name
         self.tag = tag
@@ -49,10 +60,11 @@ class Team:
         self.currentplayers = []
         self.formerplayers = []
         for player in players:
-            self.currentplayers.append(player) if player.leftAt is None else self.formerplayers.append(player)
+            self.currentplayers.append(
+                player
+            ) if player.leftAt is None else self.formerplayers.append(player)
         self.rank = rank
         self.linkedteams = linkedteams
-
 
     def __str__(self):
         return f"""ID: {self.teamid}\nName: {self.name}\nTag: {self.tag}\nSeason ID: {self.seasonid}
@@ -306,9 +318,7 @@ class RGL_API:
         """
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                self.api_url + "teams/" + str(team_id)
-            ) as team_data:
+            async with session.get(self.api_url + "teams/" + str(team_id)) as team_data:
                 team = await team_data.json()
                 return team
 
@@ -341,5 +351,14 @@ class RGL_API:
         team_json = await self.get_team(team_id)
         season_json = await self.get_season(team_json["seasonId"])
 
-        return Team(team_id, team_json["name"], team_json["tag"], team_json["divisionName"], team_json["seasonId"],
-                    season_json["name"], team_json["players"], team_json["finalRank"], team_json["linkedTeams"])
+        return Team(
+            team_id,
+            team_json["name"],
+            team_json["tag"],
+            team_json["divisionName"],
+            team_json["seasonId"],
+            season_json["name"],
+            team_json["players"],
+            team_json["finalRank"],
+            team_json["linkedTeams"],
+        )

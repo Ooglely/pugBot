@@ -219,6 +219,7 @@ async def create_player_embed(player: Player) -> nextcord.Embed:
     embed.set_footer(text=VERSION)
     return embed
 
+
 async def create_team_embed(team: Team) -> nextcord.Embed:
     """Creates an embed to represent an RGL team.
 
@@ -249,7 +250,10 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
         player_text += "["
         if player["isLeader"]:
             player_text += ":star: "
-        player_text += player["name"] + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        player_text += (
+            player["name"]
+            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        )
         embed.add_field(name="Current Players", value=player_text, inline=False)
 
     player_text = ""
@@ -257,7 +261,10 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
         player_text += "["
         if player["isLeader"]:
             player_text += ":star: "
-        player_text += player["name"] + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        player_text += (
+            player["name"]
+            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+        )
         embed.add_field(name="Former Players", value=player_text, inline=False)
 
     embed.set_footer(text=VERSION)
@@ -280,7 +287,11 @@ async def player_listener(message: nextcord.Message):
                 embed = await create_player_embed(rgl)
                 await message.channel.send(embed=embed)
     elif "https://rgl.gg/Public/Team.aspx?" in message.content:
-        team_id = int(re.search("(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content).group(0))
+        team_id = int(
+            re.search(
+                "(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content
+            ).group(0)
+        )
         team = await RGL.create_team(team_id)
         embed = await create_team_embed(team)
         await message.channel.send(embed=embed)
