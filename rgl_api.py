@@ -60,7 +60,7 @@ class Team:
         self.currentplayers = []
         self.formerplayers = []
         for player in players:
-            if player["player"]["leftAt"] is None:
+            if player["leftAt"] is None:
                 self.currentplayers.append(player)
             else:
                 self.formerplayers.append(player)
