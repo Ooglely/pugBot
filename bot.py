@@ -272,7 +272,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
 
 
 @bot.listen("on_message")
-async def player_listener(message: nextcord.Message):
+async def rgl_link_listener(message: nextcord.Message):
     """Listener for messages that contain a link to a player's RGL profile or to a RGL team page.
 
     Args:
@@ -280,15 +280,19 @@ async def player_listener(message: nextcord.Message):
     """
 
     if "https://rgl.gg/Public/PlayerProfile.aspx?" in message.content:
-        words = message.content.split()
-        for word in words:
-            if "https://rgl.gg/Public/PlayerProfile.aspx?" in word:
-                rgl = await RGL.create_player(int(get_steam64(word)))
-                embed = await create_player_embed(rgl)
-                await message.channel.send(embed=embed)
+        regex = re.search(
+            r"(?<=https:\/\/rgl\.gg\/Public\/PlayerProfile\.aspx\?p=)[0-9]*",
+            message.content,
+        )
+        if regex is None:
+            return
+        player = await RGL.create_player(int(get_steam64(regex.group(0))))
+        embed = await create_player_embed(player)
+        await message.channel.send(embed=embed)
     elif "https://rgl.gg/Public/Team.aspx?" in message.content:
         regex = re.search(
-            "(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*", message.content
+            r"(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*",
+            message.content,
         )
         if regex is None:
             return
@@ -317,8 +321,6 @@ async def search(
         steamid (str): The player to search for.
     """
     await interaction.response.defer()
-    print(discord_user)
-    print(steamid)
     if discord_user is not None:
         steam_id = database.get_steam_from_discord(discord_user.id)
         print(steam_id)
