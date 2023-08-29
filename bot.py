@@ -254,6 +254,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
             player["name"]
             + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
         )
+    if player_text:
         embed.add_field(name="Current Players", value=player_text, inline=False)
 
     player_text = ""
@@ -265,6 +266,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
             player["name"]
             + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
         )
+    if player_text:
         embed.add_field(name="Former Players", value=player_text, inline=False)
 
     embed.set_footer(text=VERSION)
