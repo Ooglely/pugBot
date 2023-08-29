@@ -241,7 +241,9 @@ class ServerCog(commands.Cog):
         )
 
         embed = nextcord.Embed(title="Server started!", color=0xF0984D)
-        embed.add_field(name="Server", value=reserve["name"], inline=False)
+        embed.add_field(
+            name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
+        )
         embed.add_field(name="Connect", value=connect, inline=False)
         embed.add_field(
             name="RCON", value="RCON has been sent in the rcon channel.", inline=False
@@ -257,6 +259,9 @@ class ServerCog(commands.Cog):
         # Connect Message
         connect_embed = nextcord.Embed(
             title=tf_oog_pw_link, url=tf_oog_pw_link, color=0x3DFF1F
+        )
+        connect_embed.add_field(
+            name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
