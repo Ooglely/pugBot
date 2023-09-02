@@ -5,12 +5,22 @@ from typing import Optional
 
 import logging
 import nextcord
+from gql import Client, gql
+from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands, tasks
 
 import database
 from rgl_api import RGL_API, Player, Team
-from constants import BOT_COLOR, NEW_COMMIT_NAME, VERSION, DISCORD_TOKEN
-from util import get_steam64
+from constants import (
+    BOT_COLOR,
+    NEW_COMMIT_NAME,
+    VERSION,
+    DISCORD_TOKEN,
+    TESTING_GUILDS,
+    GITHUB_API_KEY,
+    # RAILWAY_API_KEY,
+)
+from util import get_steam64, is_setup, is_runner
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
@@ -334,6 +344,85 @@ async def search(
         return
     embed = await create_player_embed(rgl)
     await interaction.send(embed=embed)
+
+
+@bot.slash_command(guild_ids=TESTING_GUILDS)
+async def test(_interaction: nextcord.Interaction):
+    """
+    This is the main slash command that will be the prefix of all commands below.
+    This will never get called since it has subcommands.
+    """
+
+
+class BranchSelect(nextcord.ui.View):
+    """Opens a string select dropdown to select the branch to switch the bot to."""
+
+    def __init__(self, branches: list[str]):
+        super().__init__()
+        self.branches: list[nextcord.SelectOption] = []
+        for branch in branches:
+            self.branches.append(nextcord.SelectOption(label=branch))
+        self.select = nextcord.ui.StringSelect(
+            placeholder="Select a branch", options=self.branches, row=1
+        )
+        self.add_item(self.select)
+
+    @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green, row=2)
+    async def finish(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Continues setup"""
+        self.stop()
+
+
+@test.subcommand(
+    name="branch", description="Switch the branch that the test bot is deployed under."
+)
+@is_setup()
+@is_runner()
+async def switch_branch(interaction: nextcord.Interaction):
+    """Switches the branch that the test bot account is currently deployed off of."""
+    await interaction.response.defer()
+    github_api = AIOHTTPTransport(
+        url="https://api.github.com/graphql",
+        headers={"Authorization": f"bearer {GITHUB_API_KEY}"},
+    )
+
+    branch_names = []
+    async with Client(
+        transport=github_api,
+        fetch_schema_from_transport=False,
+    ) as session:
+        list_branches = gql(
+            """
+            query getBranches {
+                repository(name: "pugBot", owner: "Ooglely") {
+                    refs(first: 25, refPrefix: "refs/heads/") {
+                        edges {
+                            node {
+                                name
+                            }
+                        }
+                    }
+                }
+            }
+            """
+        )
+
+        result = await session.execute(list_branches)
+        for branch in result["repository"]["refs"]["edges"]:
+            branch_names.append(branch["node"]["name"])
+    branch_select = BranchSelect(branch_names)
+    await interaction.send(
+        "Select a branch to deploy.", view=branch_select, ephemeral=False
+    )
+    status = await branch_select.wait()
+    if not status:
+        # railway_api = AIOHTTPTransport(
+        #     url="https://api.github.com/graphql",
+        #     headers={"Authorization": f"bearer {GITHUB_API_KEY}"},
+        # )
+        pass
 
 
 @bot.slash_command(
