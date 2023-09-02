@@ -18,7 +18,7 @@ from constants import (
     DISCORD_TOKEN,
     TESTING_GUILDS,
     GITHUB_API_KEY,
-    # RAILWAY_API_KEY,
+    RAILWAY_API_KEY,
 )
 from util import get_steam64, is_setup, is_runner
 from servers.servers import ServerCog
@@ -418,11 +418,53 @@ async def switch_branch(interaction: nextcord.Interaction):
     )
     status = await branch_select.wait()
     if not status:
-        # railway_api = AIOHTTPTransport(
-        #     url="https://api.github.com/graphql",
-        #     headers={"Authorization": f"bearer {GITHUB_API_KEY}"},
-        # )
-        pass
+        selected_branch = branch_select.select.values[0]
+        railway_api = AIOHTTPTransport(
+            url="https://backboard.railway.app/graphql/v2",
+            headers={"Authorization": f"Bearer {RAILWAY_API_KEY}"},
+        )
+
+        async with Client(
+            transport=railway_api,
+            fetch_schema_from_transport=False,
+        ) as session:
+            set_deployment_trigger = gql(
+                f"""
+                mutation setDeploymentTrigger {{
+                    deploymentTriggerUpdate(
+                        id: "275e3203-4ac7-4ada-84de-1c11f8b9b124",
+                        input: {{
+                            branch: "{selected_branch}",
+                            checkSuites: true,
+                            repository: "Ooglely/pugBot",
+                        }}
+                    ) {{
+                        id
+                    }}
+                }}
+                """
+            )
+
+            redeploy_environment = gql(
+                """
+                mutation deployNewDeployment {
+                    environmentTriggersDeploy(
+                        input: {
+                            environmentId: "5c2a716b-7bac-4dae-9ee4-78725cb1ee1a",
+                            projectId: "8ffd3860-8187-406a-bf03-69d7356ec462",
+                            serviceId: "01b0b783-64b1-4727-b8c9-5df09701c8ac"
+                        }
+                    )
+                }
+                """
+            )
+
+            await session.execute(set_deployment_trigger)
+            await session.execute(redeploy_environment)
+        await interaction.edit_original_message(
+            content=f"Switching branch to `{selected_branch}`... Please check <#1144720434370203698> to see deployment progress.",
+            view=None,
+        )
 
 
 @bot.slash_command(
