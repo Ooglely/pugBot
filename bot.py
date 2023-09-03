@@ -20,7 +20,7 @@ from constants import (
     GITHUB_API_KEY,
     RAILWAY_API_KEY,
 )
-from util import get_steam64, is_setup, is_runner
+from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
@@ -378,11 +378,16 @@ class BranchSelect(nextcord.ui.View):
 @test.subcommand(
     name="branch", description="Switch the branch that the test bot is deployed under."
 )
-@is_setup()
-@is_runner()
 async def switch_branch(interaction: nextcord.Interaction):
     """Switches the branch that the test bot account is currently deployed off of."""
     await interaction.response.defer()
+    if interaction.user.get_role(1144720671558078485) is None:
+        await interaction.send(
+            "You do not have the Contributors role and cannot run this command.",
+            ephemeral=True,
+        )
+        return
+
     github_api = AIOHTTPTransport(
         url="https://api.github.com/graphql",
         headers={"Authorization": f"bearer {GITHUB_API_KEY}"},
