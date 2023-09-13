@@ -304,19 +304,44 @@ class PlayerData:
             self.class_stats.append(ClassData(class_played))
             self.time += class_played["total_time"]
 
-        self.linked: None | LinkedPlayerData = LinkedPlayerData(self.steam_3)
+        self.linked: None | Player = None
+
+    async def link_player(self) -> None:
+        """Add database data from the associated steam ID to the player data"""
+        try:
+            player = await player_db.find_item(
+                {"steam": str(SteamID(self.steam_3).as_64)}
+            )
+            self.linked = Player(self.steam_3, player["discord"])
+        except LookupError:
+            self.linked = None
+            return
 
 
-class LinkedPlayerData:
-    def __init__(self, steam_3: str) -> None:
-        self.steam_3 = steam_3
-        self.steam_64 = SteamID(steam_3).as_64
+class Player:
+    def __init__(
+        self, steam: str | int | None = None, discord: int | None = None
+    ) -> None:
+        self.steam_3: str | None = SteamID(steam).as_steam3 if steam else None
+        self.steam_64: int | None = SteamID(steam).as_64 if steam else None
+        self.discord: int | None = discord if discord else None
+        self.registered: bool = False
 
-        if player_db.find_item({"steam": self.steam_64}):
-            self.data = player_db.find_item({"steam": self.steam_64})
-
-        print(self.data)
-        print(self.steam_64)
+    async def link_player(self) -> None:
+        """Add database data from the associated steam ID to the player data"""
+        try:
+            if self.steam_64:
+                data = await player_db.find_item({"steam": str(self.steam_64)})
+            elif self.discord:
+                data = await player_db.find_item({"discord": str(self.discord)})
+            else:
+                return
+            self.steam_64 = data["steam"]
+            self.discord = data["discord"]
+            self.registered = True
+        except LookupError:
+            self.registered = False
+            return
 
 
 class ClassData:
@@ -347,9 +372,16 @@ class LogData:
                 )
             self.players.append(PlayerData(player, data["players"][player]))
 
+    async def link_all_players(self) -> None:
+        for player in self.players:
+            await player.link_player()
+
 
 async def test_log_data():
-    example_log = LogData(await LogsAPI.get_single_log(3455142))
+    example_log_data = LogData(await LogsAPI.get_single_log(3490943))
+    await example_log_data.link_all_players()
+
+    await LogsAPI.search_for_log()
 
 
 if __name__ == "__main__":

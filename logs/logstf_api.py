@@ -22,3 +22,17 @@ class LogsAPI:
             async with session.get(f"{baseURL}log/{str(log_id)}") as resp:
                 log = await resp.json()
                 return log
+
+    @staticmethod
+    async def search_for_log() -> dict:
+        """Search for a log on logs.tf.
+
+        Returns:
+            dict: The log data.
+        """
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{baseURL}log?uploader=76561198171178258") as resp:
+                log = await resp.json()
+                print(log)
+                return log
+        pass
