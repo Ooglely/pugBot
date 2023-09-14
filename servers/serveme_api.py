@@ -12,7 +12,7 @@ class ServemeAPI:
         self.base_url = "https://na.serveme.tf/api/reservations/"
 
     async def get_new_reservation(
-        self, serveme_key: str, start_time: datetime = None, duration: float = 2
+        self, serveme_key: str, start_time: datetime | None = None, duration: float = 2
     ):
         """Gets a new reservation from na.serveme.tf.
 
@@ -25,7 +25,7 @@ class ServemeAPI:
             dict: The reservation data.
         """
 
-        times_json, times_text = "", ""
+        times_json, times_text = {}, ""
         if not start_time:
             # No start time provided, get current time
             times_json, times_text = await self.get_reservation_times(serveme_key)

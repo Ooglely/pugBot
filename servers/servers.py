@@ -126,7 +126,7 @@ class ServerCog(commands.Cog):
                 "TF2CC Newbie": 13798,
             },
         ),
-        start_time: string = nextcord.SlashOption(
+        start_time: str = nextcord.SlashOption(
             name="start time",
             description="Start time in the format HH:MM (24 hour clock)",
             default=None,
@@ -154,6 +154,7 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             tf_map (str): The map to set on the server
             gamemode (str): The gamemode config to set on the server
+            whitelist (str): The whitelist to set on the server
             start_time (str): The start time of the reservation
             duration (int): The duration of the reservation
             tzone (int): The UTC offset of the timezone to use
