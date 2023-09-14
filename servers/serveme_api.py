@@ -25,7 +25,8 @@ class ServemeAPI:
             dict: The reservation data.
         """
 
-        times_json, times_text = {}, ""
+        times_json: dict
+        times_text: str
         if not start_time:
             # No start time provided, get current time
             times_json, times_text = await self.get_reservation_times(serveme_key)
@@ -88,11 +89,14 @@ class ServemeAPI:
             async with session.get(self.base_url + "?api_key=" + serveme_key) as times:
                 reservations = await times.json()
                 active_servers = []
+                future_servers = []
                 for reservation in reservations["reservations"]:
                     if (
                         reservation["status"] != "Ended"
-                        and reservation["status"] != "Waiting to start"
+                        and reservation["status"] == "Waiting to start"
                     ):
                         active_servers.append(reservation)
+                    elif reservation["status"] == "Waiting to start":
+                        future_servers.append(reservation)
                 active_servers.reverse()
-                return active_servers
+                return active_servers, future_servers

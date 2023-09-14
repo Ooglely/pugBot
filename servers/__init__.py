@@ -1,4 +1,6 @@
 """Classes for use in the servers cog."""
+from datetime import datetime
+
 import nextcord
 import aiohttp
 
@@ -16,8 +18,12 @@ class ServerButton(nextcord.ui.Button):
 
     def __init__(self, reservation, num):
         self.num = num
+        text = f"ID #{reservation['id']} - {reservation['server']['name']}"
+        if reservation["status"] == "Waiting to start":
+            text += f" Opens: <t:{datetime.fromisoformat(reservation['starts_at']).timestamp()}:t>"
+
         super().__init__(
-            label=f"ID #{reservation['id']} - {reservation['server']['name']}",
+            label=text,
             custom_id=str(num),
             style=nextcord.ButtonStyle.blurple,
         )

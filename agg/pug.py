@@ -142,9 +142,9 @@ class PugCog(commands.Cog):
         """Checks for new logs every minute, and sends it to the log channel if it is completed."""
         guild_data = get_server(AGG_SERVER_ID[0])
         serveme_api_key: str = guild_data["serveme"]
-        current_reservations: dict = await serveme.get_current_reservations(
-            serveme_api_key
-        )
+        current_reservations: dict = (
+            await serveme.get_current_reservations(serveme_api_key)
+        )[0]
         latest_reservation: dict = current_reservations["reservations"][0]
 
         logs = await get_all_logs()

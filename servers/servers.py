@@ -394,7 +394,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -452,7 +452,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -495,7 +495,11 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        (
+            current_reservations,
+            future_reservations,
+        ) = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = current_reservations + future_reservations
 
         async with aiohttp.ClientSession() as session:
             if len(reservations) == 0:
