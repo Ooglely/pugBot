@@ -2,10 +2,12 @@
 import json
 import string
 import random
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 import aiohttp
 import nextcord
+import pytz
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
@@ -124,6 +126,27 @@ class ServerCog(commands.Cog):
                 "TF2CC Newbie": 13798,
             },
         ),
+        start_time: string = nextcord.SlashOption(
+            name="start time",
+            description="Start time in the format HH:MM (24 hour clock)",
+            default=None,
+            max_length=5,
+            min_length=5,
+        ),
+        duration: float = nextcord.SlashOption(
+            name="duration",
+            description="How long to reserve the server (between 2 to 5 hours)",
+            default=2,
+            min_value=2,
+            max_value=5,
+        ),
+        tzone: int = nextcord.SlashOption(
+            name="time zone",
+            description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
+            default=None,
+            min_value=-12,
+            max_value=14,
+        ),
     ):
         """Reserves a server for the user to use.
 
@@ -131,11 +154,39 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             tf_map (str): The map to set on the server
             gamemode (str): The gamemode config to set on the server
+            start_time (str): The start time of the reservation
+            duration (int): The duration of the reservation
+            tzone (int): The UTC offset of the timezone to use
         """
         await interaction.response.defer()
+
+        offset = tzone
+        if not tzone:
+            # Get default timezone adjusted for daylight savings
+            offset = pytz.timezone("US/Eastern")
+
+        dt_start = datetime.now(tz=timezone(timedelta(offset)))
+        if start_time:
+            try:
+                # Adjust datetime object to inputted start time
+                hours = int(start_time[0:2])
+                mins = int(start_time[3:5])
+
+                # Can't reserve a server in the past!
+                if dt_start.hour > hours:
+                    dt_start += timedelta(days=1)
+
+                dt_start -= timedelta(hours=dt_start.hour, minutes=dt_start.minute)
+                dt_start += timedelta(hours=hours, minutes=mins)
+            except ValueError:
+                await interaction.send("Start time must be in HH:MM format")
+                return
+
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await ServemeAPI().get_new_reservation(serveme_api_key)
+        servers, times = await ServemeAPI().get_new_reservation(
+            serveme_api_key, dt_start, duration
+        )
 
         reserve: dict
         server_found: bool = False

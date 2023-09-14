@@ -1,4 +1,7 @@
 """Class used to interact with the serveme.tf API."""
+import json
+from datetime import datetime, timedelta
+
 import aiohttp
 
 
@@ -8,16 +11,41 @@ class ServemeAPI:
     def __init__(self):
         self.base_url = "https://na.serveme.tf/api/reservations/"
 
-    async def get_new_reservation(self, serveme_key: str):
+    async def get_new_reservation(
+        self, serveme_key: str, start_time: datetime = None, duration: float = 2
+    ):
         """Gets a new reservation from na.serveme.tf.
 
         Args:
             serveme_key (str): The serveme.tf API key.
+            start_time (datetime): Optional time for the server to start
+            duration (float): Optional length of the reservation
 
         Returns:
             dict: The reservation data.
         """
-        times_json, times_text = await self.get_reservation_times(serveme_key)
+
+        times_json, times_text = "", ""
+        if not start_time:
+            # No start time provided, get current time
+            times_json, times_text = await self.get_reservation_times(serveme_key)
+
+            # Adjust duration
+            if duration != 2:
+                ends_at = datetime.fromisoformat(times_json["reservation"]["starts_at"])
+                ends_at += timedelta(hours=duration)
+                times_json["reservation"]["ends_at"] = ends_at.isoformat()
+                times_text = json.dumps(times_json)
+        else:
+            # Custom start time
+            times_json = {
+                "reservation": {
+                    "starts_at": start_time.isoformat(),
+                    "ends_at": (start_time + timedelta(hours=duration)).isoformat(),
+                }
+            }
+            times_text = json.dumps(times_json)
+
         headers = {"Content-type": "application/json"}
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.post(
@@ -25,7 +53,7 @@ class ServemeAPI:
                 data=times_text,
                 headers=headers,
             ) as resp:
-                servers = await resp.json()
+                servers = await resp.json(content_type=None)
                 return servers, times_json
 
     async def get_reservation_times(self, serveme_key: str):
