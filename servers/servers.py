@@ -1,5 +1,6 @@
 """Files containing the server cog with commands for reserving/managing servers."""
 import json
+import re
 import string
 import random
 from datetime import datetime, timedelta, timezone
@@ -143,7 +144,7 @@ class ServerCog(commands.Cog):
             required=False,
         ),
         tzone: Optional[int] = nextcord.SlashOption(
-            name="time_zone",
+            name="UTC_time_zone",
             description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
             default=None,
             min_value=-12,
@@ -175,18 +176,32 @@ class ServerCog(commands.Cog):
 
         if start_time:
             try:
-                # Adjust datetime object to inputted start time
-                hours = int(start_time[0:2])
-                mins = int(start_time[3:5])
+                # Ensure correct format and valid time
+                match = re.match(
+                    r"[0-9]{1,2}:[0-9]{2}",
+                    start_time,
+                )
+                if not match:
+                    raise ValueError("Must be in HH:MM format")
 
-                # Can't reserve a server in the past!
+                # Adjust datetime object to inputted start time
+                split_time = start_time.split(':')
+                hours = int(split_time[0])
+                mins = int(split_time[1])
+
+                if 0 > hours or hours > 24:
+                    raise ValueError("Hours must be between 0 and 23")
+                if 0 > mins or mins < 59:
+                    raise ValueError("Minutes must be between 0 and 59")
+
+                # Can't reserve a server in the past! Move to tomorrow
                 if dt_start.hour > hours:
                     dt_start += timedelta(days=1)
 
                 dt_start -= timedelta(hours=dt_start.hour, minutes=dt_start.minute)
                 dt_start += timedelta(hours=hours, minutes=mins)
-            except ValueError:
-                await interaction.send("Start time must be in HH:MM format")
+            except ValueError as err:
+                await interaction.send(f"Start time input error: {err}", ephemeral=True)
                 return
 
         guild_data = database.get_server(interaction.guild.id)
