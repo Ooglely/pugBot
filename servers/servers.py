@@ -132,7 +132,7 @@ class ServerCog(commands.Cog):
             default=None,
             max_length=5,
             min_length=5,
-            required=False
+            required=False,
         ),
         duration: float = nextcord.SlashOption(
             name="duration",
@@ -140,7 +140,7 @@ class ServerCog(commands.Cog):
             default=2,
             min_value=2,
             max_value=5,
-            required=False
+            required=False,
         ),
         tzone: Optional[int] = nextcord.SlashOption(
             name="time zone",
@@ -148,7 +148,7 @@ class ServerCog(commands.Cog):
             default=None,
             min_value=-12,
             max_value=14,
-            required=False
+            required=False,
         ),
     ):
         """Reserves a server for the user to use.
