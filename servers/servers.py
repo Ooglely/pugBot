@@ -3,7 +3,7 @@ import json
 import string
 import random
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 
 import aiohttp
 import nextcord
@@ -126,12 +126,13 @@ class ServerCog(commands.Cog):
                 "TF2CC Newbie": 13798,
             },
         ),
-        start_time: str = nextcord.SlashOption(
+        start_time: Optional[str] = nextcord.SlashOption(
             name="start time",
             description="Start time in the format HH:MM (24 hour clock)",
             default=None,
             max_length=5,
             min_length=5,
+            required=False
         ),
         duration: float = nextcord.SlashOption(
             name="duration",
@@ -139,13 +140,15 @@ class ServerCog(commands.Cog):
             default=2,
             min_value=2,
             max_value=5,
+            required=False
         ),
-        tzone: int = nextcord.SlashOption(
+        tzone: Optional[int] = nextcord.SlashOption(
             name="time zone",
             description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
             default=None,
             min_value=-12,
             max_value=14,
+            required=False
         ),
     ):
         """Reserves a server for the user to use.
