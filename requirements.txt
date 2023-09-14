@@ -12,3 +12,4 @@ pydantic==1.10.4
 bs4==0.0.1
 beautifulsoup4==4.11.1
 pytz~=2023.3.post1
+gql==3.4.1
