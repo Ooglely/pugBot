@@ -127,7 +127,7 @@ class ServerCog(commands.Cog):
             },
         ),
         start_time: Optional[str] = nextcord.SlashOption(
-            name="start time",
+            name="start_time",
             description="Start time in the format HH:MM (24 hour clock)",
             default=None,
             max_length=5,
@@ -143,7 +143,7 @@ class ServerCog(commands.Cog):
             required=False
         ),
         tzone: Optional[int] = nextcord.SlashOption(
-            name="time zone",
+            name="time_zone",
             description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
             default=None,
             min_value=-12,
