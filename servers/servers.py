@@ -165,14 +165,13 @@ class ServerCog(commands.Cog):
         """
         await interaction.response.defer()
 
-        offset = tzone
-        dt_start = None
+        dt_start: datetime
         if not tzone:
             # Get default timezone adjusted for daylight savings
-            offset = pytz.timezone("US/Eastern")
-            dt_start = datetime.now().astimezone(offset)
+            ept = pytz.timezone("US/Eastern")
+            dt_start = datetime.now().astimezone(ept)
         else:
-            dt_start = datetime.now(tz=timezone(timedelta(hours=offset)))
+            dt_start = datetime.now(tz=timezone(timedelta(hours=tzone)))
 
         if start_time:
             try:
@@ -185,7 +184,7 @@ class ServerCog(commands.Cog):
                     raise ValueError("Must be in HH:MM format")
 
                 # Adjust datetime object to inputted start time
-                split_time = start_time.split(':')
+                split_time = start_time.split(":")
                 hours = int(split_time[0])
                 mins = int(split_time[1])
 
@@ -313,21 +312,36 @@ class ServerCog(commands.Cog):
             f"https://tf.oog.pw/connect/{reserve['ip_and_port']}/{connect_password}"
         )
 
-        embed = nextcord.Embed(title="Server started!", color=0xF0984D)
+        embed = nextcord.Embed(title="Server reserved!", color=0xF0984D)
         embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
-        embed.add_field(name="Connect", value=connect, inline=False)
         embed.add_field(
-            name="RCON", value="RCON has been sent in the rcon channel.", inline=False
+            name="Start Time",
+            value=f"<t:{datetime.fromisoformat(server_data['reservation']['starts_at']).timestamp()}:t>",
+            inline=True,
         )
+        embed.add_field(
+            name="End Time",
+            value=f"<t:{datetime.fromisoformat(server_data['reservation']['ends_at']).timestamp()}:t>",
+            inline=True,
+        )
+        embed.add_field(name="Connect", value=connect, inline=False)
+
+        # RCON message
+        rcon_channel = self.bot.get_channel(guild_data["rcon"])
+        value: str
+        if rcon_channel == interaction.channel:
+            # Include RCON in this embed if we are already in the RCON channel
+            value = rcon
+        else:
+            value = "RCON has been sent in the rcon channel."
+            rcon_msg = await rcon_channel.send(rcon)
+
+        embed.add_field(name="RCON", value=value, inline=False)
         embed.add_field(name="Map", value=tf_map, inline=False)
         embed.set_footer(text=VERSION)
         reserve_msg = await interaction.send(embed=embed)
-
-        # RCON Message
-        rcon_channel = self.bot.get_channel(guild_data["rcon"])
-        rcon_msg = await rcon_channel.send(rcon)
 
         # Connect Message
         connect_embed = nextcord.Embed(
