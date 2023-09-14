@@ -60,9 +60,10 @@ class Team:
         self.currentplayers = []
         self.formerplayers = []
         for player in players:
-            self.currentplayers.append(
-                player
-            ) if player.leftAt is None else self.formerplayers.append(player)
+            if player["leftAt"] is None:
+                self.currentplayers.append(player)
+            else:
+                self.formerplayers.append(player)
         self.rank = rank
         self.linkedteams = linkedteams
 
