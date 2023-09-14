@@ -165,11 +165,14 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
 
         offset = tzone
+        dt_start = None
         if not tzone:
             # Get default timezone adjusted for daylight savings
             offset = pytz.timezone("US/Eastern")
+            dt_start = datetime.now().astimezone(offset)
+        else:
+            dt_start = datetime.now(tz=timezone(timedelta(hours=offset)))
 
-        dt_start = datetime.now(tz=timezone(timedelta(offset)))
         if start_time:
             try:
                 # Adjust datetime object to inputted start time
