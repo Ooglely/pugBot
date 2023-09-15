@@ -132,7 +132,7 @@ class ServerCog(commands.Cog):
             description="Start time in the format HH:MM (24 hour clock)",
             default=None,
             max_length=5,
-            min_length=5,
+            min_length=4,
             required=False,
         ),
         duration: float = nextcord.SlashOption(
@@ -316,14 +316,16 @@ class ServerCog(commands.Cog):
         embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
+        start = datetime.fromisoformat(server_data['reservation']['starts_at'])
         embed.add_field(
             name="Start Time",
-            value=f"<t:{datetime.fromisoformat(server_data['reservation']['starts_at']).timestamp()}:t>",
+            value=f"<t:{int(start.timestamp())}:t>",
             inline=True,
         )
+        end = datetime.fromisoformat(server_data['reservation']['ends_at'])
         embed.add_field(
             name="End Time",
-            value=f"<t:{datetime.fromisoformat(server_data['reservation']['ends_at']).timestamp()}:t>",
+            value=f"<t:{int(end.timestamp())}:t>",
             inline=True,
         )
         embed.add_field(name="Connect", value=connect, inline=False)
@@ -526,6 +528,11 @@ class ServerCog(commands.Cog):
                 if resp.status == 200:
                     await interaction.edit_original_message(
                         content=f"Ending reservation `#{reservations[server_id]['id']}`.",
+                        view=None,
+                    )
+                elif resp.status == 204:
+                    await interaction.edit_original_message(
+                        content=f"Canceling future reservation `#{reservations[server_id]['id']}`.",
                         view=None,
                     )
                 else:
