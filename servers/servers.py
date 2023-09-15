@@ -190,7 +190,7 @@ class ServerCog(commands.Cog):
 
                 if 0 > hours or hours > 24:
                     raise ValueError("Hours must be between 0 and 23")
-                if 0 > mins or mins < 59:
+                if 0 > mins or mins > 59:
                     raise ValueError("Minutes must be between 0 and 59")
 
                 # Can't reserve a server in the past! Move to tomorrow
