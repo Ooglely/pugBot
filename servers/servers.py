@@ -316,13 +316,13 @@ class ServerCog(commands.Cog):
         embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
-        start = datetime.fromisoformat(server_data['reservation']['starts_at'])
+        start = datetime.fromisoformat(server_data["reservation"]["starts_at"])
         embed.add_field(
             name="Start Time",
             value=f"<t:{int(start.timestamp())}:t>",
             inline=True,
         )
-        end = datetime.fromisoformat(server_data['reservation']['ends_at'])
+        end = datetime.fromisoformat(server_data["reservation"]["ends_at"])
         embed.add_field(
             name="End Time",
             value=f"<t:{int(end.timestamp())}:t>",
