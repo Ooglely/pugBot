@@ -1,7 +1,8 @@
 """Classes for use in the servers cog."""
-from datetime import datetime
+from datetime import datetime, tzinfo
 
 import nextcord
+import pytz
 import aiohttp
 
 
@@ -16,16 +17,21 @@ class Servers(nextcord.ui.View):
 class ServerButton(nextcord.ui.Button):
     """A button representing a server."""
 
-    def __init__(self, reservation, num):
+    def __init__(self, reservation, num, highlighted=True):
         self.num = num
         text = f"ID #{reservation['id']} - {reservation['server']['name']}"
         if reservation["status"] == "Waiting to start":
-            text += f" Opens: <t:{datetime.fromisoformat(reservation['starts_at']).timestamp()}:t>"
+            text += f" - Opens: {datetime.fromisoformat(reservation['starts_at']).astimezone(pytz.timezone('US/Eastern')).strftime('%m-%d %H:%M:%S')}"
+
+        if highlighted:
+            color = nextcord.ButtonStyle.green
+        else:
+            color = nextcord.ButtonStyle.gray
 
         super().__init__(
             label=text,
             custom_id=str(num),
-            style=nextcord.ButtonStyle.blurple,
+            style=color,
         )
 
     async def callback(

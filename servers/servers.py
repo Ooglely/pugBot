@@ -512,8 +512,14 @@ class ServerCog(commands.Cog):
 
             server_view = Servers()
 
-            for num, reservation in enumerate(reservations):
-                button = ServerButton(reservation, num)
+            for num, reservation in enumerate(current_reservations):
+                button = ServerButton(reservation, num, True)
+                server_view.add_item(button)
+
+            for num, reservation in enumerate(future_reservations):
+                button = ServerButton(
+                    reservation, num + len(current_reservations), False
+                )
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)

@@ -93,7 +93,7 @@ class ServemeAPI:
                 for reservation in reservations["reservations"]:
                     if (
                         reservation["status"] != "Ended"
-                        and reservation["status"] == "Waiting to start"
+                        and reservation["status"] != "Waiting to start"
                     ):
                         active_servers.append(reservation)
                     elif reservation["status"] == "Waiting to start":
