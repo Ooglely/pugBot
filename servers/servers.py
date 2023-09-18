@@ -332,15 +332,12 @@ class ServerCog(commands.Cog):
 
         # RCON message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
-        value: str
         if rcon_channel == interaction.channel:
             # Include RCON in this embed if we are already in the RCON channel
-            value = rcon
+            embed.add_field(name="RCON", value=rcon, inline=False)
         else:
-            value = "RCON has been sent in the rcon channel."
-            rcon_msg = await rcon_channel.send(rcon)
+            await rcon_channel.send(rcon)
 
-        embed.add_field(name="RCON", value=value, inline=False)
         embed.add_field(name="Map", value=tf_map, inline=False)
         embed.set_footer(text=VERSION)
         reserve_msg = await interaction.send(embed=embed)
@@ -371,9 +368,7 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
 
         self.servers.append(
-            Reservation(
-                server_id, serveme_api_key, [reserve_msg, rcon_msg, connect_msg]
-            )
+            Reservation(server_id, serveme_api_key, [reserve_msg, connect_msg])
         )
 
     @util.is_setup()
