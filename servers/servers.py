@@ -1,11 +1,14 @@
 """Files containing the server cog with commands for reserving/managing servers."""
 import json
+import re
 import string
 import random
-from typing import List
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 import aiohttp
 import nextcord
+import pytz
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
@@ -124,6 +127,30 @@ class ServerCog(commands.Cog):
                 "TF2CC Newbie": 13798,
             },
         ),
+        start_time: Optional[str] = nextcord.SlashOption(
+            name="start_time",
+            description="Start time in the format HH:MM (24 hour clock)",
+            default=None,
+            max_length=5,
+            min_length=4,
+            required=False,
+        ),
+        duration: float = nextcord.SlashOption(
+            name="duration",
+            description="How long to reserve the server (between 2 to 5 hours)",
+            default=2,
+            min_value=2,
+            max_value=5,
+            required=False,
+        ),
+        tzone: Optional[int] = nextcord.SlashOption(
+            name="UTC_time_zone",
+            description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
+            default=None,
+            min_value=-12,
+            max_value=14,
+            required=False,
+        ),
     ):
         """Reserves a server for the user to use.
 
@@ -131,11 +158,56 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             tf_map (str): The map to set on the server
             gamemode (str): The gamemode config to set on the server
+            whitelist (str): The whitelist to set on the server
+            start_time (str): The start time of the reservation
+            duration (int): The duration of the reservation
+            tzone (int): The UTC offset of the timezone to use
         """
         await interaction.response.defer()
+
+        dt_start: datetime
+        if not tzone:
+            # Get default timezone adjusted for daylight savings
+            ept = pytz.timezone("US/Eastern")
+            dt_start = datetime.now().astimezone(ept)
+        else:
+            dt_start = datetime.now(tz=timezone(timedelta(hours=tzone)))
+
+        if start_time:
+            try:
+                # Ensure correct format and valid time
+                match = re.match(
+                    r"[0-9]{1,2}:[0-9]{2}",
+                    start_time,
+                )
+                if not match:
+                    raise ValueError("Must be in HH:MM format")
+
+                # Adjust datetime object to inputted start time
+                split_time = start_time.split(":")
+                hours = int(split_time[0])
+                mins = int(split_time[1])
+
+                if 0 > hours or hours > 24:
+                    raise ValueError("Hours must be between 0 and 23")
+                if 0 > mins or mins > 59:
+                    raise ValueError("Minutes must be between 0 and 59")
+
+                # Can't reserve a server in the past! Move to tomorrow
+                if dt_start.hour > hours:
+                    dt_start += timedelta(days=1)
+
+                dt_start -= timedelta(hours=dt_start.hour, minutes=dt_start.minute)
+                dt_start += timedelta(hours=hours, minutes=mins)
+            except ValueError as err:
+                await interaction.send(f"Start time input error: {err}", ephemeral=True)
+                return
+
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await ServemeAPI().get_new_reservation(serveme_api_key)
+        servers, times = await ServemeAPI().get_new_reservation(
+            serveme_api_key, dt_start, duration
+        )
 
         reserve: dict
         server_found: bool = False
@@ -240,21 +312,35 @@ class ServerCog(commands.Cog):
             f"https://tf.oog.pw/connect/{reserve['ip_and_port']}/{connect_password}"
         )
 
-        embed = nextcord.Embed(title="Server started!", color=0xF0984D)
+        embed = nextcord.Embed(title="Server reserved!", color=0xF0984D)
         embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
-        embed.add_field(name="Connect", value=connect, inline=False)
+        start = datetime.fromisoformat(server_data["reservation"]["starts_at"])
         embed.add_field(
-            name="RCON", value="RCON has been sent in the rcon channel.", inline=False
+            name="Start Time",
+            value=f"<t:{int(start.timestamp())}:t>",
+            inline=True,
         )
+        end = datetime.fromisoformat(server_data["reservation"]["ends_at"])
+        embed.add_field(
+            name="End Time",
+            value=f"<t:{int(end.timestamp())}:t>",
+            inline=True,
+        )
+        embed.add_field(name="Connect", value=connect, inline=False)
+
+        # RCON message
+        rcon_channel = self.bot.get_channel(guild_data["rcon"])
+        if rcon_channel == interaction.channel:
+            # Include RCON in this embed if we are already in the RCON channel
+            embed.add_field(name="RCON", value=rcon, inline=False)
+        else:
+            await rcon_channel.send(rcon)
+
         embed.add_field(name="Map", value=tf_map, inline=False)
         embed.set_footer(text=VERSION)
         reserve_msg = await interaction.send(embed=embed)
-
-        # RCON Message
-        rcon_channel = self.bot.get_channel(guild_data["rcon"])
-        rcon_msg = await rcon_channel.send(rcon)
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -282,9 +368,7 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
 
         self.servers.append(
-            Reservation(
-                server_id, serveme_api_key, [reserve_msg, rcon_msg, connect_msg]
-            )
+            Reservation(server_id, serveme_api_key, [reserve_msg, connect_msg])
         )
 
     @util.is_setup()
@@ -307,7 +391,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -365,7 +449,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -408,7 +492,11 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        (
+            current_reservations,
+            future_reservations,
+        ) = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = current_reservations + future_reservations
 
         async with aiohttp.ClientSession() as session:
             if len(reservations) == 0:
@@ -419,8 +507,14 @@ class ServerCog(commands.Cog):
 
             server_view = Servers()
 
-            for num, reservation in enumerate(reservations):
-                button = ServerButton(reservation, num)
+            for num, reservation in enumerate(current_reservations):
+                button = ServerButton(reservation, num, True)
+                server_view.add_item(button)
+
+            for num, reservation in enumerate(future_reservations):
+                button = ServerButton(
+                    reservation, num + len(current_reservations), False
+                )
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
@@ -435,6 +529,11 @@ class ServerCog(commands.Cog):
                 if resp.status == 200:
                     await interaction.edit_original_message(
                         content=f"Ending reservation `#{reservations[server_id]['id']}`.",
+                        view=None,
+                    )
+                elif resp.status == 204:
+                    await interaction.edit_original_message(
+                        content=f"Canceling future reservation `#{reservations[server_id]['id']}`.",
                         view=None,
                     )
                 else:
