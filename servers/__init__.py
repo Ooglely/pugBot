@@ -2,6 +2,7 @@
 from datetime import datetime, tzinfo
 
 import nextcord
+import pytz
 import aiohttp
 
 
@@ -20,7 +21,7 @@ class ServerButton(nextcord.ui.Button):
         self.num = num
         text = f"ID #{reservation['id']} - {reservation['server']['name']}"
         if reservation["status"] == "Waiting to start":
-            text += f" Opens: <t:{int(datetime.fromisoformat(reservation['starts_at']).timestamp())}:t>"
+            text += f" - Opens: {datetime.fromisoformat(reservation['starts_at']).astimezone(pytz.timezone('US/Eastern')).strftime('%m-%d %H:%M:%S')}"
 
         if highlighted:
             color = nextcord.ButtonStyle.green
