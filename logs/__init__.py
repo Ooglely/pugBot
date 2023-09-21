@@ -313,35 +313,47 @@ class PlayerData:
                 {"steam": str(SteamID(self.steam_3).as_64)}
             )
             self.linked = Player(self.steam_3, player["discord"])
+            await self.linked.link_player()
         except LookupError:
+            print(f"Player {str(SteamID(self.steam_3).as_64)} not found in database")
             self.linked = None
             return
 
 
 class Player:
     def __init__(
-        self, steam: str | int | None = None, discord: int | None = None
+        self,
+        steam: str | int | None = None,
+        discord: int | None = None,
+        data: dict | None = {},
     ) -> None:
         self.steam_3: str | None = SteamID(steam).as_steam3 if steam else None
         self.steam_64: int | None = SteamID(steam).as_64 if steam else None
         self.discord: int | None = discord if discord else None
         self.registered: bool = False
 
+        if data:
+            self.steam_64 = data["steam_64"]
+            self.steam_3 = data["steam_3"]
+            self.discord = data["discord"]
+            self.registered = data["registered"]
+
     async def link_player(self) -> None:
         """Add database data from the associated steam ID to the player data"""
-        try:
-            if self.steam_64:
-                data = await player_db.find_item({"steam": str(self.steam_64)})
-            elif self.discord:
-                data = await player_db.find_item({"discord": str(self.discord)})
-            else:
+        if not self.registered:
+            try:
+                if self.steam_64:
+                    data = await player_db.find_item({"steam": str(self.steam_64)})
+                elif self.discord:
+                    data = await player_db.find_item({"discord": str(self.discord)})
+                else:
+                    return
+                self.steam_64 = data["steam"]
+                self.discord = data["discord"]
+                self.registered = True
+            except LookupError:
+                self.registered = False
                 return
-            self.steam_64 = data["steam"]
-            self.discord = data["discord"]
-            self.registered = True
-        except LookupError:
-            self.registered = False
-            return
 
 
 class ClassData:
@@ -373,6 +385,7 @@ class LogData:
             self.players.append(PlayerData(player, data["players"][player]))
 
     async def link_all_players(self) -> None:
+        """Link all players in the log to their database entries"""
         for player in self.players:
             await player.link_player()
 
@@ -381,7 +394,10 @@ async def test_log_data():
     example_log_data = LogData(await LogsAPI.get_single_log(3490943))
     await example_log_data.link_all_players()
 
-    await LogsAPI.search_for_log()
+    for player in example_log_data.players:
+        print(player.linked.__dict__)
+
+    # await LogsAPI.search_for_log()
 
 
 if __name__ == "__main__":

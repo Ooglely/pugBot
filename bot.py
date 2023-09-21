@@ -24,6 +24,7 @@ from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
+from logs.searcher import LogSearcher
 from pug.pug import PugRunningCog
 from pug.setup import PugSetupCog
 from registration.setup import RegistrationSetupCog
@@ -62,6 +63,8 @@ async def on_ready():
     bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
     update_status.start()
+    LogSearcher.searcher.start()  # pylint: disable=no-member
+    LogSearcher.queue.start()  # pylint: disable=no-member
 
 
 class SetupView(nextcord.ui.View):

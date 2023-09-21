@@ -7,12 +7,14 @@ from nextcord.ext import commands
 
 from constants import BOT_COLOR
 from database import BotCollection
+from logs import Player
+from logs.searcher import LogSearcher
 from pug import (
     CategorySelect,
     CategoryButton,
     TeamGenerationView,
     MoveView,
-    Player,
+    PugPlayer,
     PugCategory,
 )
 from pug.setup import PugSetupCog
@@ -240,6 +242,13 @@ class PugRunningCog(commands.Cog):
                     interaction.guild.id, all_players
                 )
 
+                game_players = [
+                    Player(discord=player.discord) for player in all_players
+                ]
+                await LogSearcher.add_searcher_game(
+                    interaction.guild.id, chosen_category, game_players
+                )
+
                 break
 
             if team_generation_view.action == "random":
@@ -258,7 +267,7 @@ class PugRunningCog(commands.Cog):
 
     async def get_player_list(
         self, next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
-    ) -> Dict[str, List[Player]]:
+    ) -> Dict[str, List[PugPlayer]]:
         """Return a list of players in a voice channel.
 
         Args:
@@ -267,18 +276,18 @@ class PugRunningCog(commands.Cog):
         Returns:
             list: A list of players in the voice channel.
         """
-        players: Dict[str, list[Player]] = {"next_pug": [], "add_up": []}
+        players: Dict[str, list[PugPlayer]] = {"next_pug": [], "add_up": []}
         for member in next_pug.members:
-            player = Player(discord=member.id)
+            player = PugPlayer(discord=member.id)
             players["next_pug"].append(player)
         for member in add_up.members:
-            player = Player(discord=member.id)
+            player = PugPlayer(discord=member.id)
             players["add_up"].append(player)
         return players
 
     async def generate_random_teams(
-        self, players: Dict[str, List[Player]], team_size: int
-    ) -> Dict[str, list[Player]]:
+        self, players: Dict[str, List[PugPlayer]], team_size: int
+    ) -> Dict[str, list[PugPlayer]]:
         """Generate random teams for a pug.
 
         Args:
@@ -291,10 +300,10 @@ class PugRunningCog(commands.Cog):
         """
         random.shuffle(players["next_pug"])
         random.shuffle(players["add_up"])
-        all_players: List[Player] = players["next_pug"] + players["add_up"]
+        all_players: List[PugPlayer] = players["next_pug"] + players["add_up"]
 
-        red_team: list[Player] = []
-        blu_team: list[Player] = []
+        red_team: list[PugPlayer] = []
+        blu_team: list[PugPlayer] = []
 
         while len(red_team) < team_size and len(blu_team) < team_size:
             red_team.append(all_players.pop(0))
@@ -305,10 +314,10 @@ class PugRunningCog(commands.Cog):
 
     async def generate_balanced_teams(
         self,
-        players: Dict[str, List[Player]],
+        players: Dict[str, List[PugPlayer]],
         team_size,
         reg_settings: RegistrationSettings,
-    ) -> Dict[str, List[Player]]:
+    ) -> Dict[str, List[PugPlayer]]:
         """Generate balanced teams for a pug.
 
         Args:
@@ -345,8 +354,8 @@ class PugRunningCog(commands.Cog):
         )
         all_players = players["next_pug"] + players["add_up"]
 
-        red_team: list[Player] = []
-        blu_team: list[Player] = []
+        red_team: list[PugPlayer] = []
+        blu_team: list[PugPlayer] = []
         count = 0
 
         while len(red_team) < team_size and len(blu_team) < team_size:
@@ -486,7 +495,7 @@ class PugRunningCog(commands.Cog):
         moving_string += "\nDone!"
 
         move_view = MoveView()
-        pug_embed.title = "Players moved!"
+        pug_embed.title = "PugPlayers moved!"
         pug_embed.description = moving_string
         await interaction.edit_original_message(embed=pug_embed, view=move_view)
         await move_view.wait()

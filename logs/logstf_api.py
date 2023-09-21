@@ -24,15 +24,54 @@ class LogsAPI:
                 return log
 
     @staticmethod
-    async def search_for_log() -> dict:
+    async def search_for_log(
+        title: str = None,
+        map_name: str = None,
+        uploader: int = None,
+        players: list[int] = None,
+        limit: int = None,
+        offset: int = None,
+    ) -> dict:
         """Search for a log on logs.tf.
 
+        http://logs.tf/api/v1/log?title=X&uploader=Y&player=Z&limit=N&offset=N
+
+        Available filters (copied from logs.tf API docs):\n
+        title           Title text search (min. 2 characters)
+        map	            Exact name of a map
+        uploader	    Uploader SteamID64
+        player	        One or more player SteamID64 values, comma-separated
+        limit	        Limit results (default 1000, maximum 10000)
+        offset	        Offset results (default 0)
+
         Returns:
-            dict: The log data.
+            dict: The log query.
         """
+        query_url = f"{baseURL}log?"
+        if title is not None:
+            query_url += f"title={title}&"
+
+        if map_name is not None:
+            query_url += f"map={map_name}&"
+
+        if uploader is not None:
+            query_url += f"uploader={uploader}&"
+
+        if players is not None:
+            steam_ids = ""
+            for steam_id in players:
+                steam_ids += f"{steam_id},"
+
+            steam_ids = steam_ids[:-1]
+            query_url += f"player={steam_ids}&"
+
+        if limit is not None:
+            query_url += f"limit={limit}&"
+
+        if offset is not None:
+            query_url += f"offset={offset}&"
+
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{baseURL}log?uploader=76561198171178258") as resp:
+            async with session.get(query_url) as resp:
                 log = await resp.json()
-                print(log)
                 return log
-        pass
