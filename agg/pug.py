@@ -22,7 +22,6 @@ class PugCog(commands.Cog):
         self.bot: nextcord.Client = bot
         self.organizing: bool = False
         self.last_log: int = 0
-        self.logs.start()  # pylint: disable=no-member
 
     @commands.Cog.listener(name="on_voice_state_update")
     async def first_to_18(self, _member, state_before, _state_after):
