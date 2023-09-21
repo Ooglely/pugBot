@@ -63,8 +63,9 @@ async def on_ready():
     bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
     update_status.start()
-    LogSearcher.searcher.start()  # pylint: disable=no-member
-    LogSearcher.queue.start()  # pylint: disable=no-member
+    log_searcher = LogSearcher(bot)
+    log_searcher.searcher.start()  # pylint: disable=no-member
+    log_searcher.queue.start()  # pylint: disable=no-member
 
 
 class SetupView(nextcord.ui.View):
