@@ -124,6 +124,8 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
             new_config = "rgl_hl_koth_bo5"
         else:
             new_config = "rgl_off"
+    elif whitelist_id == 26:  # PT whitelist ID
+        new_config = "rgl_pt_push"
     elif custom_whitelist in ("13798", "13797"):
         if tf_map.startswith("cp_"):
             return f"changelevel {tf_map}"
