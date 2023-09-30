@@ -25,6 +25,13 @@ with open("maps.json", encoding="UTF-8") as json_file:
     SIXES_MAPS: dict = maps["sixes"]
     HL_MAPS: dict = maps["hl"]
 
+PT_MAPS: dict = {
+    "pass_arena2": "pass_arena2_b8",
+    "pass_stadium": "pass_stadium_b31",
+    "pass_stonework": "pass_stonework_a24",
+    "pass_ufo": "pass_ufo_a10",
+}
+
 
 class ServerCog(commands.Cog):
     """A cog that holds all the commands for reserving/managing servers.
@@ -65,7 +72,7 @@ class ServerCog(commands.Cog):
 
         print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
 
-        map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
+        map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS, "pt": PT_MAPS}
 
         map_json = json.dumps(map_dict)
 
@@ -106,7 +113,7 @@ class ServerCog(commands.Cog):
         tf_map: str = nextcord.SlashOption(
             name="map",
             description="The map to set on the server.",
-            choices=maps["sixes"] | maps["hl"],
+            choices=maps["sixes"] | maps["hl"] | maps["pt"],
         ),
         gamemode: str = nextcord.SlashOption(
             name="gamemode",
