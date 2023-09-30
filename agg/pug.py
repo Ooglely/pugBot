@@ -1,10 +1,8 @@
 """A cog that holds all of the commands to run pugs in agg."""
 import nextcord
-from nextcord.ext import commands, tasks
-from agg import AGG_SERVER_ID, PugCategory, HL_CHANNELS, AD_CHANNELS
-from database import get_server
+from nextcord.ext import commands
+from agg import HL_CHANNELS, AD_CHANNELS
 from servers.serveme_api import ServemeAPI
-from util import is_runner, get_log, get_all_logs
 
 serveme: ServemeAPI = ServemeAPI()
 
@@ -82,56 +80,3 @@ class PugCog(commands.Cog):
                     "Assuming that pugs are dead. Resetting first to 18 tracker."
                 )
                 self.organizing = True
-
-    @nextcord.slash_command(
-        name="move",
-        description="Move all players after a pug has finished.",
-        guild_ids=AGG_SERVER_ID,
-    )
-    @is_runner()
-    async def move(self, interaction: nextcord.Interaction):
-        """Moves all players after a pug is completed.
-
-        Moves all players in the team channels to the organizing channel.
-        Moves all players in the organizing channel to the in next pug channel.
-
-        Args:
-            interaction (nextcord.Interaction): The interaction that triggered the command.
-        """
-        await interaction.response.defer()
-
-        agg_server: nextcord.Guild = self.bot.get_guild(952817189893865482)
-
-        channels: PugCategory
-        if interaction.channel.category.id == 996414120662409328:  # Normal pugs
-            channels = HL_CHANNELS
-        elif interaction.channel.category.id == 997602137683005441:  # AD pugs
-            channels = AD_CHANNELS
-        else:
-            await interaction.send(
-                "Please use this command in one of the pug channels."
-            )
-            return
-
-        organizing: nextcord.VoiceChannel = agg_server.get_channel(channels.organizing)
-        inp: nextcord.VoiceChannel = agg_server.get_channel(channels.inp)
-
-        for player in organizing.members:
-            await player.move_to(inp)
-
-        for team_channel in channels.teams:
-            team: nextcord.VoiceChannel = agg_server.get_channel(team_channel)
-            for player in team.members:
-                await player.move_to(organizing)
-
-        await interaction.send("Moved players.")
-
-    @nextcord.slash_command(
-        name="pug",
-        description="Start a pug using the ip.oog.pw server.",
-        guild_ids=AGG_SERVER_ID,
-    )
-    async def pug(self, interaction=nextcord.Interaction):
-        """Starts a pug using the ip.oog.pw server."""
-        interaction.send("Not implemented yet.")
-        return

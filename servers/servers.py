@@ -100,7 +100,7 @@ class ServerCog(commands.Cog):
     )
     @util.is_setup()
     @util.is_runner()
-    async def reserve_server(
+    async def reserve(
         self,
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
@@ -114,11 +114,13 @@ class ServerCog(commands.Cog):
             choices={
                 "6s": "sixes",
                 "HL": "highlander",
+                "PT": "passtime",
             },
         ),
-        whitelist: int = nextcord.SlashOption(
+        whitelist: Optional[int] = nextcord.SlashOption(
             name="whitelist",
             description="The whitelist to set on the server.",
+            default=None,
             choices={
                 "RGL 6s": 13531,
                 "RGL HL": 13397,
@@ -144,7 +146,7 @@ class ServerCog(commands.Cog):
             required=False,
         ),
         tzone: Optional[int] = nextcord.SlashOption(
-            name="UTC_time_zone",
+            name="utc_time_zone",
             description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
             default=None,
             min_value=-12,
@@ -244,7 +246,7 @@ class ServerCog(commands.Cog):
                 server_config_id = 69  # rgl_6s_5cp_scrim
             else:
                 server_config_id = 68  # rgl_6s_koth_bo5
-        else:
+        elif gamemode == "highlander":
             whitelist_id = 22  # HL whitelist ID
             if tf_map not in maps["hl"].values():
                 await interaction.send("Invalid map.")
@@ -253,6 +255,9 @@ class ServerCog(commands.Cog):
                 server_config_id = 55
             else:
                 server_config_id = 54
+        elif gamemode == "passtime":
+            whitelist_id = 26  # PT whitelist ID
+            server_config_id = 116  # RGL PT_Push config ID in serveme
 
         # Fix custom whitelists not working
         if whitelist in (13798, 13797):
