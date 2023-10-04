@@ -1,5 +1,6 @@
 """Class used to interact with the serveme.tf API."""
 import json
+import re
 from datetime import datetime, timedelta
 
 import aiohttp
@@ -100,3 +101,9 @@ class ServemeAPI:
                         future_servers.append(reservation)
                 active_servers.reverse()
                 return active_servers, future_servers
+    
+    async def fetch_all_maps():
+        async with aiohttp.ClientSession() as session:
+            async with session.get('http://dl.serveme.tf/maps/') as resp:
+                maps = await resp.text()
+                return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
