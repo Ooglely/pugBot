@@ -309,7 +309,7 @@ class ServerCog(commands.Cog):
         )
 
         tf_oog_pw_link = (
-            f"https://tf.oog.pw/connect/{reserve['ip_and_port']}/{connect_password}"
+            f"https://pugBot.tf/connect/{reserve['ip_and_port']}/{connect_password}"
         )
 
         embed = nextcord.Embed(title="Server reserved!", color=0xF0984D)

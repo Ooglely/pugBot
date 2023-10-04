@@ -35,7 +35,7 @@ intents.members = True
 intents.message_content = True
 intents.voice_states = True
 
-activity = nextcord.Activity(name="tf.oog.pw :3", type=nextcord.ActivityType.watching)
+activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.watching)
 bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
 
 bot.add_cog(ServerCog(bot))
@@ -489,7 +489,7 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
     help_embed.set_thumbnail("https://ooglely.github.io/53EWxbz.jpeg")
     help_embed.add_field(
         name="Global Commands",
-        value="/setup - Used to setup the bot for a guild (Admin only)\n/serveme - Used to set the serveme api key for a guild (Admin only)\n/registration - Sets up tf.oog.pw registration (Admin only)\n/register - Registers a player in the bot's database\n/search - Search for a player's RGL profile\n/reserve - Get a new reservation from na.serveme.tf\n/map - Change the map on a running reservation\n/rcon - Run an rcon command on an active reservation",
+        value="/setup - Used to setup the bot for a guild (Admin only)\n/serveme - Used to set the serveme api key for a guild (Admin only)\n/registration - Sets up pugBot.tf registration (Admin only)\n/register - Registers a player in the bot's database\n/search - Search for a player's RGL profile\n/reserve - Get a new reservation from na.serveme.tf\n/map - Change the map on a running reservation\n/rcon - Run an rcon command on an active reservation",
         inline=False,
     )
     if interaction.guild_id == 952817189893865482:
@@ -507,7 +507,7 @@ async def update_status():
     """Updates the bot's status with various data."""
     statuses = [
         f"{len(bot.guilds)} guilds",
-        "tf.oog.pw :3",
+        "pugBot.tf :3",
         f"{len(bot.users)} users",
         "sea otters :D",
         f"{database.player_count()} registered players",
