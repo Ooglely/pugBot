@@ -162,6 +162,59 @@ def add_player(steam: str, discord: str):
     )
 
 
+def add_med_immune_player(guild: int, discord: int):
+    """Add a player to the med immunity array for the guild
+
+    Args:
+        guild (int): The guild ID to set in
+        discord (str): The discord ID of the player to set
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$push": {"immune": discord}}
+    )
+
+
+def remove_med_immune_player(guild: int, discord: int):
+    """Remove a player from the med immunity array for the guild
+
+    Args:
+        guild (int): The guild ID to remove from
+        discord (str): The discord ID of the player to remove
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"pull": {"immune": discord}}
+    )
+
+def clear_med_immuninty_by_guild(guild: int):
+    """Clear the med immunity field of all discord ids for a given guild
+
+    Args:
+        guild: The guild ID to clear the med immunity field of
+    """
+    database = client.guilds.config
+    database.update_one(
+        {"guild": guild},
+        {"$set": {"immune": []}}
+    )
+
+
+def clear_med_immuninty():
+    """Clear the med immunity field for all guilds
+
+    Args:
+        guild: The guild ID to clear the med immunity field of
+    """
+    database = client.guilds.config
+    database.update_many(
+        {},
+        {"$set": {"immune": []}}
+    )
+
+
 def get_player_stats(steam: int):
     """Get the player stats from the database.
 
