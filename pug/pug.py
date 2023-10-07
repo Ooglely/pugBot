@@ -1,12 +1,12 @@
 """Commands for generating teams in pugs."""
 import random
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Set
 
 import nextcord
 from nextcord.ext import commands
 
 from constants import BOT_COLOR
-from database import BotCollection
+from database import BotCollection, get_server, add_med_immune_player
 from pug import (
     CategorySelect,
     CategoryButton,
@@ -14,6 +14,7 @@ from pug import (
     MoveView,
     Player,
     PugCategory,
+    BooleanView,
 )
 from pug.setup import PugSetupCog
 from registration import RegistrationSettings
@@ -48,15 +49,10 @@ class PugRunningCog(commands.Cog):
         # Get a list of pug categories
         try:
             result = await category_db.find_item({"_id": interaction.guild.id})
+            categories = result["categories"]
+            if len(categories) == 0:
+                raise LookupError
         except LookupError:
-            await interaction.send(
-                "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
-            )
-            return
-
-        categories = result["categories"]
-
-        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
@@ -107,10 +103,7 @@ class PugRunningCog(commands.Cog):
         )
         await interaction.send(embed=pug_embed, view=select_view)
         embed_status = await select_view.wait()
-        if embed_status:
-            return
-
-        if select_view.name == "cancel":
+        if embed_status or select_view.name == "cancel":
             return
 
         chosen_category: PugCategory = PugCategory(
@@ -373,15 +366,10 @@ class PugRunningCog(commands.Cog):
         # Get a list of pug categories
         try:
             result = await category_db.find_item({"_id": interaction.guild.id})
+            categories = result["categories"]
+            if len(categories) == 0:
+                raise LookupError
         except LookupError:
-            await interaction.send(
-                "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
-            )
-            return
-
-        categories = result["categories"]
-
-        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
@@ -533,3 +521,124 @@ class PugRunningCog(commands.Cog):
             return
 
         await interaction.delete_original_message(delay=10)
+
+    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+        name="rollmed", description="Randomly selects a non-immune player to play medic."
+    )
+    @is_setup()
+    @is_runner()
+    async def roll_medic(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+
+        # Get a list of pug categories
+        try:
+            result = await category_db.find_item({"_id": interaction.guild.id})
+            categories = result["categories"]
+            if len(categories) == 0:
+                raise LookupError
+        except LookupError:
+            await interaction.send(
+                "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
+            )
+            return
+
+        select_view = CategorySelect()
+
+        for name, category in categories.items():
+            disabled: bool = False
+            color = nextcord.ButtonStyle.gray
+            add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["add_up"]
+            )
+            red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["red_team"]
+            )
+            blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["blu_team"]
+            )
+            next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["next_pug"]
+            )
+            if (
+                len(add_up_channel.members) + len(next_pug_channel.members)
+            ) <= 2:
+                disabled = True
+                name += " (Not enough players)"
+            if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
+                disabled = True
+                name += " (Pug in progress)"
+            if (
+                interaction.user.voice is not None
+                and interaction.user.voice.channel
+                == (next_pug_channel or add_up_channel)
+            ):
+                color = nextcord.ButtonStyle.green
+
+            button = CategoryButton(name=name, color=color, disabled=disabled)
+            select_view.add_item(button)
+
+        med_embed = nextcord.Embed(
+            title="Roll Medic",
+            color=BOT_COLOR,
+            description="Select the category you would like to roll medic for.",
+        )
+        await interaction.send(embed=med_embed, view=select_view)
+        embed_status = await select_view.wait()
+        if embed_status or select_view.name == "cancel":
+            return
+
+        chosen_category: PugCategory = PugCategory(
+            select_view.name, categories[select_view.name]
+        )
+
+        add_up: nextcord.VoiceChannel = interaction.guild.get_channel(
+            chosen_category.add_up
+        )
+        next_pug: nextcord.VoiceChannel = interaction.guild.get_channel(
+            chosen_category.next_pug
+        )
+
+        server = get_server(interaction.guild.id)
+        immune_players: Set[int] = set(server["immune"])
+
+        players = await self.get_player_list(next_pug, add_up)
+
+        medic: Player | None = None
+        # 12 players in next pug, must pick meds from this channel
+        if len(players["next_pug"]) >= 12:
+            random.shuffle(players["next_pug"])
+            for player in players["next_pug"]:
+                if player.discord not in immune_players:
+                    medic = player
+                    break
+            if not medic:
+                medic = players["next_pug"][0]
+        else:
+            random.shuffle(players["add_up"])
+            for player in players["add_up"]:
+                if player.discord not in immune_players:
+                    medic = player
+                    break
+            if not medic:
+                medic = players["add_up"][0]
+
+        med_embed.description = f"Rolled <@{medic.discord}> as medic."
+        med_embed.add_field(
+            value="Give player medic roll immunity?"
+        )
+
+        boolean_view = BooleanView()
+
+        await interaction.edit_original_message(embed=med_embed, view=boolean_view)
+        status = await boolean_view.wait()
+
+        med_embed.clear_fields()
+        if status or not boolean_view.action:
+            med_embed.add_field(
+               value="Player not given med roll immunity"
+            )
+        else:
+            med_embed.add_field(
+                value="Player given med roll immunity"
+            )
+            add_med_immune_player(interaction.guild.id, medic.discord)
