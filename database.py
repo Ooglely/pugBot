@@ -189,7 +189,8 @@ def remove_med_immune_player(guild: int, discord: int):
         {"pull": {"immune": discord}}
     )
 
-def clear_med_immuninty_by_guild(guild: int):
+
+def clear_med_immunity_by_guild(guild: int):
     """Clear the med immunity field of all discord ids for a given guild
 
     Args:
@@ -202,11 +203,8 @@ def clear_med_immuninty_by_guild(guild: int):
     )
 
 
-def clear_med_immuninty():
+def clear_med_immunity():
     """Clear the med immunity field for all guilds
-
-    Args:
-        guild: The guild ID to clear the med immunity field of
     """
     database = client.guilds.config
     database.update_many(
