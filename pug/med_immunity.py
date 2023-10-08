@@ -241,3 +241,33 @@ class PugMedicCog(commands.Cog):
             med_embed.description = "Removed medic roll immunity from all players."
 
         await interaction.edit_original_message(embed=med_embed, view=None)
+
+    @medic.subcommand(  # pylint: disable=no-member
+        name="view",
+        description="View all currently medic roll immune players.",
+    )
+    @is_setup()
+    @is_runner()
+    async def view_all_med_immune(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+        server = get_server(interaction.guild.id)
+
+        immune_embed = nextcord.Embed(
+            title="Immune Players",
+            color=BOT_COLOR,
+        )
+
+        if "immune" not in server:
+            immune_embed.description = "No players are currently immune to medic roll!"
+        else:
+            immune = server["immune"]
+            description: str = ""
+
+            for discord_id, i in enumerate(immune):
+                description += f"<@{discord_id}>"
+                if i < len(immune):
+                    description += "\n"
+
+            immune_embed.description = description
+
+        await interaction.send(embed=immune_embed)
