@@ -144,7 +144,7 @@ class ServerCog(commands.Cog):
             required=False,
         ),
         tzone: Optional[int] = nextcord.SlashOption(
-            name="UTC_time_zone",
+            name="utc_time_zone",
             description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
             default=None,
             min_value=-12,

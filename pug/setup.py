@@ -34,6 +34,10 @@ class PugSetupCog(commands.Cog):
     async def category(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
+    @pug.subcommand()
+    async def medic(self, interaction: nextcord.Interaction):
+        """Never gets called, just a placeholder for the subcommand."""
+
     @category.subcommand(name="add", description="Add a pug category to the server.")
     @is_setup()
     @is_runner()

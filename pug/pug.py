@@ -528,8 +528,8 @@ class PugRunningCog(commands.Cog):
 
         await interaction.delete_original_message(delay=10)
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
-        name="rollmed",
+    @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
+        name="roll",
         description="Randomly selects a non-immune player to play medic.",
     )
     @is_setup()
@@ -658,8 +658,8 @@ class PugRunningCog(commands.Cog):
                 med_embed.add_field(value="Player given med roll immunity")
                 add_med_immune_player(interaction.guild.id, medic.discord)
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
-        name="setimmune", description="Manually set a player as immune to medic roll."
+    @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
+        name="immune", description="Manually set a player as immune to medic roll."
     )
     @is_setup()
     @is_runner()
@@ -680,8 +680,8 @@ class PugRunningCog(commands.Cog):
         )
         await interaction.send(embed=med_embed)
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
-        name="removeimmune",
+    @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
+        name="remove",
         description="Manually remove a player from being immune to medic roll.",
     )
     @is_setup()
@@ -705,13 +705,13 @@ class PugRunningCog(commands.Cog):
         )
         await interaction.send(embed=med_embed)
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
-        name="removeallimmune",
+    @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
+        name="remove_all",
         description="Manually set a player as immune to medic roll.",
     )
     @is_setup()
     @is_runner()
-    async def set_med_immune(self, interaction: nextcord.Interaction):
+    async def remove_all_med_immune(self, interaction: nextcord.Interaction):
         await interaction.response.defer()
         clear_med_immunity_by_guild(interaction.guild.id)
 
