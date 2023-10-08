@@ -1,5 +1,10 @@
 """Functions for interacting with the database throughout the bot."""
+from datetime import time
+
 import pymongo
+import pytz
+from nextcord.ext import tasks
+
 import constants
 from rgl_api import RGL_API
 
@@ -170,10 +175,7 @@ def add_med_immune_player(guild: int, discord: int):
         discord (str): The discord ID of the player to set
     """
     database = client.guilds.config
-    database.update_one(
-        {"guild": guild},
-        {"$push": {"immune": discord}}
-    )
+    database.update_one({"guild": guild}, {"$push": {"immune": discord}})
 
 
 def remove_med_immune_player(guild: int, discord: int):
@@ -184,10 +186,7 @@ def remove_med_immune_player(guild: int, discord: int):
         discord (str): The discord ID of the player to remove
     """
     database = client.guilds.config
-    database.update_one(
-        {"guild": guild},
-        {"pull": {"immune": discord}}
-    )
+    database.update_one({"guild": guild}, {"$pull": {"immune": discord}})
 
 
 def clear_med_immunity_by_guild(guild: int):
@@ -197,20 +196,18 @@ def clear_med_immunity_by_guild(guild: int):
         guild: The guild ID to clear the med immunity field of
     """
     database = client.guilds.config
-    database.update_one(
-        {"guild": guild},
-        {"$set": {"immune": []}}
-    )
+    database.update_one({"guild": guild}, {"$set": {"immune": []}})
 
 
+@tasks.loop(time=time(hour=10, tzinfo=pytz.timezone("US/Eastern")))
 def clear_med_immunity():
     """Clear the med immunity field for all guilds
+    Runs automatically at 10AM Eastern every day
     """
     database = client.guilds.config
-    database.update_many(
-        {},
-        {"$set": {"immune": []}}
-    )
+    database.update_many({}, {"$set": {"immune": []}})
+
+    print("Removed medic immunity for all players in every guild")
 
 
 def get_player_stats(steam: int):

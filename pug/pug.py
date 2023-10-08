@@ -6,7 +6,13 @@ import nextcord
 from nextcord.ext import commands
 
 from constants import BOT_COLOR
-from database import BotCollection, get_server, add_med_immune_player
+from database import (
+    BotCollection,
+    get_server,
+    add_med_immune_player,
+    remove_med_immune_player,
+    clear_med_immunity_by_guild,
+)
 from pug import (
     CategorySelect,
     CategoryButton,
@@ -187,11 +193,11 @@ class PugRunningCog(commands.Cog):
             pug_embed.clear_fields()
             if red_count != 0 and blu_count != 0:
                 pug_embed.add_field(
-                    name=f"🔴 Red Team\nLevel: {(red_level/red_count):.2f}",
+                    name=f"🔴 Red Team\nLevel: {(red_level / red_count):.2f}",
                     value=red_team_string,
                 )
                 pug_embed.add_field(
-                    name=f"🔵 Blu Team\nLevel: {(blu_level/blu_count):.2f}",
+                    name=f"🔵 Blu Team\nLevel: {(blu_level / blu_count):.2f}",
                     value=blu_team_string,
                 )
             else:
@@ -523,11 +529,21 @@ class PugRunningCog(commands.Cog):
         await interaction.delete_original_message(delay=10)
 
     @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
-        name="rollmed", description="Randomly selects a non-immune player to play medic."
+        name="rollmed",
+        description="Randomly selects a non-immune player to play medic.",
     )
     @is_setup()
     @is_runner()
-    async def roll_medic(self, interaction: nextcord.Interaction):
+    async def roll_medic(
+        self,
+        interaction: nextcord.Interaction,
+        team_size: Optional[int] = nextcord.SlashOption(
+            name="team_size",
+            description="The size of the teams, default 6",
+            required=False,
+            default=6,
+        ),
+    ):
         await interaction.response.defer()
 
         # Get a list of pug categories
@@ -561,7 +577,7 @@ class PugRunningCog(commands.Cog):
             )
             if (
                 len(add_up_channel.members) + len(next_pug_channel.members)
-            ) <= 2:
+            ) < team_size * 2:
                 disabled = True
                 name += " (Not enough players)"
             if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
@@ -603,9 +619,10 @@ class PugRunningCog(commands.Cog):
 
         players = await self.get_player_list(next_pug, add_up)
 
+        immune_chosen = False  # True in the very rare case that all players in next pug/add up are already immune
         medic: Player | None = None
-        # 12 players in next pug, must pick meds from this channel
-        if len(players["next_pug"]) >= 12:
+        # All players in the next pug must be picked from this channel including med
+        if len(players["next_pug"]) >= team_size * 2:
             random.shuffle(players["next_pug"])
             for player in players["next_pug"]:
                 if player.discord not in immune_players:
@@ -613,6 +630,7 @@ class PugRunningCog(commands.Cog):
                     break
             if not medic:
                 medic = players["next_pug"][0]
+                immune_chosen = True
         else:
             random.shuffle(players["add_up"])
             for player in players["add_up"]:
@@ -621,24 +639,93 @@ class PugRunningCog(commands.Cog):
                     break
             if not medic:
                 medic = players["add_up"][0]
+                immune_chosen = True
 
         med_embed.description = f"Rolled <@{medic.discord}> as medic."
-        med_embed.add_field(
-            value="Give player medic roll immunity?"
+
+        if not immune_chosen:
+            med_embed.add_field(value="Give player medic roll immunity?")
+
+            boolean_view = BooleanView()
+
+            await interaction.edit_original_message(embed=med_embed, view=boolean_view)
+            status = await boolean_view.wait()
+
+            med_embed.clear_fields()
+            if status or not boolean_view.action:
+                med_embed.add_field(value="Player not given med roll immunity")
+            else:
+                med_embed.add_field(value="Player given med roll immunity")
+                add_med_immune_player(interaction.guild.id, medic.discord)
+
+    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+        name="setimmune", description="Manually set a player as immune to medic roll."
+    )
+    @is_setup()
+    @is_runner()
+    async def set_med_immune(
+        self,
+        interaction: nextcord.Interaction,
+        user: nextcord.User = nextcord.SlashOption(
+            name="discord", description="The Discord user to make immune", required=True
+        ),
+    ):
+        await interaction.response.defer()
+        add_med_immune_player(interaction.guild.id, user.id)
+
+        med_embed = nextcord.Embed(
+            title="Set User Immune to Medic Roll",
+            color=BOT_COLOR,
+            description=f"<@{user.id}> is now immune to medic roll.",
         )
+        await interaction.send(embed=med_embed)
 
+    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+        name="removeimmune",
+        description="Manually remove a player from being immune to medic roll.",
+    )
+    @is_setup()
+    @is_runner()
+    async def remove_med_immune(
+        self,
+        interaction: nextcord.Interaction,
+        user: nextcord.User = nextcord.SlashOption(
+            name="discord",
+            description="The Discord user to remove immunity from",
+            required=True,
+        ),
+    ):
+        await interaction.response.defer()
+        remove_med_immune_player(interaction.guild.id, user.id)
+
+        med_embed = nextcord.Embed(
+            title="Removed User Immune to Medic Roll",
+            color=BOT_COLOR,
+            description=f"<@{user.id}> is no longer immune to medic roll.",
+        )
+        await interaction.send(embed=med_embed)
+
+    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+        name="removeallimmune",
+        description="Manually set a player as immune to medic roll.",
+    )
+    @is_setup()
+    @is_runner()
+    async def set_med_immune(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+        clear_med_immunity_by_guild(interaction.guild.id)
+
+        med_embed = nextcord.Embed(
+            title="Remove Immunity From All Players",
+            color=BOT_COLOR,
+            description="Are you certain you want to clear medic roll immunity from all players?",
+        )
         boolean_view = BooleanView()
+        await interaction.send(embed=med_embed, view=boolean_view)
 
-        await interaction.edit_original_message(embed=med_embed, view=boolean_view)
-        status = await boolean_view.wait()
-
-        med_embed.clear_fields()
-        if status or not boolean_view.action:
-            med_embed.add_field(
-               value="Player not given med roll immunity"
-            )
+        if boolean_view.action:
+            med_embed.description = "Removed medic roll immunity from all players."
         else:
-            med_embed.add_field(
-                value="Player given med roll immunity"
-            )
-            add_med_immune_player(interaction.guild.id, medic.discord)
+            med_embed.description = "Did not remove medic roll immunity."
+
+        await interaction.edit_original_message(embed=med_embed)
