@@ -658,6 +658,8 @@ class PugRunningCog(commands.Cog):
                 med_embed.description = "Player given med roll immunity"
                 add_med_immune_player(interaction.guild.id, medic.discord)
 
+        await interaction.edit_original_message(embed=med_embed, view=None)
+
     @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
         name="immune", description="Manually set a player as immune to medic roll."
     )
@@ -729,4 +731,4 @@ class PugRunningCog(commands.Cog):
         else:
             med_embed.description = "Removed medic roll immunity from all players."
 
-        await interaction.edit_original_message(embed=med_embed)
+        await interaction.edit_original_message(embed=med_embed, view=None)
