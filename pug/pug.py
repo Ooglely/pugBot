@@ -644,7 +644,7 @@ class PugRunningCog(commands.Cog):
         med_embed.description = f"Rolled <@{medic.discord}> as medic."
 
         if not immune_chosen:
-            med_embed.add_field(value="Give player medic roll immunity?")
+            med_embed.description = "Give player medic roll immunity?"
 
             boolean_view = BooleanView()
 
@@ -653,9 +653,9 @@ class PugRunningCog(commands.Cog):
 
             med_embed.clear_fields()
             if status or not boolean_view.action:
-                med_embed.add_field(value="Player not given med roll immunity")
+                med_embed.description = "Player not given med roll immunity"
             else:
-                med_embed.add_field(value="Player given med roll immunity")
+                med_embed.description = "Player given med roll immunity"
                 add_med_immune_player(interaction.guild.id, medic.discord)
 
     @PugSetupCog.medic.subcommand(  # pylint: disable=no-member
@@ -722,10 +722,11 @@ class PugRunningCog(commands.Cog):
         )
         boolean_view = BooleanView()
         await interaction.send(embed=med_embed, view=boolean_view)
+        view_status = await boolean_view.wait()
 
-        if boolean_view.action:
-            med_embed.description = "Removed medic roll immunity from all players."
-        else:
+        if view_status or not boolean_view.action:
             med_embed.description = "Did not remove medic roll immunity."
+        else:
+            med_embed.description = "Removed medic roll immunity from all players."
 
         await interaction.edit_original_message(embed=med_embed)
