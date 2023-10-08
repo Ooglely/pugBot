@@ -200,7 +200,7 @@ def clear_med_immunity_by_guild(guild: int):
 
 
 @tasks.loop(time=time(hour=15, minute=0))
-def clear_med_immunity():
+async def clear_med_immunity():
     """Clear the med immunity field for all guilds
     Runs automatically at 10AM Eastern every day
     """
