@@ -1,9 +1,16 @@
+# type: ignore
+# i cannot be bothered to make mypy happy with the fetch_newest_version method
 """Class used to interact with the serveme.tf API."""
 import json
 import re
 from datetime import datetime, timedelta
+from typing import Dict
 
 import aiohttp
+
+with open("maps.json", encoding="UTF-8") as json_file:
+    maps_dict: dict = json.load(json_file)
+    COMP_MAPS = maps_dict["sixes"] | maps_dict["hl"]
 
 
 class ServemeAPI:
@@ -101,9 +108,70 @@ class ServemeAPI:
                         future_servers.append(reservation)
                 active_servers.reverse()
                 return active_servers, future_servers
-    
+
+    @staticmethod
     async def fetch_all_maps():
+        """Fetches all maps from the serveme.tf FastDL.
+
+        Returns:
+            list: A list of all maps.
+        """
         async with aiohttp.ClientSession() as session:
-            async with session.get('http://dl.serveme.tf/maps/') as resp:
+            async with session.get("http://dl.serveme.tf/maps/") as resp:
                 maps = await resp.text()
                 return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
+
+    @staticmethod
+    async def fetch_newest_version(map_name: str):
+        """Fetches the newest version of a map from the serveme.tf FastDL.
+
+        Args:
+            map_name (str): The name of the map.
+
+        Returns:
+            str: The newest version of the map.
+            None: if no matching map is found.
+        """
+        if map_name in COMP_MAPS:
+            return COMP_MAPS[map_name]
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://dl.serveme.tf/maps/") as resp:
+                map_list = await resp.text()
+
+        # Get all maps that match the beginning of the input
+        maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", map_list)
+        # Deduplicate results
+        maps_set = set(maps)
+        # If there's only one map, return it
+        if len(maps_set) == 0:
+            return None
+        if len(maps_set) == 1:
+            return maps_set.pop()
+        # For each different type, get the newest version
+        versions: Dict[str, str] = {}
+        for map_version in maps_set:
+            version_name = re.search(rf"(?<={map_name})(.*)", map_version).group(0)
+            version_number = re.search(r"\d*(?=$)", version_name)
+            version_type = re.search(r"^.*(?<!(\d))", version_name)
+            if version_number is not None:
+                version_number = version_number.group(0)
+            else:
+                version_number = None
+            version_type = version_type.group(0)
+            if version_type in versions:
+                if int(version_number) > int(versions[version_type]):
+                    versions[version_type] = version_number
+            else:
+                versions[version_type] = version_number
+        newest_versions = [f"{map_name}{type}{num}" for type, num in versions.items()]
+        if len(newest_versions) == 1:
+            return newest_versions.pop()
+        return newest_versions
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
+    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
+    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product'))}")
