@@ -1,10 +1,8 @@
-# type: ignore
-# i cannot be bothered to make mypy happy with the fetch_newest_version method
 """Class used to interact with the serveme.tf API."""
 import json
 import re
 from datetime import datetime, timedelta
-from typing import Dict
+from typing import Dict, no_type_check
 
 import aiohttp
 
@@ -122,6 +120,7 @@ class ServemeAPI:
                 return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
 
     @staticmethod
+    @no_type_check  # LOLLLLL
     async def fetch_newest_version(map_name: str):
         """Fetches the newest version of a map from the serveme.tf FastDL.
 

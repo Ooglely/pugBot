@@ -16,8 +16,8 @@ from rcon.source import Client
 import database
 import util
 from constants import VERSION
-from servers.serveme_api import ServemeAPI
-from servers import Reservation, Servers, ServerButton
+from servers.serveme_api import ServemeAPI  # disable=attr-defined
+from servers import Reservation, Servers, ServerButton, MapSelection
 
 
 with open("maps.json", encoding="UTF-8") as json_file:
@@ -111,16 +111,16 @@ class ServerCog(commands.Cog):
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
             name="map",
-            description="The map to set on the server.",
-            choices=maps["sixes"] | maps["hl"] | PT_MAPS,
+            description="The map to set on the server. The bot will automatically find and use the newest version.",
         ),
         gamemode: str = nextcord.SlashOption(
             name="gamemode",
             description="The gamemode config to set on the server.",
             choices={
                 "6s": "sixes",
-                "HL": "highlander",
-                "PT": "passtime",
+                "Highlander": "highlander",
+                "Passtime": "passtime",
+                "None": "none",
             },
         ),
         whitelist: Optional[int] = nextcord.SlashOption(
@@ -211,6 +211,29 @@ class ServerCog(commands.Cog):
                 await interaction.send(f"Start time input error: {err}", ephemeral=True)
                 return
 
+        map_versions = await ServemeAPI.fetch_newest_version(
+            tf_map
+        )  # pylint: disable=no-member
+        print(map_versions)
+        if map_versions is None:
+            await interaction.send(
+                f"Invalid map error: Not able to find any map that starts with {tf_map}",
+                ephemeral=True,
+            )
+            return
+        if isinstance(map_versions, str):
+            chosen_map = map_versions
+        else:
+            map_selector_view = MapSelection(map_versions)
+            await interaction.send(
+                "Multiple map versions were found. Please select the right version.",
+                view=map_selector_view,
+            )
+            status = await map_selector_view.wait()
+            if status:
+                return
+            chosen_map = map_selector_view.map_chosen
+
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         servers, times = await ServemeAPI().get_new_reservation(
@@ -264,6 +287,9 @@ class ServerCog(commands.Cog):
         elif gamemode == "passtime":
             whitelist_id = 26  # PT whitelist ID
             server_config_id = 116  # RGL PT_Push config ID in serveme
+        elif gamemode == "none":
+            whitelist_id = None
+            server_config_id = None
 
         # Fix custom whitelists not working
         if whitelist in (13798, 13797):
@@ -278,7 +304,7 @@ class ServerCog(commands.Cog):
                 "server_id": reserve["id"],
                 "enable_plugins": True,
                 "enable_demos_tf": True,
-                "first_map": tf_map,
+                "first_map": chosen_map,
                 "server_config_id": server_config_id,
                 "whitelist_id": whitelist_id,
                 "custom_whitelist_id": whitelist,
@@ -349,9 +375,11 @@ class ServerCog(commands.Cog):
         else:
             await rcon_channel.send(rcon)
 
-        embed.add_field(name="Map", value=tf_map, inline=False)
+        embed.add_field(name="Map", value=chosen_map, inline=False)
         embed.set_footer(text=VERSION)
-        reserve_msg = await interaction.send(embed=embed)
+        reserve_msg = await interaction.edit_original_message(
+            content=None, embed=embed, view=None
+        )
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -390,7 +418,7 @@ class ServerCog(commands.Cog):
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
             name="map",
-            choices=maps["sixes"] | maps["hl"],
+            description="The map to change to. The bot will automatically find and use the newest version.",
         ),
     ):
         """Changes the map on a user's reserved server.
@@ -424,9 +452,32 @@ class ServerCog(commands.Cog):
         await server_view.wait()
         server_id = server_view.server_chosen
 
+        map_versions = await ServemeAPI.fetch_newest_version(
+            tf_map
+        )  # pylint: disable=no-member
+        print(map_versions)
+        if map_versions is None:
+            await interaction.edit_original_message(
+                content=f"Invalid map error: Not able to find any map that starts with {tf_map}",
+                view=None,
+            )
+            return
+        if isinstance(map_versions, str):
+            chosen_map = map_versions
+        else:
+            map_selector_view = MapSelection(map_versions)
+            await interaction.edit_original_message(
+                content="Multiple map versions were found. Please select the right version.",
+                view=map_selector_view,
+            )
+            status = await map_selector_view.wait()
+            if status:
+                return
+            chosen_map = map_selector_view.map_chosen
+
         try:
             exec_command: str = await util.get_exec_command(
-                reservations[server_id], tf_map
+                reservations[server_id], chosen_map
             )
         except Exception:
             await interaction.edit_original_message(
@@ -442,7 +493,7 @@ class ServerCog(commands.Cog):
             client.run(exec_command)
 
         await interaction.edit_original_message(
-            content="Changing map to `" + tf_map + "`.", view=None
+            content="Changing map to `" + chosen_map + "`.", view=None
         )
 
     @util.is_setup()
