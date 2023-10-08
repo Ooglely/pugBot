@@ -257,13 +257,13 @@ class PugMedicCog(commands.Cog):
             color=BOT_COLOR,
         )
 
-        if "immune" not in server:
+        if "immune" not in server or len(server["immune"]) == 0:
             immune_embed.description = "No players are currently immune to medic roll!"
         else:
             immune = server["immune"]
             description: str = ""
 
-            for discord_id, i in enumerate(immune):
+            for i, discord_id in enumerate(immune):
                 description += f"<@{discord_id}>"
                 if i < len(immune):
                     description += "\n"
