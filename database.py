@@ -199,7 +199,7 @@ def clear_med_immunity_by_guild(guild: int):
     database.update_one({"guild": guild}, {"$set": {"immune": []}})
 
 
-@tasks.loop(time=pytz.timezone("US/Eastern").localize(datetime(year=2000, month=1, day=1, hour=10, minute=0)).timetz())
+@tasks.loop(time=time(hour=15, minute=0))
 def clear_med_immunity():
     """Clear the med immunity field for all guilds
     Runs automatically at 10AM Eastern every day
