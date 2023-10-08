@@ -364,7 +364,7 @@ class BooleanView(nextcord.ui.View):
         self.action = None
 
     @nextcord.ui.button(label="Yes", style=nextcord.ButtonStyle.green, row=0)
-    def yes_button(
+    async def yes_button(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Yes button that sets action to true"""
@@ -372,7 +372,7 @@ class BooleanView(nextcord.ui.View):
         self.stop()
 
     @nextcord.ui.button(label="No", style=nextcord.ButtonStyle.red, row=1)
-    def no_button(
+    async def no_button(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """No button that sets action to false"""
