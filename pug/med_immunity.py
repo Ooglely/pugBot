@@ -162,10 +162,12 @@ class PugMedicCog(commands.Cog):
 
             med_embed.clear_fields()
             if status or not boolean_view.action:
-                med_embed.description = f"<@{medic.discord}> not given med roll immunity"
+                med_embed.description = f"<@{medic.discord}> not given med roll immunity."
             else:
-                med_embed.description = f"<@{medic.discord}> given med roll immunity"
+                med_embed.description = f"<@{medic.discord}> given med roll immunity."
                 add_med_immune_player(interaction.guild.id, medic.discord)
+        else:
+            med_embed.description += "\nAll players are already immune so an already immune player was chosen."
 
         await interaction.edit_original_message(embed=med_embed, view=None)
 
