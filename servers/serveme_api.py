@@ -108,8 +108,8 @@ class ServemeAPI:
                 return active_servers, future_servers
 
     @staticmethod
-    async def fetch_all_maps():
-        """Fetches all maps from the serveme.tf FastDL.
+    async def fetch_all_maps(map_names_only: bool = True):
+        """Fetches all maps from the serveme.tf FastDL and updates the cached list.
 
         Returns:
             list: A list of all maps.
@@ -117,11 +117,13 @@ class ServemeAPI:
         async with aiohttp.ClientSession() as session:
             async with session.get("http://dl.serveme.tf/maps/") as resp:
                 maps = await resp.text()
-                return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
+                if map_names_only:
+                    return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
+                return maps
 
     @staticmethod
     @no_type_check  # LOLLLLL
-    async def fetch_newest_version(map_name: str):
+    async def fetch_newest_version(map_name: str, maps_list: list = None):
         """Fetches the newest version of a map from the serveme.tf FastDL.
 
         Args:
@@ -138,9 +140,13 @@ class ServemeAPI:
                 map_list = await resp.text()
 
         # Get all maps that match the beginning of the input
-        maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", map_list)
+        if maps_list is None:
+            maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", map_list)
+        else:  # If maps_list is provided, use that
+            maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
         # Deduplicate results
         maps_set = set(maps)
+        print(maps_set)
         # If there's only one map, return it
         if len(maps_set) == 0:
             return None
@@ -158,7 +164,9 @@ class ServemeAPI:
                 version_number = None
             version_type = version_type.group(0)
             if version_type in versions:
-                if int(version_number) > int(versions[version_type]):
+                if versions[version_type] == "" or version_number == "":
+                    versions[version_type] = version_number
+                elif int(version_number) > int(versions[version_type]):
                     versions[version_type] = version_number
             else:
                 versions[version_type] = version_number
@@ -174,3 +182,4 @@ if __name__ == "__main__":
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product'))}")
+    print(asyncio.run(ServemeAPI.fetch_all_maps()))

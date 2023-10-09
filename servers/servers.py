@@ -42,6 +42,7 @@ class ServerCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.servers: List[Reservation] = []
         self.bot = bot
+        self.all_maps: list = []
         self.map_updater.start()  # pylint: disable=no-member
         self.server_status.start()  # pylint: disable=no-member
 
@@ -77,6 +78,10 @@ class ServerCog(commands.Cog):
 
         with open("maps.json", "w", encoding="UTF-8") as outfile:
             outfile.write(map_json)
+
+        # Handle the FastDL all map pool
+        self.all_maps = await ServemeAPI.fetch_all_maps(False)
+        print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
@@ -603,6 +608,38 @@ class ServerCog(commands.Cog):
                         content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
                         view=None,
                     )
+
+    @reserve.on_autocomplete("tf_map")
+    @change_map.on_autocomplete("tf_map")
+    async def map_autocomplete(self, interaction: nextcord.Interaction, map_query: str):
+        """Autocompletes the map name for the user.
+
+        Args:
+            interaction (nextcord.Interaction): Interaction to respond to
+            map_query (str): The map name to autocomplete
+        """
+        if len(map_query.split("_")) > 1:
+            map_search = await ServemeAPI.fetch_newest_version(
+                map_query, maps_list=self.all_maps
+            )
+            print(map_search)
+            if map_search is None:
+                await interaction.response.send_autocomplete(["No results."])
+                return
+            if isinstance(map_search, str):
+                await interaction.response.send_autocomplete([map_search])
+                return
+            if len(map_search) > 25:
+                await interaction.response.send_autocomplete(
+                    ["Too many results. Please narrow your search."]
+                )
+                return
+            await interaction.response.send_autocomplete(map_search)
+            return
+
+        await interaction.response.send_autocomplete(
+            ["Please type the beginning of the map name to get autocomplete results."]
+        )
 
     @tasks.loop(minutes=1)
     async def server_status(self):
