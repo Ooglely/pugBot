@@ -11,6 +11,7 @@ divs = {
     "Intermediate": 3,
     "Main": 4,
     "Advanced": 5,
+    "Div-1": 5,
     "Advanced-1": 6,
     "Advanced-2": 5,
     "Challenger": 6,
