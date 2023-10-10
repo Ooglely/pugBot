@@ -1,27 +1,46 @@
 """Implements the log searcher file, which takes the players from a team generation or moved back and searches for the log associated with the game that was played/being played."""
-from util import get_steam64
 import time
-from pug import PugCategory
-from logs import Player, LogData
-from database import BotCollection
+
 import nextcord
 from nextcord.ext import tasks
+
+from pug import PugCategory
+from logs import Player, LogData
 from logs.logstf_api import LogsAPI
+from database import BotCollection
 
 queue_db = BotCollection("logs", "queue")
 searcher_db = BotCollection("logs", "searcher")
 
 
 class PartialLog:
+    """A partial log, used to search for a log on logs.tf.
+
+    Args:
+        guild (int): The guild ID the game was played in.
+        category (PugCategory): The category the game was played in.
+        players (list[Player]): The players in the game.
+        timestamp (int, optional): The timestamp of when the game was played. Defaults to time.time().__round__().
+    """
+
     def __init__(
-        self, guild: int, category: PugCategory, players: list[Player], timestamp = time.time().__round__()
+        self,
+        guild: int,
+        category: PugCategory,
+        players: list[Player],
+        timestamp=time.time().__round__(),
     ) -> None:
         self.guild: int = guild
         self.timestamp: int = timestamp
         self.category: PugCategory = category
         self.players: list[Player] = players
 
-    def export(self):
+    def export(self) -> dict:
+        """Export the partial log to a dictionary.
+
+        Returns:
+            dict: The partial log as a dictionary.
+        """
         return {
             "guild": self.guild,
             "timestamp": self.timestamp,
@@ -31,15 +50,23 @@ class PartialLog:
 
 
 class FullLog(PartialLog):
-    def __init__(
-        self, partial_log: PartialLog, log_id: str, log_data: dict | None = None
-    ) -> None:
-        self.guild = partial_log.guild
-        self.timestamp = partial_log.timestamp
-        self.category = partial_log.category
-        self.players = partial_log.players
-        self.log_id: str = log_id
-        self.log: dict | None = LogData(log_data)
+    """A full log, used to store a log that has been found on logs.tf.
+
+    Args:
+        partial_log (PartialLog): The partial log that was used to find the log.
+        log_id (str): The ID of the log.
+        log_data (dict): The log data.
+    """
+
+    def __init__(self, partial_log: PartialLog, log_id: int, log_data: dict) -> None:
+        super().__init__(
+            partial_log.guild,
+            partial_log.category,
+            partial_log.players,
+            partial_log.timestamp,
+        )
+        self.log_id: int = log_id
+        self.log: LogData = LogData(log_data)
 
     def export(self):
         return {
@@ -50,14 +77,12 @@ class FullLog(PartialLog):
             "log_id": self.log_id,
         }
 
-    def update_log_data(self, log_data: dict) -> None:
-        self.log = LogData(log_data)
-
 
 class LogSearcher:
+    """The log searcher class, used to search for logs on logs.tf and store them in the database."""
+
     def __init__(self, bot: nextcord.Client) -> None:
         self.bot = bot
-        pass
 
     @tasks.loop(minutes=1)
     async def searcher(self):
@@ -81,13 +106,18 @@ class LogSearcher:
                 searcher_log["timestamp"],
             )
             print(f"Timestamp: {partial_log.timestamp}")
-            
-            if time.time().__round__() - partial_log.timestamp < 21600:
+
+            if round(time.time()) - partial_log.timestamp < 21600:
                 await LogSearcher._delete_searcher_game(searcher_log["_id"])
-                await self.log_failed_log(partial_log, "Searcher timed out (6 hours without finding a log)")
+                await self.log_failed_log(
+                    partial_log, "Searcher timed out (6 hours without finding a log)"
+                )
                 return
 
-            steam_ids = [player.steam_64 for player in partial_log.players]
+            steam_ids = []
+            for player in partial_log.players:
+                if player.steam_64 is not None:
+                    steam_ids.append(player.steam_64)
             print(steam_ids)
 
             query = await LogsAPI.search_for_log(players=steam_ids, limit=10)
@@ -95,16 +125,16 @@ class LogSearcher:
             try:
                 if query["success"] and query["results"] > 0:
                     for log in query["logs"]:
-                        if log["date"] < partial_log.timestamp: # TODO CHANGE THIS BACK!!!
+                        log_data = await LogsAPI.get_single_log(log["id"])
+                        if (
+                            log["date"] < partial_log.timestamp and log_data["success"]
+                        ):  # TODO CHANGE THIS BACK!!!
                             print(f"Log: {log}")
-                            log_data = await LogsAPI.get_single_log(log["id"])
-                            if log_data["success"]:
-                                full_log = FullLog(partial_log, log["id"], log_data)
-                                await LogSearcher._add_queue_game(full_log)
-                                await LogSearcher._delete_searcher_game(searcher_log["_id"])
-                                break
-                        else:
-                            print("Log is too old.")
+                            full_log = FullLog(partial_log, log["id"], log_data)
+                            await LogSearcher._add_queue_game(full_log)
+                            await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                            break
+                        print("Log is too old.")
             except KeyError:
                 continue
 
@@ -122,6 +152,8 @@ class LogSearcher:
         print("Running queue...")
         queue_logs = await queue_db.find_all_items()
         for queue_log in queue_logs:
+            print(f"Log: {queue_log['_id']}")
+
             players = [Player(data=player) for player in queue_log["players"]]
             full_log = FullLog(
                 PartialLog(
@@ -131,15 +163,31 @@ class LogSearcher:
                     queue_log["timestamp"],
                 ),
                 queue_log["log_id"],
-                await LogsAPI.get_single_log(queue_log["log_id"])
+                await LogsAPI.get_single_log(queue_log["log_id"]),
             )
-            #print(f"Timestamp: {full_log.timestamp}")
-            
+
+            if (round(time.time()) - full_log.timestamp) < 43200:
+                await LogSearcher._delete_searcher_game(queue_log["_id"])
+                await self.log_failed_log(
+                    full_log, "Searcher timed out (12 hours without finding a log)"
+                )
+                return
+
+            time_reached = await check_game_time(full_log)
+            score_reached = await check_map_score(full_log)
+            if time_reached or score_reached:
+                await self.log_completed_log(full_log)
+                await LogSearcher._delete_queue_game(queue_log["_id"])
+
     async def log_failed_log(self, log: PartialLog, reason: str):
         """Log a failed log to the database"""
-        print("Logging failed log...")
+        print(f"Logging failed log... {reason}")
         print(log.export())
-        pass
+
+    async def log_completed_log(self, log: FullLog):
+        """Log a completed log to the database"""
+        print("Logging completed log...")
+        print(log.export())
 
     @staticmethod
     async def add_searcher_game(
@@ -176,14 +224,47 @@ class LogSearcher:
         print(f"Deleting queue game {database_id}...")
         await queue_db.delete_item({"_id": database_id})
 
+
 async def check_map_score(log: FullLog) -> bool:
-    pass
+    """Checks to see if the map score has been reached, meaning that a log is complete.
+
+    Args:
+        log (FullLog): The log to check.
+
+    Returns:
+        bool: Whether or not the log is complete.
+    """
+    map_name: str = log.log.map_name
+    if map_name.startswith("cp_"):
+        if (log.log.red_team.score == 5) or (log.log.blue_team.score == 5):
+            return True
+    elif map_name.startswith("koth_"):
+        if (log.log.red_team.score == 5) or (log.log.blue_team.score == 5):
+            return True
+    return False
+
 
 async def check_game_time(log: FullLog) -> bool:
-    pass
+    """Checks to see if the game time has reached 30 minutes, meaning that a log is complete.
+
+    Args:
+        log (FullLog): The log to check.
+
+    Returns:
+        bool: Whether or not the log is complete.
+    """
+    map_name: str = log.log.map_name
+    if map_name.startswith("pl_"):
+        if log.log.length > 2400:
+            return True
+    else:
+        if log.log.length > 1800:
+            return True
+    return False
 
 
 async def test():
+    """Test function for the log searcher."""
     category_db = BotCollection("guilds", "categories")
 
     guild = 727627956058325052
@@ -205,5 +286,5 @@ async def test():
     ]
 
     await LogSearcher.add_searcher_game(guild, category, players)
-    #await LogSearcher().searcher()
+    # await LogSearcher().searcher()
     # The resulting log should be 3490943

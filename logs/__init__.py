@@ -275,6 +275,8 @@ example_log = {
 
 
 class LogTeamData:
+    """Stores team data from a log"""
+
     def __init__(self, data: dict) -> None:
         self.score = data["score"]
         self.kills = data["kills"]
@@ -288,6 +290,8 @@ class LogTeamData:
 
 
 class PlayerData:
+    """Stores player data from a log"""
+
     def __init__(self, steam_3: str, data: dict) -> None:
         self.steam_3 = steam_3
         self.team = data["team"]
@@ -321,11 +325,13 @@ class PlayerData:
 
 
 class Player:
+    """Stores player data from the database"""
+
     def __init__(
         self,
         steam: str | int | None = None,
         discord: int | None = None,
-        data: dict | None = {},
+        data: dict | None = None,
     ) -> None:
         self.steam_3: str | None = SteamID(steam).as_steam3 if steam else None
         self.steam_64: int | None = SteamID(steam).as_64 if steam else None
@@ -357,6 +363,8 @@ class Player:
 
 
 class ClassData:
+    """Stores class data from a log"""
+
     def __init__(self, data: dict) -> None:
         self.kills = data["kills"]
         self.assists = data["assists"]
@@ -367,10 +375,13 @@ class ClassData:
 
 
 class LogData:
+    """Stores log data from logs.tf"""
+
     def __init__(self, data: dict) -> None:
         self.red_team: LogTeamData = LogTeamData(data["teams"]["Red"])
         self.blue_team: LogTeamData = LogTeamData(data["teams"]["Blue"])
         self.players: list[PlayerData] = []
+        self.map_name: str = data["info"]["map"]
         self.length: int = data["length"]
 
         for player in data["players"]:
@@ -391,6 +402,7 @@ class LogData:
 
 
 async def test_log_data():
+    """Test the log data class"""
     example_log_data = LogData(await LogsAPI.get_single_log(3490943))
     await example_log_data.link_all_players()
 
