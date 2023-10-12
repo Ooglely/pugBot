@@ -1,5 +1,8 @@
 """Classes for use in the servers cog."""
+from datetime import datetime, tzinfo
+
 import nextcord
+import pytz
 import aiohttp
 
 
@@ -14,17 +17,24 @@ class Servers(nextcord.ui.View):
 class ServerButton(nextcord.ui.Button):
     """A button representing a server."""
 
-    def __init__(self, reservation, num):
+    def __init__(self, reservation, num, highlighted=True):
         self.num = num
+        text = f"ID #{reservation['id']} - {reservation['server']['name']}"
+        if reservation["status"] == "Waiting to start":
+            text += f" - Opens: {datetime.fromisoformat(reservation['starts_at']).astimezone(pytz.timezone('US/Eastern')).strftime('%m-%d %H:%M:%S')}"
+
+        if highlighted:
+            color = nextcord.ButtonStyle.green
+        else:
+            color = nextcord.ButtonStyle.gray
+
         super().__init__(
-            label=f"ID #{reservation['id']} - {reservation['server']['name']}",
+            label=text,
             custom_id=str(num),
-            style=nextcord.ButtonStyle.blurple,
+            style=color,
         )
 
-    async def callback(
-        self, interaction: nextcord.Interaction
-    ):  # pylint: disable=unused-argument
+    async def callback(self, _interaction: nextcord.Interaction):
         """Callback for when the button is pressed."""
         super().view.server_chosen = self.num
         super().view.stop()
@@ -59,3 +69,31 @@ class Reservation:
                 if server["reservation"]["status"] == "Ended":
                     return False
                 return True
+
+
+class MapSelection(nextcord.ui.View):
+    """Displays the different map options and allows the user to select one."""
+
+    def __init__(self, maps: list[str]):
+        super().__init__()
+        self.map_chosen: str = ""
+
+        for map_name in maps:
+            super().add_item(MapButton(map_name))
+
+
+class MapButton(nextcord.ui.Button):
+    """A button representing a map."""
+
+    def __init__(self, map_name: str):
+        self.map = map_name
+        super().__init__(
+            label=map_name,
+            custom_id=map_name,
+            style=nextcord.ButtonStyle.green,
+        )
+
+    async def callback(self, _interaction: nextcord.Interaction):
+        """Callback for when the button is pressed."""
+        super().view.map_chosen = self.map
+        super().view.stop()

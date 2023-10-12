@@ -1,11 +1,14 @@
 """Files containing the server cog with commands for reserving/managing servers."""
 import json
+import re
 import string
 import random
-from typing import List
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 
 import aiohttp
 import nextcord
+import pytz
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
@@ -13,14 +16,20 @@ from rcon.source import Client
 import database
 import util
 from constants import VERSION
-from servers.serveme_api import ServemeAPI
-from servers import Reservation, Servers, ServerButton
+from servers.serveme_api import ServemeAPI  # disable=attr-defined
+from servers import Reservation, Servers, ServerButton, MapSelection
 
 
 with open("maps.json", encoding="UTF-8") as json_file:
     maps: dict = json.load(json_file)
     SIXES_MAPS: dict = maps["sixes"]
     HL_MAPS: dict = maps["hl"]
+
+PT_MAPS: dict = {
+    "pass_arena2": "pass_arena2_b8",
+    "pass_stadium": "pass_stadium_b31",
+    "pass_stonework": "pass_stonework_a24",
+}
 
 
 class ServerCog(commands.Cog):
@@ -33,6 +42,7 @@ class ServerCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.servers: List[Reservation] = []
         self.bot = bot
+        self.all_maps: list = []
         self.map_updater.start()  # pylint: disable=no-member
         self.server_status.start()  # pylint: disable=no-member
 
@@ -69,6 +79,9 @@ class ServerCog(commands.Cog):
         with open("maps.json", "w", encoding="UTF-8") as outfile:
             outfile.write(map_json)
 
+        # Handle the FastDL all map pool
+        self.all_maps = await ServemeAPI.fetch_all_maps(False)
+
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
 
@@ -97,25 +110,27 @@ class ServerCog(commands.Cog):
     )
     @util.is_setup()
     @util.is_runner()
-    async def reserve_server(
+    async def reserve(
         self,
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
             name="map",
-            description="The map to set on the server.",
-            choices=maps["sixes"] | maps["hl"],
+            description="The map to set on the server. The bot will automatically find and use the newest version.",
         ),
         gamemode: str = nextcord.SlashOption(
             name="gamemode",
             description="The gamemode config to set on the server.",
             choices={
                 "6s": "sixes",
-                "HL": "highlander",
+                "Highlander": "highlander",
+                "Passtime": "passtime",
+                "None": "none",
             },
         ),
-        whitelist: int = nextcord.SlashOption(
+        whitelist: Optional[int] = nextcord.SlashOption(
             name="whitelist",
             description="The whitelist to set on the server.",
+            default=None,
             choices={
                 "RGL 6s": 13531,
                 "RGL HL": 13397,
@@ -124,6 +139,30 @@ class ServerCog(commands.Cog):
                 "TF2CC Newbie": 13798,
             },
         ),
+        start_time: Optional[str] = nextcord.SlashOption(
+            name="start_time",
+            description="Start time in the format HH:MM (24 hour clock)",
+            default=None,
+            max_length=5,
+            min_length=4,
+            required=False,
+        ),
+        duration: float = nextcord.SlashOption(
+            name="duration",
+            description="How long to reserve the server (between 2 to 5 hours)",
+            default=2,
+            min_value=2,
+            max_value=5,
+            required=False,
+        ),
+        tzone: Optional[int] = nextcord.SlashOption(
+            name="utc_time_zone",
+            description="The UTC offset for the timezone of the optional start time (default US/Eastern)",
+            default=None,
+            min_value=-12,
+            max_value=14,
+            required=False,
+        ),
     ):
         """Reserves a server for the user to use.
 
@@ -131,11 +170,79 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
             tf_map (str): The map to set on the server
             gamemode (str): The gamemode config to set on the server
+            whitelist (str): The whitelist to set on the server
+            start_time (str): The start time of the reservation
+            duration (int): The duration of the reservation
+            tzone (int): The UTC offset of the timezone to use
         """
         await interaction.response.defer()
+
+        dt_start: datetime
+        if not tzone:
+            # Get default timezone adjusted for daylight savings
+            ept = pytz.timezone("US/Eastern")
+            dt_start = datetime.now().astimezone(ept)
+        else:
+            dt_start = datetime.now(tz=timezone(timedelta(hours=tzone)))
+
+        if start_time:
+            try:
+                # Ensure correct format and valid time
+                match = re.match(
+                    r"[0-9]{1,2}:[0-9]{2}",
+                    start_time,
+                )
+                if not match:
+                    raise ValueError("Must be in HH:MM format")
+
+                # Adjust datetime object to inputted start time
+                split_time = start_time.split(":")
+                hours = int(split_time[0])
+                mins = int(split_time[1])
+
+                if 0 > hours or hours > 24:
+                    raise ValueError("Hours must be between 0 and 23")
+                if 0 > mins or mins > 59:
+                    raise ValueError("Minutes must be between 0 and 59")
+
+                # Can't reserve a server in the past! Move to tomorrow
+                if dt_start.hour > hours:
+                    dt_start += timedelta(days=1)
+
+                dt_start -= timedelta(hours=dt_start.hour, minutes=dt_start.minute)
+                dt_start += timedelta(hours=hours, minutes=mins)
+            except ValueError as err:
+                await interaction.send(f"Start time input error: {err}", ephemeral=True)
+                return
+
+        map_versions = await ServemeAPI.fetch_newest_version(
+            tf_map
+        )  # pylint: disable=no-member
+        print(map_versions)
+        if map_versions is None:
+            await interaction.send(
+                f"Invalid map error: Not able to find any map that starts with {tf_map}",
+                ephemeral=True,
+            )
+            return
+        if isinstance(map_versions, str):
+            chosen_map = map_versions
+        else:
+            map_selector_view = MapSelection(map_versions)
+            await interaction.send(
+                "Multiple map versions were found. Please select the right version.",
+                view=map_selector_view,
+            )
+            status = await map_selector_view.wait()
+            if status:
+                return
+            chosen_map = map_selector_view.map_chosen
+
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await ServemeAPI().get_new_reservation(serveme_api_key)
+        servers, times = await ServemeAPI().get_new_reservation(
+            serveme_api_key, dt_start, duration
+        )
 
         reserve: dict
         server_found: bool = False
@@ -172,7 +279,7 @@ class ServerCog(commands.Cog):
                 server_config_id = 69  # rgl_6s_5cp_scrim
             else:
                 server_config_id = 68  # rgl_6s_koth_bo5
-        else:
+        elif gamemode == "highlander":
             whitelist_id = 22  # HL whitelist ID
             if tf_map not in maps["hl"].values():
                 await interaction.send("Invalid map.")
@@ -181,6 +288,12 @@ class ServerCog(commands.Cog):
                 server_config_id = 55
             else:
                 server_config_id = 54
+        elif gamemode == "passtime":
+            whitelist_id = 26  # PT whitelist ID
+            server_config_id = 116  # RGL PT_Push config ID in serveme
+        elif gamemode == "none":
+            whitelist_id = None
+            server_config_id = None
 
         # Fix custom whitelists not working
         if whitelist in (13798, 13797):
@@ -195,7 +308,7 @@ class ServerCog(commands.Cog):
                 "server_id": reserve["id"],
                 "enable_plugins": True,
                 "enable_demos_tf": True,
-                "first_map": tf_map,
+                "first_map": chosen_map,
                 "server_config_id": server_config_id,
                 "whitelist_id": whitelist_id,
                 "custom_whitelist_id": whitelist,
@@ -237,24 +350,40 @@ class ServerCog(commands.Cog):
         )
 
         tf_oog_pw_link = (
-            f"https://tf.oog.pw/connect/{reserve['ip_and_port']}/{connect_password}"
+            f"https://pugBot.tf/connect/{reserve['ip_and_port']}/{connect_password}"
         )
 
-        embed = nextcord.Embed(title="Server started!", color=0xF0984D)
+        embed = nextcord.Embed(title="Server reserved!", color=0xF0984D)
         embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
-        embed.add_field(name="Connect", value=connect, inline=False)
+        start = datetime.fromisoformat(server_data["reservation"]["starts_at"])
         embed.add_field(
-            name="RCON", value="RCON has been sent in the rcon channel.", inline=False
+            name="Start Time",
+            value=f"<t:{int(start.timestamp())}:t>",
+            inline=True,
         )
-        embed.add_field(name="Map", value=tf_map, inline=False)
-        embed.set_footer(text=VERSION)
-        reserve_msg = await interaction.send(embed=embed)
+        end = datetime.fromisoformat(server_data["reservation"]["ends_at"])
+        embed.add_field(
+            name="End Time",
+            value=f"<t:{int(end.timestamp())}:t>",
+            inline=True,
+        )
+        embed.add_field(name="Connect", value=connect, inline=False)
 
-        # RCON Message
+        # RCON message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
-        rcon_msg = await rcon_channel.send(rcon)
+        if rcon_channel == interaction.channel:
+            # Include RCON in this embed if we are already in the RCON channel
+            embed.add_field(name="RCON", value=rcon, inline=False)
+        else:
+            await rcon_channel.send(rcon)
+
+        embed.add_field(name="Map", value=chosen_map, inline=False)
+        embed.set_footer(text=VERSION)
+        reserve_msg = await interaction.edit_original_message(
+            content=None, embed=embed, view=None
+        )
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -282,9 +411,7 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
 
         self.servers.append(
-            Reservation(
-                server_id, serveme_api_key, [reserve_msg, rcon_msg, connect_msg]
-            )
+            Reservation(server_id, serveme_api_key, [reserve_msg, connect_msg])
         )
 
     @util.is_setup()
@@ -295,7 +422,7 @@ class ServerCog(commands.Cog):
         interaction: nextcord.Interaction,
         tf_map: str = nextcord.SlashOption(
             name="map",
-            choices=maps["sixes"] | maps["hl"],
+            description="The map to change to. The bot will automatically find and use the newest version.",
         ),
     ):
         """Changes the map on a user's reserved server.
@@ -307,7 +434,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -329,9 +456,32 @@ class ServerCog(commands.Cog):
         await server_view.wait()
         server_id = server_view.server_chosen
 
+        map_versions = await ServemeAPI.fetch_newest_version(
+            tf_map
+        )  # pylint: disable=no-member
+        print(map_versions)
+        if map_versions is None:
+            await interaction.edit_original_message(
+                content=f"Invalid map error: Not able to find any map that starts with {tf_map}",
+                view=None,
+            )
+            return
+        if isinstance(map_versions, str):
+            chosen_map = map_versions
+        else:
+            map_selector_view = MapSelection(map_versions)
+            await interaction.edit_original_message(
+                content="Multiple map versions were found. Please select the right version.",
+                view=map_selector_view,
+            )
+            status = await map_selector_view.wait()
+            if status:
+                return
+            chosen_map = map_selector_view.map_chosen
+
         try:
             exec_command: str = await util.get_exec_command(
-                reservations[server_id], tf_map
+                reservations[server_id], chosen_map
             )
         except Exception:
             await interaction.edit_original_message(
@@ -347,7 +497,7 @@ class ServerCog(commands.Cog):
             client.run(exec_command)
 
         await interaction.edit_original_message(
-            content="Changing map to `" + tf_map + "`.", view=None
+            content="Changing map to `" + chosen_map + "`.", view=None
         )
 
     @util.is_setup()
@@ -365,7 +515,7 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
         if len(reservations) == 0:
             await interaction.send(
@@ -408,7 +558,11 @@ class ServerCog(commands.Cog):
         await interaction.response.defer()
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        reservations = await ServemeAPI().get_current_reservations(serveme_api_key)
+        (
+            current_reservations,
+            future_reservations,
+        ) = await ServemeAPI().get_current_reservations(serveme_api_key)
+        reservations = current_reservations + future_reservations
 
         async with aiohttp.ClientSession() as session:
             if len(reservations) == 0:
@@ -419,8 +573,14 @@ class ServerCog(commands.Cog):
 
             server_view = Servers()
 
-            for num, reservation in enumerate(reservations):
-                button = ServerButton(reservation, num)
+            for num, reservation in enumerate(current_reservations):
+                button = ServerButton(reservation, num, True)
+                server_view.add_item(button)
+
+            for num, reservation in enumerate(future_reservations):
+                button = ServerButton(
+                    reservation, num + len(current_reservations), False
+                )
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
@@ -437,11 +597,48 @@ class ServerCog(commands.Cog):
                         content=f"Ending reservation `#{reservations[server_id]['id']}`.",
                         view=None,
                     )
+                elif resp.status == 204:
+                    await interaction.edit_original_message(
+                        content=f"Canceling future reservation `#{reservations[server_id]['id']}`.",
+                        view=None,
+                    )
                 else:
                     await interaction.edit_original_message(
                         content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
                         view=None,
                     )
+
+    @reserve.on_autocomplete("tf_map")
+    @change_map.on_autocomplete("tf_map")
+    async def map_autocomplete(self, interaction: nextcord.Interaction, map_query: str):
+        """Autocompletes the map name for the user.
+
+        Args:
+            interaction (nextcord.Interaction): Interaction to respond to
+            map_query (str): The map name to autocomplete
+        """
+        if len(map_query.split("_")) > 1:
+            map_search = await ServemeAPI.fetch_newest_version(
+                map_query, maps_list=self.all_maps
+            )
+            print(map_search)
+            if map_search is None:
+                await interaction.response.send_autocomplete(["No results."])
+                return
+            if isinstance(map_search, str):
+                await interaction.response.send_autocomplete([map_search])
+                return
+            if len(map_search) > 25:
+                await interaction.response.send_autocomplete(
+                    ["Too many results. Please narrow your search."]
+                )
+                return
+            await interaction.response.send_autocomplete(map_search)
+            return
+
+        await interaction.response.send_autocomplete(
+            ["Please type the beginning of the map name to get autocomplete results."]
+        )
 
     @tasks.loop(minutes=1)
     async def server_status(self):

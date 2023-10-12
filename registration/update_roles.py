@@ -370,8 +370,11 @@ class UpdateRolesCog(commands.Cog):
         for player in players:
             await asyncio.sleep(10)
             print(player)
-            steam_id = int(player["steam"])
-            discord_id = int(player["discord"])
+            try:
+                steam_id = int(player["steam"])
+                discord_id = int(player["discord"])
+            except KeyError:
+                continue
             try:
                 player_divs = await RGL.get_div_data(int(player["steam"]))
             except LookupError:

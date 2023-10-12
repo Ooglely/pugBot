@@ -9,14 +9,14 @@ repos:
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
 -   repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 23.9.1
     hooks:
     -   id: black
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.5.1  # Use the sha / tag you want to point at
     hooks:
     -   id: mypy
-        additional_dependencies: [types-requests==2.31.0.1]
+        additional_dependencies: [types-requests==2.31.0.1, types_pytz>=2023.3.1.0]
         args: [--ignore-missing-imports, --check-untyped-defs]
 -   repo: local
     hooks:
