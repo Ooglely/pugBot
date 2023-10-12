@@ -301,6 +301,9 @@ async def check_map_score(log: FullLog) -> bool:
     elif map_name.startswith("koth_"):
         if (log.log.red_team.score == 5) or (log.log.blue_team.score == 5):
             return True
+    elif map_name.startswith("pt_"):
+        if (log.log.red_team.score >= 3) or (log.log.blue_team.score >= 3):
+            return True
     return False
 
 
