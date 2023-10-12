@@ -7,7 +7,7 @@ from pug.setup import PugSetupCog
 from registration import TrueFalseSelect
 from constants import BOT_COLOR
 
-guild_configs = BotCollection("guilds", "configs")
+guild_configs = BotCollection("guilds", "config")
 
 
 class LogsChannelSelect(nextcord.ui.View):
@@ -24,6 +24,7 @@ class LogsChannelSelect(nextcord.ui.View):
     ):
         """Continues setup"""
         self.action = "continue"
+        await _interaction.response.edit_message(view=None)
         self.stop()
 
     @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red)
@@ -32,6 +33,7 @@ class LogsChannelSelect(nextcord.ui.View):
     ):
         """Cancels setup"""
         self.action = "cancel"
+        await _interaction.response.edit_message(view=None)
         self.stop()
 
     @nextcord.ui.channel_select(placeholder="Logs Channel")
@@ -74,7 +76,7 @@ class LogsCog(commands.Cog):
                 {"guild": interaction.guild.id}
             )
         except LookupError:
-            interaction.send(
+            await interaction.send(
                 "This server has not been setup yet. Please run /setup first."
             )
             return
@@ -98,29 +100,32 @@ class LogsCog(commands.Cog):
         if not logs_enable.selection:
             log_settings["enabled"] = False
             await guild_configs.update_item(
-                {"guild": interaction.guild.id}, {"logs": log_settings}
+                {"guild": interaction.guild.id}, {"$set": {"logs": log_settings}}
             )
             setup_embed.description = "Logs have been disabled."
             await interaction.edit_original_message(embed=setup_embed, view=None)
             await interaction.delete_original_message(delay=30)
             return
+        await interaction.edit_original_message(view=None)
+        log_settings["enabled"] = True
 
         setup_embed.description = (
             "Please select the channel you want logs to be sent to."
         )
         channel_setup = LogsChannelSelect()
-        await interaction.send(embed=setup_embed, view=channel_setup)
+        await interaction.edit_original_message(embed=setup_embed, view=channel_setup)
         setup_status = await channel_setup.wait()
         if setup_status or channel_setup.action == "cancel":
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
         log_settings["channel"] = channel_setup.logs
+        await interaction.edit_original_message(view=None)
 
         setup_embed.description = "Would you like to embed a picture of logs?\nThis is done through using loogs.tf. More info can be found at https://loogs.tf/"
         loogs_select = TrueFalseSelect()
-        await interaction.send(embed=setup_embed, view=loogs_select)
-        setup_status = await channel_setup.wait()
+        await interaction.edit_original_message(embed=setup_embed, view=loogs_select)
+        setup_status = await loogs_select.wait()
         if setup_status:
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
@@ -131,5 +136,5 @@ class LogsCog(commands.Cog):
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=60)
         await guild_configs.update_item(
-            {"guild": interaction.guild.id}, {"logs": log_settings}
+            {"guild": interaction.guild.id}, {"$set": {"logs": log_settings}}
         )

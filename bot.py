@@ -25,6 +25,7 @@ from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
 from logs.searcher import LogSearcher
+from logs.logs import LogsCog
 from pug.pug import PugRunningCog
 from pug.setup import PugSetupCog
 from registration.setup import RegistrationSetupCog
@@ -46,6 +47,7 @@ bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
+bot.add_cog(LogsCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()

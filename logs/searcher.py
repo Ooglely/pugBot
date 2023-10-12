@@ -11,6 +11,9 @@ from database import BotCollection
 
 queue_db = BotCollection("logs", "queue")
 searcher_db = BotCollection("logs", "searcher")
+logs_list_db = BotCollection("logs", "list")
+guild_settings_db = BotCollection("guilds", "config")
+guild_categories_db = BotCollection("guilds", "categories")
 
 
 class PartialLog:
@@ -96,7 +99,7 @@ class LogSearcher:
         print("Running searcher...")
         searcher_logs = await searcher_db.find_all_items()
         for searcher_log in searcher_logs:
-            print(f"Log: {searcher_log['_id']}")
+            print(f"Searcher Log: {searcher_log['_id']}")
 
             players = [Player(data=player) for player in searcher_log["players"]]
             partial_log = PartialLog(
@@ -112,7 +115,7 @@ class LogSearcher:
                 await self.log_failed_log(
                     partial_log, "Searcher timed out (6 hours without finding a log)"
                 )
-                return
+                continue
 
             steam_ids = []
             for player in partial_log.players:
@@ -126,9 +129,7 @@ class LogSearcher:
                 if query["success"] and query["results"] > 0:
                     for log in query["logs"]:
                         log_data = await LogsAPI.get_single_log(log["id"])
-                        if (
-                            log["date"] < partial_log.timestamp and log_data["success"]
-                        ):  # TODO CHANGE THIS BACK!!!
+                        if log["date"] > partial_log.timestamp and log_data["success"]:
                             print(f"Log: {log}")
                             full_log = FullLog(partial_log, log["id"], log_data)
                             await LogSearcher._add_queue_game(full_log)
@@ -152,7 +153,7 @@ class LogSearcher:
         print("Running queue...")
         queue_logs = await queue_db.find_all_items()
         for queue_log in queue_logs:
-            print(f"Log: {queue_log['_id']}")
+            print(f"Queue Log: {queue_log['_id']}")
 
             players = [Player(data=player) for player in queue_log["players"]]
             full_log = FullLog(
@@ -166,12 +167,14 @@ class LogSearcher:
                 await LogsAPI.get_single_log(queue_log["log_id"]),
             )
 
-            if (round(time.time()) - full_log.timestamp) < 43200:
-                await LogSearcher._delete_searcher_game(queue_log["_id"])
+            print(round(time.time()) - full_log.timestamp)
+
+            if (round(time.time()) - full_log.timestamp) > 43200:
+                await LogSearcher._delete_queue_game(queue_log["_id"])
                 await self.log_failed_log(
-                    full_log, "Searcher timed out (12 hours without finding a log)"
+                    full_log, "Queue timed out (12 hours without finding a log)"
                 )
-                return
+                continue
 
             time_reached = await check_game_time(full_log)
             score_reached = await check_map_score(full_log)
@@ -183,11 +186,65 @@ class LogSearcher:
         """Log a failed log to the database"""
         print(f"Logging failed log... {reason}")
         print(log.export())
+        guild_settings = await guild_settings_db.find_item({"guild": log.guild})
+
+        if "logs" in guild_settings:
+            if not guild_settings["logs"]["enabled"]:
+                return
+            logs_channel = guild_settings["logs"]["channel"]
+        else:
+            return
+        player_string = ""
+        for player in log.players:
+            player_string += f"<@{player.discord}>\n"
+
+        log_embed = nextcord.Embed(color=nextcord.Color.red())
+        log_embed.title = "Failed Log"
+        log_embed.description = (
+            f"**Category:** {log.category.name}\n**Reason:** {reason}"
+        )
+        log_embed.add_field(name="Players", value=player_string)
+
+        await self.bot.get_channel(logs_channel).send(embed=log_embed)
+        log_embed.add_field(name="Guild", value=log.guild)
+        await self.bot.get_channel(1161824917021536256).send(embed=log_embed)
 
     async def log_completed_log(self, log: FullLog):
         """Log a completed log to the database"""
         print("Logging completed log...")
         print(log.export())
+
+        guild_settings = await guild_settings_db.find_item({"guild": log.guild})
+
+        if "logs" in guild_settings:
+            if not guild_settings["logs"]["enabled"]:
+                return
+            logs_channel = guild_settings["logs"]["channel"]
+        else:
+            return
+
+        try:
+            guild_categories = await guild_categories_db.find_item({"_id": log.guild})
+            if len(guild_categories["categories"]) > 1:
+                category_string = f"**Category:** {log.category.name}\n"
+            else:
+                category_string = ""
+        except LookupError:
+            category_string = ""
+
+        if guild_settings["logs"]["loogs"]:
+            log_url = f"https://loogs.tf/{log.log_id}"
+        else:
+            log_url = f"https://logs.tf/{log.log_id}"
+
+        await self.bot.get_channel(logs_channel).send(
+            content=f"{category_string}{log_url}"
+        )
+        await self.bot.get_channel(1161825015587680256).send(
+            content=f"{category_string}{log_url}\nGuild: {log.guild}"
+        )
+
+        await logs_list_db.add_item(log.export())
 
     @staticmethod
     async def add_searcher_game(
