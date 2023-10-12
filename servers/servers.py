@@ -81,7 +81,6 @@ class ServerCog(commands.Cog):
 
         # Handle the FastDL all map pool
         self.all_maps = await ServemeAPI.fetch_all_maps(False)
-        print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
@@ -404,7 +403,7 @@ class ServerCog(commands.Cog):
                     if "connect" in channel.name:
                         connect_channel = channel
                         break
-            if category is None:
+            else:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])

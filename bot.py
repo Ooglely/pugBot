@@ -59,7 +59,8 @@ async def on_ready():
     print(f"Running: {NEW_COMMIT_NAME}")
     print("------")
     # Need to add cog on ready instead of before for webserver async to be friendly
-    bot.add_cog(WebserverCog(bot))
+    if bot.get_cog("WebserverCog") is None:
+        bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
     update_status.start()
 
