@@ -31,10 +31,13 @@ class PartialLog:
         guild: int,
         category: PugCategory,
         players: list[Player],
-        timestamp=time.time().__round__(),
+        timestamp=None,
     ) -> None:
         self.guild: int = guild
-        self.timestamp: int = timestamp
+        if timestamp is None:
+            current_time: int = round(time.time())
+        self.timestamp: int = current_time or timestamp
+        print(f"Timestamp is {self.timestamp}")
         self.category: PugCategory = category
         self.players: list[Player] = players
 
@@ -110,7 +113,7 @@ class LogSearcher:
             )
             print(f"Timestamp: {partial_log.timestamp}")
 
-            if round(time.time()) - partial_log.timestamp < 21600:
+            if round(time.time()) - partial_log.timestamp > 21600:
                 await LogSearcher._delete_searcher_game(searcher_log["_id"])
                 await self.log_failed_log(
                     partial_log, "Searcher timed out (6 hours without finding a log)"

@@ -313,6 +313,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Moves the players"""
+        await _interaction.response.defer()
         self.action = "move"
         self.stop()
 
@@ -321,6 +322,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Rerolls new balanced teams"""
+        await _interaction.response.defer()
         self.action = "balance"
         self.stop()
 
@@ -329,6 +331,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         "Rerolls new random teams"
+        await _interaction.response.defer()
         self.action = "random"
         self.stop()
 

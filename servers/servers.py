@@ -274,7 +274,7 @@ class ServerCog(commands.Cog):
                     if "connect" in channel.name:
                         connect_channel = channel
                         break
-            if category is None:
+            else:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
