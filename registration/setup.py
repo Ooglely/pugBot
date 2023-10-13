@@ -24,17 +24,17 @@ class RegistrationSetupCog(commands.Cog):
     @is_setup()
     @nextcord.slash_command(
         name="registration",
-        description="Setup tf.oog.pw registration for this server.",
+        description="Setup pugBot.tf registration for this server.",
         default_member_permissions=nextcord.Permissions(manage_guild=True),
     )
     async def setup_registration(self, interaction: nextcord.Interaction):
-        """Setup tf.oog.pw registration for this server."""
+        """Setup pugBot.tf registration for this server."""
         settings = RegistrationSettings()
         settings.import_from_db(interaction.guild.id)
         setup_embed = nextcord.Embed(
             title="Registration Setup",
             color=BOT_COLOR,
-            description="Registration allows for you to link new members of the server to https://tf.oog.pw/register, which can give them division roles based on their RGL experience.\n\nYou can have it go off either their current or highest division played, in either 6s or Highlander.\n\nYou will need to create your own division roles. You will match the divisions with the role you would like to be assigned in the setup menu.",
+            description="Registration allows for you to link new members of the server to https://pugBot.tf/register, which can give them division roles based on their RGL experience.\n\nYou can have it go off either their current or highest division played, in either 6s or Highlander.\n\nYou will need to create your own division roles. You will match the divisions with the role you would like to be assigned in the setup menu.",
         )
         setup_embed.add_field(
             name="Current Settings",
@@ -147,7 +147,7 @@ class RegistrationSetupCog(commands.Cog):
         settings.channels["registration"] = channel_view.registration
         settings.channels["logs"] = channel_view.logs
 
-        setup_embed.description = "Registration setup complete! You can now link new members of the server to https://tf.oog.pw/register, and roles will be assigned from the bot.\n\nUse /updateall to update all current members of the server, or wait for the bots daily update."
+        setup_embed.description = "Registration setup complete! You can now link new members of the server to https://pugBot.tf/register, and roles will be assigned from the bot.\n\nUse /updateall to update all current members of the server, or wait for the bots daily update."
         setup_embed.add_field(
             name="Current Settings",
             value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",

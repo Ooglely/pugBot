@@ -46,6 +46,11 @@ class PugPlayer:
                 },
             }
             registered = False
+        if "divison" not in player_data:
+            player_data["divison"] = {
+                "sixes": {"highest": -1, "current": -1},
+                "hl": {"highest": -1, "current": -1},
+            }
         self.steam: int = player_data["steam"]
         self.discord: int = player_data["discord"]
         self.division: Dict[str, Dict[str, int]] = player_data["divison"]
