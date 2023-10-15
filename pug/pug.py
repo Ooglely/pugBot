@@ -70,18 +70,27 @@ class PugRunningCog(commands.Cog):
         for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
-            add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["add_up"]
-            )
-            red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["red_team"]
-            )
-            blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["blu_team"]
-            )
-            next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["next_pug"]
-            )
+            try:
+                add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["add_up"]
+                )
+                red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["red_team"]
+                )
+                blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["blu_team"]
+                )
+                next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["next_pug"]
+                )
+            except AttributeError:
+                print(f"Error getting channels for {name}")
+                name += " (Error getting channels)"
+                disabled = True
+
+                button = CategoryButton(name=name, color=color, disabled=disabled)
+                select_view.add_item(button)
+                continue
             if (
                 len(add_up_channel.members) + len(next_pug_channel.members)
             ) < team_size * 2:
@@ -392,15 +401,25 @@ class PugRunningCog(commands.Cog):
         for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
-            add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["add_up"]
-            )
-            red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["red_team"]
-            )
-            blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                category["blu_team"]
-            )
+            try:
+                add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["add_up"]
+                )
+                red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["red_team"]
+                )
+                blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                    category["blu_team"]
+                )
+            except AttributeError:
+                print(f"Error getting channels for {name}")
+                name += " (Error getting channels)"
+                disabled = True
+
+                button = CategoryButton(name=name, color=color, disabled=disabled)
+                select_view.add_item(button)
+                continue
+
             if (
                 len(red_team_channel.members) == 0
                 and len(blu_team_channel.members) == 0
