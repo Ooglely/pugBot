@@ -70,19 +70,37 @@ class PugRunningCog(commands.Cog):
         for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
+
+            add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["add_up"]
+            )
+            red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["red_team"]
+            )
+            blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["blu_team"]
+            )
+            next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["next_pug"]
+            )
             try:
-                add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["add_up"]
-                )
-                red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["red_team"]
-                )
-                blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["blu_team"]
-                )
-                next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["next_pug"]
-                )
+                if (
+                    len(add_up_channel.members) + len(next_pug_channel.members)
+                ) < team_size * 2:
+                    disabled = True
+                    name += " (Not enough players)"
+                if (
+                    len(red_team_channel.members) > 0
+                    or len(blu_team_channel.members) > 0
+                ):
+                    disabled = True
+                    name += " (Pug in progress)"
+                if (
+                    interaction.user.voice is not None
+                    and interaction.user.voice.channel
+                    == (next_pug_channel or add_up_channel)
+                ):
+                    color = nextcord.ButtonStyle.green
             except AttributeError:
                 print(f"Error getting channels for {name}")
                 name += " (Error getting channels)"
@@ -91,20 +109,6 @@ class PugRunningCog(commands.Cog):
                 button = CategoryButton(name=name, color=color, disabled=disabled)
                 select_view.add_item(button)
                 continue
-            if (
-                len(add_up_channel.members) + len(next_pug_channel.members)
-            ) < team_size * 2:
-                disabled = True
-                name += " (Not enough players)"
-            if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
-                disabled = True
-                name += " (Pug in progress)"
-            if (
-                interaction.user.voice is not None
-                and interaction.user.voice.channel
-                == (next_pug_channel or add_up_channel)
-            ):
-                color = nextcord.ButtonStyle.green
 
             button = CategoryButton(name=name, color=color, disabled=disabled)
             select_view.add_item(button)
@@ -375,7 +379,9 @@ class PugRunningCog(commands.Cog):
     )
     @is_setup()
     @is_runner()
-    async def move(self, interaction: nextcord.Interaction):
+    async def move(
+        self, interaction: nextcord.Interaction
+    ):  # pylint: disable=too-many-return-statements
         """Move players back after a pug is done."""
         await interaction.response.defer()
 
@@ -401,16 +407,30 @@ class PugRunningCog(commands.Cog):
         for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
+            add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["add_up"]
+            )
+            red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["red_team"]
+            )
+            blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
+                category["blu_team"]
+            )
+
             try:
-                add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["add_up"]
-                )
-                red_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["red_team"]
-                )
-                blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
-                    category["blu_team"]
-                )
+                if (
+                    len(red_team_channel.members) == 0
+                    and len(blu_team_channel.members) == 0
+                ):
+                    disabled = True
+                    name += " (No players to move)"
+                if interaction.user.voice is not None:
+                    if interaction.user.voice.channel == (
+                        red_team_channel,
+                        blu_team_channel,
+                        add_up_channel,
+                    ):
+                        color = nextcord.ButtonStyle.green
             except AttributeError:
                 print(f"Error getting channels for {name}")
                 name += " (Error getting channels)"
@@ -419,20 +439,6 @@ class PugRunningCog(commands.Cog):
                 button = CategoryButton(name=name, color=color, disabled=disabled)
                 select_view.add_item(button)
                 continue
-
-            if (
-                len(red_team_channel.members) == 0
-                and len(blu_team_channel.members) == 0
-            ):
-                disabled = True
-                name += " (No players to move)"
-            if interaction.user.voice is not None:
-                if interaction.user.voice.channel == (
-                    red_team_channel,
-                    blu_team_channel,
-                    add_up_channel,
-                ):
-                    color = nextcord.ButtonStyle.green
 
             button = CategoryButton(name=name, color=color, disabled=disabled)
             select_view.add_item(button)
@@ -508,7 +514,10 @@ class PugRunningCog(commands.Cog):
         pug_embed.title = "Players moved!"
         pug_embed.description = moving_string
         await interaction.edit_original_message(embed=pug_embed, view=move_view)
-        await move_view.wait()
+        status = await move_view.wait()
+        if status:
+            await interaction.delete_original_message(delay=5)
+            return
 
         if move_view.action == "cancel":
             return
