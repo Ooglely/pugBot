@@ -495,7 +495,7 @@ class PugRunningCog(commands.Cog):
         moving_string += "\nDone!"
 
         game_players = [
-            Player(discord=player.discord) for player in red_players + blu_players
+            Player(discord=player.id) for player in red_players + blu_players
         ]
         await LogSearcher.add_searcher_game(
             interaction.guild.id, chosen_category, game_players
