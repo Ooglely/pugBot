@@ -122,7 +122,7 @@ class LogsCog(commands.Cog):
         log_settings["channel"] = channel_setup.logs
         await interaction.edit_original_message(view=None)
 
-        setup_embed.description = "Would you like to embed a picture of logs?\nThis is done through using loogs.tf. More info can be found at https://loogs.tf/"
+        setup_embed.description = "Would you like to embed a picture of logs?\nThis is done through using loogs.tf. More info can be found at https://loogs.tf/\nThis website is in development, and may be unstable."
         loogs_select = TrueFalseSelect()
         await interaction.edit_original_message(embed=setup_embed, view=loogs_select)
         setup_status = await loogs_select.wait()
