@@ -502,7 +502,7 @@ class PugRunningCog(commands.Cog):
         )
 
         move_view = MoveView()
-        pug_embed.title = "PugPlayers moved!"
+        pug_embed.title = "Players moved!"
         pug_embed.description = moving_string
         await interaction.edit_original_message(embed=pug_embed, view=move_view)
         await move_view.wait()
