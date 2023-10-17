@@ -53,6 +53,14 @@ class BotCollection:
             raise LookupError
         return result
 
+    async def delete_item(self, search: dict):
+        """Delete an item from the collection.
+
+        Args:
+            search (dict): The key to look for.
+        """
+        self.database.delete_one(search)
+
     async def find_all_items(self) -> list[dict]:
         """Returns all items in the collection."""
         results = []

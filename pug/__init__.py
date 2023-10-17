@@ -22,7 +22,7 @@ config_db = BotCollection("guilds", "config")
 category_db = BotCollection("guilds", "categories")
 
 
-class Player:
+class PugPlayer:
     """Represents a player in the pug."""
 
     def __init__(
@@ -72,6 +72,7 @@ class PugCategory:
 
     def __dict__(self):
         return {
+            "name": self.name,
             "add_up": self.add_up,
             "red_team": self.red_team,
             "blu_team": self.blu_team,
@@ -98,7 +99,7 @@ class PugCategory:
             {"$unset": {f"categories.{self.name}": ""}},
         )
 
-    async def get_last_players(self, guild: int) -> List[Player] | None:
+    async def get_last_players(self, guild: int) -> List[PugPlayer] | None:
         """Gets the last players from the database."""
         try:
             result = await category_db.find_item({"_id": guild})
@@ -110,13 +111,13 @@ class PugCategory:
             or "players" not in result["categories"][self.name]
         ):
             return None
-        players: List[Player] = []
+        players: List[PugPlayer] = []
         for player in result["categories"][self.name]["players"]:
             print(player)
-            players.append(Player(player["steam"]))
+            players.append(PugPlayer(player["steam"]))
         return players
 
-    async def update_last_players(self, guild: int, players: List[Player]) -> None:
+    async def update_last_players(self, guild: int, players: List[PugPlayer]) -> None:
         """Updates the last players in the database."""
         last_players = []
         for player in players:
@@ -317,6 +318,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Moves the players"""
+        await _interaction.response.defer()
         self.action = "move"
         self.stop()
 
@@ -325,6 +327,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Rerolls new balanced teams"""
+        await _interaction.response.defer()
         self.action = "balance"
         self.stop()
 
@@ -333,6 +336,7 @@ class TeamGenerationView(nextcord.ui.View):
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         "Rerolls new random teams"
+        await _interaction.response.defer()
         self.action = "random"
         self.stop()
 

@@ -24,6 +24,8 @@ from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
+from logs.searcher import LogSearcher
+from logs.logs import LogsCog
 from pug.pug import PugRunningCog
 from pug.setup import PugSetupCog
 from registration.setup import RegistrationSetupCog
@@ -45,6 +47,7 @@ bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
+bot.add_cog(LogsCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()
@@ -63,6 +66,9 @@ async def on_ready():
         bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
     update_status.start()
+    log_searcher = LogSearcher(bot)
+    log_searcher.searcher.start()  # pylint: disable=no-member
+    log_searcher.queue.start()  # pylint: disable=no-member
 
 
 class SetupView(nextcord.ui.View):
