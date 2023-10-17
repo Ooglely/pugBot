@@ -123,7 +123,7 @@ class ServemeAPI:
 
     @staticmethod
     @no_type_check  # LOLLLLL
-    async def fetch_newest_version(map_name: str, maps_list: list = None):
+    async def fetch_newest_version(map_name: str, maps_list: str = None):
         """Fetches the newest version of a map from the serveme.tf FastDL.
 
         Args:
@@ -144,7 +144,9 @@ class ServemeAPI:
         if maps_list is None:
             maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", map_list)
         else:  # If maps_list is provided, use that
-            maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
+            # maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
+            # Use temporary fix for now
+            maps = re.findall(rf"(?<=\(fs\) ){map_name}.*", maps_list)
         # Deduplicate results
         maps_set = set(maps)
         print(maps_set)

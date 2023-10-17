@@ -42,7 +42,7 @@ class ServerCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.servers: List[Reservation] = []
         self.bot = bot
-        self.all_maps: list = []
+        self.all_maps: str = ""
         self.map_updater.start()  # pylint: disable=no-member
         self.server_status.start()  # pylint: disable=no-member
 
@@ -80,7 +80,12 @@ class ServerCog(commands.Cog):
             outfile.write(map_json)
 
         # Handle the FastDL all map pool
-        self.all_maps = await ServemeAPI.fetch_all_maps(False)
+        # Can't use serveme for now
+        # self.all_maps = await ServemeAPI.fetch_all_maps(False)
+        with open("map_list.txt", "r", encoding="UTF-8") as map_file:
+            self.all_maps = map_file.read()
+
+        print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
@@ -216,7 +221,7 @@ class ServerCog(commands.Cog):
                 return
 
         map_versions = await ServemeAPI.fetch_newest_version(
-            tf_map
+            tf_map, self.all_maps
         )  # pylint: disable=no-member
         print(map_versions)
         if map_versions is None:
@@ -457,7 +462,7 @@ class ServerCog(commands.Cog):
         server_id = server_view.server_chosen
 
         map_versions = await ServemeAPI.fetch_newest_version(
-            tf_map
+            tf_map, self.all_maps
         )  # pylint: disable=no-member
         print(map_versions)
         if map_versions is None:
