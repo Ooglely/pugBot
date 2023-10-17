@@ -135,9 +135,10 @@ class ServemeAPI:
         """
         if map_name in COMP_MAPS:
             return COMP_MAPS[map_name]
-        async with aiohttp.ClientSession() as session:
-            async with session.get("http://dl.serveme.tf/maps/") as resp:
-                map_list = await resp.text()
+        if maps_list is None:
+            async with aiohttp.ClientSession() as session:
+                async with session.get("http://dl.serveme.tf/maps/") as resp:
+                    map_list = await resp.text()
 
         # Get all maps that match the beginning of the input
         if maps_list is None:
