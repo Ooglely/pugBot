@@ -326,7 +326,7 @@ async def check_game_time(log: FullLog) -> bool:
         if log.log.length > 2400:
             return True
     else:
-        if log.log.length > 1800:
+        if log.log.length > 1680:
             return True
     return False
 
