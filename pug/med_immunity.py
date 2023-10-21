@@ -1,10 +1,10 @@
 """Commands for randomly rolling medics in pugs."""
-
+import datetime
 import random
 from typing import Optional, Set
 
 import nextcord
-from nextcord.ext import commands
+from nextcord.ext import commands, tasks
 
 from constants import BOT_COLOR
 from database import (
@@ -12,7 +12,7 @@ from database import (
     get_server,
     add_med_immune_player,
     remove_med_immune_player,
-    clear_med_immunity_by_guild,
+    clear_med_immunity_by_guild, clear_med_immunity_all_guilds,
 )
 from pug import (
     CategorySelect,
@@ -26,6 +26,8 @@ from util import is_setup, is_runner
 
 category_db = BotCollection("guilds", "categories")
 
+reset_time = datetime.time(hour=13, minute=0, tzinfo=datetime.timezone.utc)
+
 
 class PugMedicCog(commands.Cog):
     """Cog storing all the commands for medic immunity"""
@@ -36,6 +38,10 @@ class PugMedicCog(commands.Cog):
     @PugRunningCog.pug.subcommand()
     async def medic(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
+
+    @tasks.loop(time=reset_time)
+    async def __clear_all(self):
+        clear_med_immunity_all_guilds()
 
     @medic.subcommand(  # pylint: disable=no-member
         name="roll",

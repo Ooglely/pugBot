@@ -1,9 +1,6 @@
 """Functions for interacting with the database throughout the bot."""
-from datetime import time, datetime
 
 import pymongo
-import pytz
-from nextcord.ext import tasks
 
 import constants
 from rgl_api import RGL_API
@@ -199,10 +196,9 @@ def clear_med_immunity_by_guild(guild: int):
     database.update_one({"guild": guild}, {"$set": {"immune": []}})
 
 
-@tasks.loop(time=time(hour=15, minute=0))
-async def clear_med_immunity():
+def clear_med_immunity_all_guilds():
     """Clear the med immunity field for all guilds
-    Runs automatically at 10AM Eastern every day
+    THIS FUNCTION SHOULD NEVER BE CALLED WITHIN A SLASH COMMAND
     """
     database = client.guilds.config
     database.update_many({}, {"$set": {"immune": []}})
