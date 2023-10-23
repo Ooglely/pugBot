@@ -8,6 +8,7 @@ from pug import PugCategory
 from logs import Player, LogData
 from logs.logstf_api import LogsAPI
 from database import BotCollection
+from util import get_steam64
 
 queue_db = BotCollection("logs", "queue")
 searcher_db = BotCollection("logs", "searcher")
@@ -99,7 +100,7 @@ class LogSearcher:
         """
         print("Running searcher...")
         searcher_logs = await searcher_db.find_all_items()
-        for searcher_log in searcher_logs:
+        for searcher_log in searcher_logs:  # pylint: disable=too-many-nested-blocks
             print(f"Searcher Log: {searcher_log['_id']}")
 
             players = [Player(data=player) for player in searcher_log["players"]]
@@ -150,6 +151,44 @@ class LogSearcher:
                         break
             except KeyError:
                 continue
+
+            # Incase not all players are in the game, check for logs with only some of the players
+            for steam_id in steam_ids:
+                print(f"Steam ID: {steam_id}")
+                query = await LogsAPI.search_for_log(players=[steam_id], limit=10)
+                print(f"Result: {query}")
+                try:
+                    if query["success"] and query["results"] > 0:
+                        for log in query["logs"]:
+                            log_data = await LogsAPI.get_single_log(log["id"])
+                            # Check if at least half the players are in the log
+                            player_count = 0
+                            for player_id in log_data["players"]:
+                                if get_steam64(player_id) in steam_ids:
+                                    player_count += 1
+                            if player_count < (len(steam_ids) / 2):
+                                print("Not enough players in log.")
+                                continue
+                            if log["date"] < partial_log.timestamp:
+                                print("Log is too old.")
+                                continue
+                            if not log_data["success"]:
+                                print("Log query was not successful.")
+                                continue
+                            if log["id"] in await list_all_logs():
+                                print(
+                                    "Log is either already in the database or is being processed."
+                                )
+                                continue
+
+                            # If passes...
+                            print(f"Log: {log}")
+                            full_log = FullLog(partial_log, log["id"], log_data)
+                            await LogSearcher._add_queue_game(full_log)
+                            await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                            break
+                except KeyError:
+                    continue
 
     @tasks.loop(minutes=1)
     async def queue(self):
