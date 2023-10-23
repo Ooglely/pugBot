@@ -303,7 +303,6 @@ async def rgl_link_listener(message: nextcord.Message):
             r"(?<=https:\/\/rgl\.gg\/Public\/PlayerProfile\?p=)[0-9]*",
             message.content,
         )
-        print(regex.group(0))
         if regex is None:
             return
         player = await RGL.create_player(int(get_steam64(regex.group(0))))
