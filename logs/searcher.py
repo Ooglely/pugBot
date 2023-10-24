@@ -127,7 +127,7 @@ class LogSearcher:
                     steam_ids.append(player.steam_64)
             print(steam_ids)
 
-            query = await LogsAPI.search_for_log(players=steam_ids, limit=10)
+            query = await LogsAPI.search_for_log(players=steam_ids, limit=3)
             print(f"Result: {query}")
             try:
                 if query["success"] and query["results"] > 0:
@@ -157,7 +157,7 @@ class LogSearcher:
             # Incase not all players are in the game, check for logs with only some of the players
             for steam_id in steam_ids:
                 print(f"Steam ID: {steam_id}")
-                query = await LogsAPI.search_for_log(players=[steam_id], limit=10)
+                query = await LogsAPI.search_for_log(players=[steam_id], limit=3)
                 print(f"Result: {query}")
                 try:
                     if query["success"] and query["results"] > 0:
@@ -171,7 +171,7 @@ class LogSearcher:
                             if player_count < (len(steam_ids) / 2):
                                 print("Not enough players in log.")
                                 continue
-                            if log["date"] < partial_log.timestamp:
+                            if log["date"] < partial_log.timestamp - 240:
                                 print("Log is too old.")
                                 continue
                             if not log_data["success"]:
