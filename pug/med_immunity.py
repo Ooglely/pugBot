@@ -34,8 +34,9 @@ class PugMedicCog(commands.Cog):
 
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
+        self.__clear_all.start() # pylint: disable=no-member
 
-    @PugRunningCog.pug.subcommand()
+    @PugRunningCog.pug.subcommand() # pylint: disable=no-member
     async def medic(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
