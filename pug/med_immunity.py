@@ -34,9 +34,9 @@ class PugMedicCog(commands.Cog):
 
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
-        self.__clear_all.start() # pylint: disable=no-member
+        self.__clear_all.start()  # pylint: disable=no-member
 
-    @PugRunningCog.pug.subcommand() # pylint: disable=no-member
+    @nextcord.slash_command()  # pylint: disable=no-member
     async def medic(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
@@ -46,7 +46,7 @@ class PugMedicCog(commands.Cog):
 
     @medic.subcommand(  # pylint: disable=no-member
         name="roll",
-        description="Randomly selects a non-immune player to play medic.",
+        description="Randomly selects a nonimmune player to play medic.",
     )
     @is_setup()
     @is_runner()
@@ -201,7 +201,7 @@ class PugMedicCog(commands.Cog):
         await interaction.send(embed=med_embed)
 
     @medic.subcommand(  # pylint: disable=no-member
-        name="remove",
+        name="unimmune",
         description="Manually remove a player from being immune to medic roll.",
     )
     @is_setup()
@@ -226,8 +226,8 @@ class PugMedicCog(commands.Cog):
         await interaction.send(embed=med_embed)
 
     @medic.subcommand(  # pylint: disable=no-member
-        name="remove_all",
-        description="Manually set a player as immune to medic roll.",
+        name="unimmune_all",
+        description="Manually remove all players from being immune to medic roll.",
     )
     @is_setup()
     @is_runner()
@@ -253,7 +253,7 @@ class PugMedicCog(commands.Cog):
 
     @medic.subcommand(  # pylint: disable=no-member
         name="view",
-        description="View all currently medic roll immune players.",
+        description="View all current medic roll immune players.",
     )
     @is_setup()
     @is_runner()
