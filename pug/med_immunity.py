@@ -12,7 +12,8 @@ from database import (
     get_server,
     add_med_immune_player,
     remove_med_immune_player,
-    clear_med_immunity_by_guild, clear_med_immunity_all_guilds,
+    clear_med_immunity_by_guild,
+    clear_med_immunity_all_guilds,
 )
 from pug import (
     CategorySelect,
@@ -169,7 +170,9 @@ class PugMedicCog(commands.Cog):
 
             med_embed.clear_fields()
             if status or not boolean_view.action:
-                med_embed.description = f"<@{medic.discord}> not given med roll immunity."
+                med_embed.description = (
+                    f"<@{medic.discord}> not given med roll immunity."
+                )
             else:
                 med_embed.description = f"<@{medic.discord}> given med roll immunity."
                 add_med_immune_player(interaction.guild.id, medic.discord)

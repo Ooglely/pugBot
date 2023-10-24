@@ -384,7 +384,6 @@ class PugRunningCog(commands.Cog):
                     reg_settings,
                 )
 
-
     async def get_player_list(
         self, next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
     ) -> Dict[str, List[PugPlayer]]:
