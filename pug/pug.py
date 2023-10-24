@@ -17,7 +17,7 @@ from pug import (
     PugPlayer,
     PugCategory,
 )
-from pug.setup import PugSetupCog
+
 from registration import RegistrationSettings
 from util import is_setup, is_runner
 
@@ -489,7 +489,7 @@ class PugRunningCog(commands.Cog):
         teams = {"red": red_team, "blu": blu_team}
         return teams
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+    @pug.subcommand(  # pylint: disable=no-member
         name="move", description="Moves players after a pug is done."
     )
     @is_setup()
