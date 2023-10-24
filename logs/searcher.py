@@ -133,7 +133,9 @@ class LogSearcher:
                 if query["success"] and query["results"] > 0:
                     for log in query["logs"]:
                         log_data = await LogsAPI.get_single_log(log["id"])
-                        if log["date"] < partial_log.timestamp:
+                        if (
+                            log["date"] < partial_log.timestamp - 240
+                        ):  # Reduced by 4 minutes to account for machine differences
                             print("Log is too old.")
                             continue
                         if not log_data["success"]:
