@@ -25,6 +25,8 @@ from util import get_steam64
 from servers.servers import ServerCog
 from agg.stats import StatsCog
 from agg.pug import PugCog
+from logs.searcher import LogSearcher
+from logs.logs import LogsCog
 from pug.pug import PugRunningCog
 from pug.setup import PugSetupCog
 from registration.setup import RegistrationSetupCog
@@ -47,6 +49,7 @@ bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
 bot.add_cog(PugMedicCog(bot))
+bot.add_cog(LogsCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()
@@ -61,9 +64,13 @@ async def on_ready():
     print(f"Running: {NEW_COMMIT_NAME}")
     print("------")
     # Need to add cog on ready instead of before for webserver async to be friendly
-    bot.add_cog(WebserverCog(bot))
+    if bot.get_cog("WebserverCog") is None:
+        bot.add_cog(WebserverCog(bot))
     await bot.sync_all_application_commands()
     update_status.start()
+    log_searcher = LogSearcher(bot)
+    log_searcher.searcher.start()  # pylint: disable=no-member
+    log_searcher.queue.start()  # pylint: disable=no-member
 
 
 class SetupView(nextcord.ui.View):
@@ -247,7 +254,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
     else:
         embed_color = 0xFEF0C7
 
-    url = "https://rgl.gg/Public/Team.aspx?t=" + str(team.teamid)
+    url = "https://rgl.gg/Public/Team?t=" + str(team.teamid)
 
     embed = nextcord.Embed(title=team.name, url=url, color=embed_color)
 
@@ -264,7 +271,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
             player_text += ":star: "
         player_text += (
             player["name"]
-            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+            + f"""](https://rgl.gg/Public/PlayerProfile?p={player["steamId"]})\n"""
         )
     if player_text:
         embed.add_field(name="Current Players", value=player_text, inline=False)
@@ -276,7 +283,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
             player_text += ":star: "
         player_text += (
             player["name"]
-            + f"""](https://rgl.gg/Public/PlayerProfile.aspx?p={player["steamId"]})\n"""
+            + f"""](https://rgl.gg/Public/PlayerProfile?p={player["steamId"]})\n"""
         )
     if player_text:
         embed.add_field(name="Former Players", value=player_text, inline=False)
@@ -292,10 +299,10 @@ async def rgl_link_listener(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
-
-    if "https://rgl.gg/Public/PlayerProfile.aspx?" in message.content:
+    print(message.content)
+    if "https://rgl.gg/Public/PlayerProfile?" in message.content:
         regex = re.search(
-            r"(?<=https:\/\/rgl\.gg\/Public\/PlayerProfile\.aspx\?p=)[0-9]*",
+            r"(?<=https:\/\/rgl\.gg\/Public\/PlayerProfile\?p=)[0-9]*",
             message.content,
         )
         if regex is None:
@@ -303,11 +310,12 @@ async def rgl_link_listener(message: nextcord.Message):
         player = await RGL.create_player(int(get_steam64(regex.group(0))))
         embed = await create_player_embed(player)
         await message.channel.send(embed=embed)
-    elif "https://rgl.gg/Public/Team.aspx?" in message.content:
+    elif "https://rgl.gg/Public/Team?" in message.content:
         regex = re.search(
-            r"(?<=https:\/\/rgl\.gg\/Public\/Team\.aspx\?t=)[0-9]*",
+            r"(?<=https:\/\/rgl\.gg\/Public\/Team\?t=)[0-9]*",
             message.content,
         )
+        print(regex)
         if regex is None:
             return
         team_id = int(regex.group(0))

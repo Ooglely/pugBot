@@ -187,6 +187,7 @@ class TrueFalseSelect(nextcord.ui.View):
     ):
         """Goes to the ban role selection menu"""
         self.selection = True
+        await _interaction.response.edit_message(view=None)
         self.stop()
 
     @nextcord.ui.button(label="no", style=nextcord.ButtonStyle.red)
@@ -195,6 +196,7 @@ class TrueFalseSelect(nextcord.ui.View):
     ):
         """Cancels ban role setup"""
         self.selection = False
+        await _interaction.response.edit_message(view=None)
         self.stop()
 
 

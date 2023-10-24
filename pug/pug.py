@@ -6,15 +6,15 @@ import nextcord
 from nextcord.ext import commands
 
 from constants import BOT_COLOR
-from database import (
-    BotCollection,
-)
+from database import BotCollection
+from logs import Player
+from logs.searcher import LogSearcher
 from pug import (
     CategorySelect,
     CategoryButton,
     TeamGenerationView,
     MoveView,
-    Player,
+    PugPlayer,
     PugCategory,
 )
 
@@ -181,6 +181,7 @@ class PugRunningCog(commands.Cog):
         for name, category in categories.items():
             disabled: bool = False
             color = nextcord.ButtonStyle.gray
+
             add_up_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
                 category["add_up"]
             )
@@ -193,20 +194,32 @@ class PugRunningCog(commands.Cog):
             next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
                 category["next_pug"]
             )
-            if (
-                len(add_up_channel.members) + len(next_pug_channel.members)
-            ) < team_size * 2:
+            try:
+                if (
+                    len(add_up_channel.members) + len(next_pug_channel.members)
+                ) < team_size * 2:
+                    disabled = True
+                    name += " (Not enough players)"
+                if (
+                    len(red_team_channel.members) > 0
+                    or len(blu_team_channel.members) > 0
+                ):
+                    disabled = True
+                    name += " (Pug in progress)"
+                if (
+                    interaction.user.voice is not None
+                    and interaction.user.voice.channel
+                    == (next_pug_channel or add_up_channel)
+                ):
+                    color = nextcord.ButtonStyle.green
+            except AttributeError:
+                print(f"Error getting channels for {name}")
+                name += " (Error getting channels)"
                 disabled = True
-                name += " (Not enough players)"
-            if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
-                disabled = True
-                name += " (Pug in progress)"
-            if (
-                interaction.user.voice is not None
-                and interaction.user.voice.channel
-                == (next_pug_channel or add_up_channel)
-            ):
-                color = nextcord.ButtonStyle.green
+
+                button = CategoryButton(name=name, color=color, disabled=disabled)
+                select_view.add_item(button)
+                continue
 
             button = CategoryButton(name=name, color=color, disabled=disabled)
             select_view.add_item(button)
@@ -348,6 +361,13 @@ class PugRunningCog(commands.Cog):
                     interaction.guild.id, all_players
                 )
 
+                game_players = [
+                    Player(discord=player.discord) for player in all_players
+                ]
+                await LogSearcher.add_searcher_game(
+                    interaction.guild.id, chosen_category, game_players
+                )
+
                 break
 
             if team_generation_view.action == "random":
@@ -364,12 +384,120 @@ class PugRunningCog(commands.Cog):
                     reg_settings,
                 )
 
-    @pug.subcommand(  # pylint: disable=no-member
+
+    async def get_player_list(
+        self, next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
+    ) -> Dict[str, List[PugPlayer]]:
+        """Return a list of players in a voice channel.
+
+        Args:
+            channel (nextcord.VoiceChannel): The voice channel to get players from.
+
+        Returns:
+            list: A list of players in the voice channel.
+        """
+        players: Dict[str, list[PugPlayer]] = {"next_pug": [], "add_up": []}
+        for member in next_pug.members:
+            player = PugPlayer(discord=member.id)
+            players["next_pug"].append(player)
+        for member in add_up.members:
+            player = PugPlayer(discord=member.id)
+            players["add_up"].append(player)
+        return players
+
+    async def generate_random_teams(
+        self, players: Dict[str, List[PugPlayer]], team_size: int
+    ) -> Dict[str, list[PugPlayer]]:
+        """Generate random teams for a pug.
+
+        Args:
+            players (list): A list of all players in the VC
+            team_size (int): The amount of players per team.
+            reg_settings (RegistrationSettings): The registration settings for the server.
+
+        Returns:
+            teams: The generated teams.
+        """
+        random.shuffle(players["next_pug"])
+        random.shuffle(players["add_up"])
+        all_players: List[PugPlayer] = players["next_pug"] + players["add_up"]
+
+        red_team: list[PugPlayer] = []
+        blu_team: list[PugPlayer] = []
+
+        while len(red_team) < team_size and len(blu_team) < team_size:
+            red_team.append(all_players.pop(0))
+            blu_team.append(all_players.pop(0))
+
+        teams = {"red": red_team, "blu": blu_team}
+        return teams
+
+    async def generate_balanced_teams(
+        self,
+        players: Dict[str, List[PugPlayer]],
+        team_size,
+        reg_settings: RegistrationSettings,
+    ) -> Dict[str, List[PugPlayer]]:
+        """Generate balanced teams for a pug.
+
+        Args:
+            players (list): A list of all players in the VC
+            team_size (int): The amount of players per team.
+            reg_settings (RegistrationSettings): The registration settings for the server.
+
+        Returns:
+            teams: The generated teams.
+        """
+        if reg_settings.mode == "" or reg_settings.gamemode == "":
+            teams = await self.generate_random_teams(players, team_size)
+            return teams
+
+        gamemode: str
+        if reg_settings.gamemode == "sixes":
+            gamemode = "sixes"
+        elif reg_settings.gamemode == "highlander":
+            gamemode = "hl"
+
+        random.shuffle(players["next_pug"])
+        random.shuffle(players["add_up"])
+        players["next_pug"].sort(
+            key=lambda x: 10
+            if x.division[gamemode][reg_settings.mode] == -1
+            else x.division[gamemode][reg_settings.mode],
+            reverse=False,
+        )
+        players["add_up"].sort(
+            key=lambda x: 10
+            if x.division[gamemode][reg_settings.mode] == -1
+            else x.division[gamemode][reg_settings.mode],
+            reverse=False,
+        )
+        all_players = players["next_pug"] + players["add_up"]
+
+        red_team: list[PugPlayer] = []
+        blu_team: list[PugPlayer] = []
+        count = 0
+
+        while len(red_team) < team_size and len(blu_team) < team_size:
+            if count % 2 == 0:
+                red_team.append(all_players.pop(0))
+                blu_team.append(all_players.pop(0))
+            else:
+                blu_team.append(all_players.pop(0))
+                red_team.append(all_players.pop(0))
+            count += 1
+
+        teams = {"red": red_team, "blu": blu_team}
+        return teams
+
+    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
         name="move", description="Moves players after a pug is done."
     )
     @is_setup()
     @is_runner()
-    async def move(self, interaction: nextcord.Interaction):
+    async def move(
+        self, interaction: nextcord.Interaction
+    ):  # pylint: disable=too-many-return-statements
         """Move players back after a pug is done."""
         await interaction.response.defer()
 
@@ -399,19 +527,29 @@ class PugRunningCog(commands.Cog):
             blu_team_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
                 category["blu_team"]
             )
-            if (
-                len(red_team_channel.members) == 0
-                and len(blu_team_channel.members) == 0
-            ):
-                disabled = True
-                name += " (No players to move)"
-            if interaction.user.voice is not None:
-                if interaction.user.voice.channel == (
-                    red_team_channel,
-                    blu_team_channel,
-                    add_up_channel,
+
+            try:
+                if (
+                    len(red_team_channel.members) == 0
+                    and len(blu_team_channel.members) == 0
                 ):
-                    color = nextcord.ButtonStyle.green
+                    disabled = True
+                    name += " (No players to move)"
+                if interaction.user.voice is not None:
+                    if interaction.user.voice.channel == (
+                        red_team_channel,
+                        blu_team_channel,
+                        add_up_channel,
+                    ):
+                        color = nextcord.ButtonStyle.green
+            except AttributeError:
+                print(f"Error getting channels for {name}")
+                name += " (Error getting channels)"
+                disabled = True
+
+                button = CategoryButton(name=name, color=color, disabled=disabled)
+                select_view.add_item(button)
+                continue
 
             button = CategoryButton(name=name, color=color, disabled=disabled)
             select_view.add_item(button)
@@ -483,11 +621,21 @@ class PugRunningCog(commands.Cog):
                 continue
         moving_string += "\nDone!"
 
+        game_players = [
+            Player(discord=player.id) for player in red_players + blu_players
+        ]
+        await LogSearcher.add_searcher_game(
+            interaction.guild.id, chosen_category, game_players
+        )
+
         move_view = MoveView()
         pug_embed.title = "Players moved!"
         pug_embed.description = moving_string
         await interaction.edit_original_message(embed=pug_embed, view=move_view)
-        await move_view.wait()
+        status = await move_view.wait()
+        if status:
+            await interaction.delete_original_message(delay=5)
+            return
 
         if move_view.action == "cancel":
             return
