@@ -15,14 +15,14 @@ from database import (
     clear_med_immunity_by_guild,
     clear_med_immunity_all_guilds,
 )
+from logs import Player
 from pug import (
     CategorySelect,
     CategoryButton,
-    Player,
     PugCategory,
     BooleanView,
 )
-from pug.pug import PugRunningCog, get_player_dict
+from pug.pug import get_player_dict
 from util import is_setup, is_runner
 
 category_db = BotCollection("guilds", "categories")
