@@ -17,7 +17,7 @@ from pug import (
     PugPlayer,
     PugCategory,
 )
-
+from pug.setup import PugSetupCog
 from registration import RegistrationSettings
 from util import is_setup, is_runner
 
