@@ -522,9 +522,23 @@ class PugRunningCog(commands.Cog):
         game_players = [
             Player(discord=player.id) for player in red_players + blu_players
         ]
-        await LogSearcher.add_searcher_game(
-            interaction.guild.id, chosen_category, game_players
+        # Check if game was already added to searcher
+        genned: bool = True
+        last_players: list[PugPlayer] = await chosen_category.get_last_players(
+            interaction.guild.id
         )
+        print(last_players)
+        for player in last_players:
+            if int(player.discord) not in [
+                int(player.id) for player in red_players + blu_players
+            ]:
+                genned = False
+                break
+        if not genned:
+            print("Adding game to searcher...")
+            await LogSearcher.add_searcher_game(
+                interaction.guild.id, chosen_category, game_players
+            )
 
         move_view = MoveView()
         pug_embed.title = "Players moved!"

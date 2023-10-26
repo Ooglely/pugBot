@@ -99,22 +99,22 @@ class PugCategory:
             {"$unset": {f"categories.{self.name}": ""}},
         )
 
-    async def get_last_players(self, guild: int) -> List[PugPlayer] | None:
+    async def get_last_players(self, guild: int) -> List[PugPlayer]:
         """Gets the last players from the database."""
         try:
             result = await category_db.find_item({"_id": guild})
         except LookupError:
-            return None
+            return []
         print(result["categories"])
         if (
             self.name not in result["categories"]
             or "players" not in result["categories"][self.name]
         ):
-            return None
+            return []
         players: List[PugPlayer] = []
         for player in result["categories"][self.name]["players"]:
             print(player)
-            players.append(PugPlayer(player["steam"]))
+            players.append(PugPlayer(discord=player["discord"]))
         return players
 
     async def update_last_players(self, guild: int, players: List[PugPlayer]) -> None:
