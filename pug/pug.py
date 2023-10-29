@@ -524,7 +524,9 @@ class PugRunningCog(commands.Cog):
         ]
         # Check if game was already added to searcher
         genned: bool = True
-        last_players: list[PugPlayer] = await chosen_category.get_last_players(
+        last_players: list[PugPlayer]
+        timestamp: int
+        last_players, timestamp = await chosen_category.get_last_players(
             interaction.guild.id
         )
         print(last_players)
@@ -537,7 +539,7 @@ class PugRunningCog(commands.Cog):
         if not genned:
             print("Adding game to searcher...")
             await LogSearcher.add_searcher_game(
-                interaction.guild.id, chosen_category, game_players
+                interaction.guild.id, chosen_category, game_players, timestamp
             )
 
         move_view = MoveView()
