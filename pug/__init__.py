@@ -51,8 +51,8 @@ class PugPlayer:
                 "sixes": {"highest": -1, "current": -1},
                 "hl": {"highest": -1, "current": -1},
             }
-        self.steam: int = player_data["steam"]
-        self.discord: int = player_data["discord"]
+        self.steam: int = int(player_data["steam"])
+        self.discord: int = int(player_data["discord"])
         self.division: Dict[str, Dict[str, int]] = player_data["divison"]
         self.registered: bool = registered
 

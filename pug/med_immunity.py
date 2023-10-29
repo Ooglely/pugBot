@@ -1,7 +1,7 @@
 """Commands for randomly rolling medics in pugs."""
 import datetime
 import random
-from typing import Optional, Set
+from typing import Set
 
 import nextcord
 from nextcord.ext import commands, tasks
@@ -15,13 +15,7 @@ from database import (
     clear_med_immunity_by_guild,
     clear_med_immunity_all_guilds,
 )
-from logs import Player
-from pug import (
-    CategorySelect,
-    CategoryButton,
-    PugCategory,
-    BooleanView,
-)
+from pug import CategorySelect, CategoryButton, PugCategory, BooleanView, PugPlayer
 from pug.pug import get_player_dict
 from util import is_setup, is_runner
 
@@ -54,13 +48,19 @@ class PugMedicCog(commands.Cog):
     async def roll_medic(
         self,
         interaction: nextcord.Interaction,
-        team_size: Optional[int] = nextcord.SlashOption(
+        team_size: int = nextcord.SlashOption(
             name="team_size",
             description="The size of the teams, default 6",
             required=False,
             default=6,
         ),
     ):
+        """Rolls a medic for a pug.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction to respond to.
+            team_size (int, optional): The size of the teams. Defaults to 6.
+        """
         await interaction.response.defer()
 
         # Get a list of pug categories
@@ -137,7 +137,7 @@ class PugMedicCog(commands.Cog):
         players = await get_player_dict(next_pug, add_up)
 
         immune_chosen = False  # True in the very rare case that all players in next pug/add up are already immune
-        medic: Player | None = None
+        medic: PugPlayer | None = None
         # All players in the next pug must be picked from this channel including med
         if len(players["next_pug"]) >= team_size * 2:
             random.shuffle(players["next_pug"])
@@ -193,6 +193,12 @@ class PugMedicCog(commands.Cog):
             name="discord", description="The Discord user to make immune", required=True
         ),
     ):
+        """Manually set a player as immune to medic roll.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction to respond to.
+            user (nextcord.User, optional): The user to make immune.
+        """
         await interaction.response.defer()
         add_med_immune_player(interaction.guild.id, user.id)
 
@@ -218,6 +224,12 @@ class PugMedicCog(commands.Cog):
             required=True,
         ),
     ):
+        """Manually remove a player from being immune to medic roll.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction to respond to.
+            user (nextcord.User, optional): The user to remove immunity from.
+        """
         await interaction.response.defer()
         remove_med_immune_player(interaction.guild.id, user.id)
 
@@ -235,6 +247,11 @@ class PugMedicCog(commands.Cog):
     @is_setup()
     @is_runner()
     async def remove_all_med_immune(self, interaction: nextcord.Interaction):
+        """Manually remove all players from being immune to medic roll.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction to respond to.
+        """
         await interaction.response.defer()
         clear_med_immunity_by_guild(interaction.guild.id)
 
@@ -261,6 +278,11 @@ class PugMedicCog(commands.Cog):
     @is_setup()
     @is_runner()
     async def view_all_med_immune(self, interaction: nextcord.Interaction):
+        """View all current medic roll immune players.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction to respond to.
+        """
         await interaction.response.defer()
         server = get_server(interaction.guild.id)
 
