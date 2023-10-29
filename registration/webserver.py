@@ -3,10 +3,9 @@ import asyncio
 import nextcord
 import uvicorn
 from fastapi import FastAPI, Request
+from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
-import agg
 import util
-from agg.stats import get_total_logs
 from constants import API_PASSWORD, BOT_COLOR, PORT
 from database import add_player, get_all_servers, update_divisons
 from registration import RegistrationSettings
@@ -14,6 +13,30 @@ from rgl_api import RGL_API
 
 app: FastAPI = FastAPI()
 RGL: RGL_API = RGL_API()
+
+
+class NewUser(BaseModel):
+    """Pydantic model for a new user from the website
+
+    Attributes:
+        steam (str): The user's steam ID
+        discord (str): The user's discord ID
+    """
+
+    steam: str
+    discord: str
+
+
+class NewConnect(BaseModel):
+    """Pydantic model for a new connect command from the TF2 server
+
+    Attributes:
+        discordID (str): The discord ID to send the connect command to
+        connectCommand (str): The connect command to send to the user
+    """
+
+    discordID: str
+    connectCommand: str
 
 
 class WebserverCog(nextcord.ext.commands.Cog):
@@ -103,11 +126,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
             elif reg_settings.gamemode == "highlander":
                 gamemode = "hl"
 
-            # AGG specific registration checks
-            if server["guild"] == 952817189893865482:
-                await self.agg_registration_checks(discord_id, steam_id)
-                continue
-
             division = player_divs[gamemode][reg_settings.mode]
 
             no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
@@ -145,7 +163,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             checks_field = ""
 
             # Log check
-            log_num = await get_total_logs(str(steam_id))
+            log_num = await util.get_total_logs(str(steam_id))
             if log_num >= 50:
                 checks_field += "✅ Logs: " + str(log_num)
             else:
@@ -212,151 +230,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
             )
             await registration_channel.send(embed=registration_embed)
 
-    async def agg_registration_checks(self, discord_id: int, steam_id: int):
-        """Goes through the checks and registers a new user in the database.
-
-        Checks in order are:
-        1. Amount of logs from logs.tf
-        2. Registered in RGL
-        3. Played on at least 1 RGL team
-        4. Not RGL banned
-        5. Highest divison played
-
-        Args:
-            discord_id (int): Discord ID of the player
-            steam_id (int): Steam ID of the player
-        """
-        agg_server: nextcord.Guild = self.bot.get_guild(agg.AGG_SERVER_ID[0])
-
-        discord_user: nextcord.Member = agg_server.get_member(discord_id)
-
-        div_appeal_channel: nextcord.TextChannel = agg_server.get_channel(
-            1060023899666002001
-        )
-        new_regs_channel: nextcord.TextChannel = agg_server.get_channel(
-            1060014665129791528
-        )
-        registration_channel: nextcord.TextChannel = agg_server.get_channel(
-            996607763159457812
-        )
-
-        nc_am_role: nextcord.Role = agg_server.get_role(992286429881303101)
-        im_role: nextcord.Role = agg_server.get_role(992281832437596180)
-        main_role: nextcord.Role = agg_server.get_role(1117852769823502397)
-        ad_in_role: nextcord.Role = agg_server.get_role(1060021145212047391)
-
-        hl_ban_role: nextcord.Role = agg_server.get_role(1060020104462606396)
-
-        hl_role: nextcord.Role = agg_server.get_role(997600342306988112)
-        ad_role: nextcord.Role = agg_server.get_role(997600373399359608)
-
-        registered_role: nextcord.Role = agg_server.get_role(1059583976039252108)
-
-        # Give registered role
-        await discord_user.add_roles(registered_role)
-
-        # Setup an embed to send to the new-registrations channel:
-        registration_embed = nextcord.Embed(
-            title="New Registration",
-            url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
-            color=0xFFFFFF,
-        )
-        registration_embed.add_field(
-            name="Discord", value=f"<@{discord_id}>", inline=True
-        )
-        registration_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-
-        # We will add a checks field later, but want to add data to it as we go along the process.
-        checks_field = ""
-
-        # Since we have started the registration process we can delete
-        # the messages the user has sent in #pug-registration
-        # (if they have anyways)
-        async for message in registration_channel.history(limit=100):
-            if message.author.id == discord_id:
-                await message.delete()
-
-        # We want to check some things to allow a player in automatically:
-        # 1. They have at least 50 logs.
-        log_num = await get_total_logs(str(steam_id))
-        if log_num >= 50:
-            checks_field += "✅ Logs: " + str(log_num)
-        else:
-            checks_field += "❌ Logs: " + str(log_num)
-
-        # 2. They have an RGL profile.
-        try:
-            player_data = await RGL.get_player(steam_id)
-        except LookupError:
-            checks_field += "\n❌ RGL Profile does not exist"
-            registration_embed.add_field(
-                name="Checks", value=checks_field, inline=False
-            )
-            await new_regs_channel.send(embed=registration_embed)
-            await registration_channel.send(
-                f"<@{discord_id}> - Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
-            )
-            await discord_user.remove_roles(registered_role)
-            return
-
-        registration_embed.set_thumbnail(url=player_data["avatar"])
-        checks_field += "\n✅ RGL Profile exists"
-
-        # 3. If they have an RGL profile, they have been on a team.
-        sixes_top, hl_top = await RGL.get_top_div(steam_id)
-        if sixes_top[0] == 0 and hl_top[0] == 0:
-            checks_field += "\n❌ No RGL team history"
-            registration_embed.add_field(
-                name="Checks", value=checks_field, inline=False
-            )
-            await new_regs_channel.send(embed=registration_embed)
-            await registration_channel.send(
-                f"<@{discord_id}> - Your registration is being looked over manually due to having no RGL history."
-            )
-            return
-
-        checks_field += "\n✅ RGL team history exists"
-
-        # 4. If they have an RGL history, they are not banned.
-        if await RGL.check_banned(steam_id):
-            checks_field += "\n❌ Currently banned from RGL"
-            registration_embed.add_field(
-                name="Checks", value=checks_field, inline=False
-            )
-            await new_regs_channel.send(embed=registration_embed)
-            await registration_channel.send(
-                f"<@{discord_id}> - You are currently banned from RGL. We do not let banned players into pugs. Come back after your ban expires."
-            )
-            return
-
-        checks_field += "\n✅ Not banned from RGL"
-
-        # 5. If they are ADV/INV, they get the div ban role. Else, give them the right div role.
-        await discord_user.add_roles(hl_role)
-
-        hl_top_div: int = hl_top[0]
-        await discord_user.remove_roles(nc_am_role, im_role, main_role)
-        # Div bybass role
-        if discord_user.get_role(1060036280970395730) is None:
-            if hl_top_div >= 5:  # Advanced and up
-                await discord_user.add_roles(hl_ban_role)
-                await discord_user.remove_roles(hl_role)
-                await div_appeal_channel.send(
-                    f"<@{discord_id}> You have been automatically restricted from normal pugs due to having Advanced/Invite experience in Highlander.\nIf you believe that you should be let in (for example, you roster rode on your Advanced seasons), please let us know.\nNote, this does not mean you are restricted from After Dark pugs."
-                )
-        if hl_top_div >= 5:  # Advanced and up
-            await discord_user.add_roles(ad_in_role, ad_role)
-        elif hl_top_div >= 4:  # Main
-            await discord_user.add_roles(main_role, ad_role)
-        elif hl_top_div >= 3:  # IM
-            await discord_user.add_roles(im_role)
-        else:  # NC/AM
-            await discord_user.add_roles(nc_am_role)
-
-        # Send the final registration embed to the new-registrations channel.
-        registration_embed.add_field(name="Checks", value=checks_field, inline=False)
-        await new_regs_channel.send(embed=registration_embed)
-
     async def send_connect_dm(self, discord_id: int, connect_command: str):
         """Sends a DM to the intended user with the connect commmand.
 
@@ -393,11 +266,11 @@ async def hello_world():
 
 
 @app.post("/api/register")
-async def register(registration: agg.NewUser, request: Request):
+async def register(registration: NewUser, request: Request):
     """Starts the registration process for a new user.
 
     Args:
-        registration (agg.NewUser): The steam and discord ID of the user
+        registration (NewUser): The steam and discord ID of the user
         request (Request): The request to check for the API password in the header
 
     Returns:
@@ -419,11 +292,11 @@ async def register(registration: agg.NewUser, request: Request):
 
 
 @app.post("/api/send_connect")
-async def send_connect(connect: agg.NewConnect, request: Request):
+async def send_connect(connect: NewConnect, request: Request):
     """Runs the send_connect_dm from the bot using a request with connect info
 
     Args:
-        connect (agg.NewConnect): The connect command
+        connect (NewConnect): The connect command
         request (Request): The request to check for the plugin in headers
 
     Returns:

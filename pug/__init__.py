@@ -1,5 +1,6 @@
 """Holds classes for pug commands/setup"""
 from typing import Union, List, Dict
+import time
 
 import nextcord
 
@@ -98,23 +99,28 @@ class PugCategory:
             {"$unset": {f"categories.{self.name}": ""}},
         )
 
-    async def get_last_players(self, guild: int) -> List[PugPlayer] | None:
+    async def get_last_players(self, guild: int) -> tuple[List[PugPlayer], int]:
         """Gets the last players from the database."""
         try:
             result = await category_db.find_item({"_id": guild})
-        except LookupError:
-            return None
+        except LookupError as exc:
+            raise exc
         print(result["categories"])
         if (
             self.name not in result["categories"]
             or "players" not in result["categories"][self.name]
         ):
-            return None
+            raise LookupError
         players: List[PugPlayer] = []
         for player in result["categories"][self.name]["players"]:
             print(player)
-            players.append(PugPlayer(player["steam"]))
-        return players
+            players.append(PugPlayer(discord=player["discord"]))
+        timestamp: int
+        try:
+            timestamp = result["categories"][self.name]["timestamp"]
+        except KeyError:
+            timestamp = round(time.time()) - 7200
+        return players, timestamp
 
     async def update_last_players(self, guild: int, players: List[PugPlayer]) -> None:
         """Updates the last players in the database."""
@@ -123,7 +129,12 @@ class PugCategory:
             last_players.append(player.__dict__)
         await category_db.update_item(
             {"_id": guild},
-            {"$set": {f"categories.{self.name}.players": last_players}},
+            {
+                "$set": {
+                    f"categories.{self.name}.players": last_players,
+                    f"categories.{self.name}.timestamp": round(time.time()),
+                }
+            },
         )
 
 
