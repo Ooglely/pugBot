@@ -200,12 +200,20 @@ class PugMedicCog(commands.Cog):
             user (nextcord.User, optional): The user to make immune.
         """
         await interaction.response.defer()
-        add_med_immune_player(interaction.guild.id, user.id)
+
+        # Ensure the player is not already immune
+        server = get_server(interaction.guild.id)
+        immune_players: Set[int] = set(server["immune"])
+
+        text = f"<@{user.id}> was already immune to medic roll."
+        if user.id not in immune_players:
+            text = f"<@{user.id}> is now immune to medic roll."
+            add_med_immune_player(interaction.guild.id, user.id)
 
         med_embed = nextcord.Embed(
             title="Set User Immune to Medic Roll",
             color=BOT_COLOR,
-            description=f"<@{user.id}> is now immune to medic roll.",
+            description=text,
         )
         await interaction.send(embed=med_embed)
 
@@ -231,12 +239,20 @@ class PugMedicCog(commands.Cog):
             user (nextcord.User, optional): The user to remove immunity from.
         """
         await interaction.response.defer()
-        remove_med_immune_player(interaction.guild.id, user.id)
+
+        # Ensure the player is immune
+        server = get_server(interaction.guild.id)
+        immune_players: Set[int] = set(server["immune"])
+
+        text = f"<@{user.id}> was not immune to being rolled as medic."
+        if user.id in immune_players:
+            text = f"<@{user.id}> is no longer immune to being rolled."
+            remove_med_immune_player(interaction.guild.id, user.id)
 
         med_embed = nextcord.Embed(
-            title="Removed User Immune to Medic Roll",
+            title="Removed User's Immunity to Medic Roll",
             color=BOT_COLOR,
-            description=f"<@{user.id}> is no longer immune to medic roll.",
+            description=text,
         )
         await interaction.send(embed=med_embed)
 
