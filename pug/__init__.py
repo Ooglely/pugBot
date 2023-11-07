@@ -6,7 +6,6 @@ import nextcord
 
 from database import get_player_from_discord, get_player_from_steam, BotCollection
 
-
 default_category = {
     "name": "",
     "add_up": None,
@@ -52,8 +51,12 @@ class PugPlayer:
                 "sixes": {"highest": -1, "current": -1},
                 "hl": {"highest": -1, "current": -1},
             }
-        self.steam: int = player_data["steam"]
-        self.discord: int = player_data["discord"]
+        self.steam: int | None = (
+            int(player_data["steam"]) if player_data["steam"] else None
+        )
+        self.discord: int | None = (
+            int(player_data["discord"]) if player_data["discord"] else None
+        )
         self.division: Dict[str, Dict[str, int]] = player_data["divison"]
         self.registered: bool = registered
 
@@ -374,4 +377,28 @@ class MoveView(nextcord.ui.View):
         """Rerolls new balanced teams"""
         await interaction.message.delete()
         self.action = "done"
+        self.stop()
+
+
+class BooleanView(nextcord.ui.View):
+    """Simple view displaying Yes/No buttons."""
+
+    def __init__(self):
+        super().__init__()
+        self.action = None
+
+    @nextcord.ui.button(label="Yes", style=nextcord.ButtonStyle.green, row=0)
+    async def yes_button(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Yes button that sets action to true"""
+        self.action = True
+        self.stop()
+
+    @nextcord.ui.button(label="No", style=nextcord.ButtonStyle.red, row=1)
+    async def no_button(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """No button that sets action to false"""
+        self.action = False
         self.stop()

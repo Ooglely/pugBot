@@ -1,5 +1,7 @@
 """Functions for interacting with the database throughout the bot."""
+
 import pymongo
+
 import constants
 from rgl_api import RGL_API
 
@@ -168,6 +170,48 @@ def add_player(steam: str, discord: str):
         {"$set": {"steam": steam, "discord": discord, "rgl_registered": False}},
         upsert=True,
     )
+
+
+def add_med_immune_player(guild: int, discord: int):
+    """Add a player to the med immunity array for the guild
+
+    Args:
+        guild (int): The guild ID to set in
+        discord (str): The discord ID of the player to set
+    """
+    database = client.guilds.config
+    database.update_one({"guild": guild}, {"$push": {"immune": discord}})
+
+
+def remove_med_immune_player(guild: int, discord: int):
+    """Remove a player from the med immunity array for the guild
+
+    Args:
+        guild (int): The guild ID to remove from
+        discord (str): The discord ID of the player to remove
+    """
+    database = client.guilds.config
+    database.update_one({"guild": guild}, {"$pull": {"immune": discord}})
+
+
+def clear_med_immunity_by_guild(guild: int):
+    """Clear the med immunity field of all discord ids for a given guild
+
+    Args:
+        guild: The guild ID to clear the med immunity field of
+    """
+    database = client.guilds.config
+    database.update_one({"guild": guild}, {"$set": {"immune": []}})
+
+
+def clear_med_immunity_all_guilds():
+    """Clear the med immunity field for all guilds
+    THIS FUNCTION SHOULD NEVER BE CALLED WITHIN A SLASH COMMAND
+    """
+    database = client.guilds.config
+    database.update_many({}, {"$set": {"immune": []}})
+
+    print("Removed medic immunity for all players in every guild")
 
 
 def get_player_stats(steam: int):
