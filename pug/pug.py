@@ -547,7 +547,7 @@ class PugRunningCog(commands.Cog):
         )
         print(last_players)
         for player in last_players:
-            if int(player.discord) not in [
+            if player.discord not in [
                 int(player.id) for player in red_players + blu_players
             ]:
                 genned = False
