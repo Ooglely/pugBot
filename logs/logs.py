@@ -3,7 +3,7 @@ import nextcord
 from nextcord.ext import commands
 
 from database import BotCollection
-from pug.setup import PugSetupCog
+from pug.pug import PugRunningCog
 from registration import TrueFalseSelect
 from constants import BOT_COLOR
 
@@ -56,7 +56,7 @@ class LogsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @PugSetupCog.pug.subcommand()  ## pylint: disable=no-member
+    @PugRunningCog.pug.subcommand()  ## pylint: disable=no-member
     async def logs(self, interaction: nextcord.Interaction):
         """
         This is a subcommand group of the '/pug' slash command.

@@ -4,7 +4,7 @@
 
 
 
-A discord bot for easily running Team Fortress 2 pick-up-games. Currently has 600 unique players registered in it's database, with around 700 unique logged games played.
+A discord bot for easily running Team Fortress 2 pick-up-games. Currently has 1300 unique players registered in it's database, with over 900 unique logged games played.
 
 Invite the bot to your own server [here.](https://discord.com/api/oauth2/authorize?client_id=989250144895655966&permissions=2147773440&scope=bot)
 

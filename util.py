@@ -140,20 +140,6 @@ async def get_exec_command(reservation: dict, tf_map: str) -> str:
     return command
 
 
-async def get_all_logs():
-    """Gets the logs from logs.tf for agg.
-
-    Returns:
-        logs: dict of logs
-    """
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            "https://logs.tf/api/v1/log?uploader=76561198171178258"
-        ) as resp:
-            logs = await resp.json()
-            return logs
-
-
 async def get_log(log_id: int):
     """Returns log data from the logs.tf API.
 
@@ -164,3 +150,20 @@ async def get_log(log_id: int):
         async with session.get("https://logs.tf/api/v1/log/" + str(log_id)) as resp:
             log = await resp.json()
             return log
+
+
+async def get_total_logs(steam_id: str):
+    """Returns the total number of logs for a player
+
+    Args:
+        steam_id (int): The steam ID to look up
+
+    Returns:
+        int: Total number of logs
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            "https://logs.tf/api/v1/log?limit=10000&player=" + str(steam_id)
+        ) as resp:
+            logs = await resp.json()
+            return logs["results"]

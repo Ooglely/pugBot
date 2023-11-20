@@ -12,6 +12,7 @@ from pug import (
     CategorySelect,
     CategoryButton,
 )
+from pug.pug import PugRunningCog
 from util import is_setup, is_runner
 
 category_db = BotCollection("guilds", "categories")
@@ -23,14 +24,7 @@ class PugSetupCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
 
-    @nextcord.slash_command()
-    async def pug(self, interaction: nextcord.Interaction):
-        """
-        This is the main slash command that will be the prefix of all commands below.
-        This will never get called since it has subcommands.
-        """
-
-    @pug.subcommand()
+    @PugRunningCog.pug.subcommand()
     async def category(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 

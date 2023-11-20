@@ -17,11 +17,118 @@ from pug import (
     PugPlayer,
     PugCategory,
 )
-from pug.setup import PugSetupCog
+
 from registration import RegistrationSettings
 from util import is_setup, is_runner
 
 category_db = BotCollection("guilds", "categories")
+
+
+async def get_player_dict(
+    next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
+) -> Dict[str, List[PugPlayer]]:
+    """Return a dict of players in two voice channels.
+
+    Args:
+        next_pug (nextcord.VoiceChannel): A voice channel to get players from.
+        add_up (nextcord.VoiceChannel): A voice channel to get players from.
+
+    Returns:
+        dict: A dict of players in the voice channels.
+    """
+    players: Dict[str, list[PugPlayer]] = {"next_pug": [], "add_up": []}
+    for member in next_pug.members:
+        player = PugPlayer(discord=member.id)
+        players["next_pug"].append(player)
+    for member in add_up.members:
+        player = PugPlayer(discord=member.id)
+        players["add_up"].append(player)
+    return players
+
+
+async def generate_random_teams(
+    players: Dict[str, List[PugPlayer]], team_size: int
+) -> Dict[str, list[PugPlayer]]:
+    """Generate random teams for a pug.
+
+    Args:
+        players (list): A list of all players in the VC
+        team_size (int): The amount of players per team.
+
+    Returns:
+        teams: The generated teams.
+    """
+    random.shuffle(players["next_pug"])
+    random.shuffle(players["add_up"])
+    all_players: List[PugPlayer] = players["next_pug"] + players["add_up"]
+
+    red_team: list[PugPlayer] = []
+    blu_team: list[PugPlayer] = []
+
+    while len(red_team) < team_size and len(blu_team) < team_size:
+        red_team.append(all_players.pop(0))
+        blu_team.append(all_players.pop(0))
+
+    teams = {"red": red_team, "blu": blu_team}
+    return teams
+
+
+async def generate_balanced_teams(
+    players: Dict[str, List[PugPlayer]],
+    team_size,
+    reg_settings: RegistrationSettings,
+) -> Dict[str, List[PugPlayer]]:
+    """Generate balanced teams for a pug.
+
+    Args:
+        players (dict): A dictionary of all players in the VCs
+        team_size (int): The amount of players per team.
+        reg_settings (RegistrationSettings): The registration settings for the server.
+
+    Returns:
+        teams: The generated teams.
+    """
+    if reg_settings.mode == "" or reg_settings.gamemode == "":
+        teams = await generate_random_teams(players, team_size)
+        return teams
+
+    gamemode: str
+    if reg_settings.gamemode == "sixes":
+        gamemode = "sixes"
+    elif reg_settings.gamemode == "highlander":
+        gamemode = "hl"
+
+    random.shuffle(players["next_pug"])
+    random.shuffle(players["add_up"])
+    players["next_pug"].sort(
+        key=lambda x: 10
+        if x.division[gamemode][reg_settings.mode] == -1
+        else x.division[gamemode][reg_settings.mode],
+        reverse=False,
+    )
+    players["add_up"].sort(
+        key=lambda x: 10
+        if x.division[gamemode][reg_settings.mode] == -1
+        else x.division[gamemode][reg_settings.mode],
+        reverse=False,
+    )
+    all_players = players["next_pug"] + players["add_up"]
+
+    red_team: list[PugPlayer] = []
+    blu_team: list[PugPlayer] = []
+    count = 0
+
+    while len(red_team) < team_size and len(blu_team) < team_size:
+        if count % 2 == 0:
+            red_team.append(all_players.pop(0))
+            blu_team.append(all_players.pop(0))
+        else:
+            blu_team.append(all_players.pop(0))
+            red_team.append(all_players.pop(0))
+        count += 1
+
+    teams = {"red": red_team, "blu": blu_team}
+    return teams
 
 
 class PugRunningCog(commands.Cog):
@@ -30,7 +137,14 @@ class PugRunningCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
 
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+    @nextcord.slash_command()
+    async def pug(self, interaction: nextcord.Interaction):
+        """
+        This is the main slash command that will be the prefix of all commands below.
+        This will never get called since it has subcommands.
+        """
+
+    @pug.subcommand(  # pylint: disable=no-member
         name="genteams", description="Generate teams for a pug."
     )
     @is_setup()
@@ -50,15 +164,10 @@ class PugRunningCog(commands.Cog):
         # Get a list of pug categories
         try:
             result = await category_db.find_item({"_id": interaction.guild.id})
+            categories = result["categories"]
+            if len(categories) == 0:
+                raise LookupError
         except LookupError:
-            await interaction.send(
-                "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
-            )
-            return
-
-        categories = result["categories"]
-
-        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
@@ -122,10 +231,7 @@ class PugRunningCog(commands.Cog):
         )
         await interaction.send(embed=pug_embed, view=select_view)
         embed_status = await select_view.wait()
-        if embed_status:
-            return
-
-        if select_view.name == "cancel":
+        if embed_status or select_view.name == "cancel":
             return
 
         chosen_category: PugCategory = PugCategory(
@@ -160,8 +266,8 @@ class PugRunningCog(commands.Cog):
         elif reg_settings.gamemode == "highlander":
             gamemode = "hl"
 
-        teams = await self.generate_balanced_teams(
-            await self.get_player_list(next_pug, add_up), team_size, reg_settings
+        teams = await generate_balanced_teams(
+            await get_player_dict(next_pug, add_up), team_size, reg_settings
         )
 
         while True:
@@ -209,11 +315,11 @@ class PugRunningCog(commands.Cog):
             pug_embed.clear_fields()
             if red_count != 0 and blu_count != 0:
                 pug_embed.add_field(
-                    name=f"🔴 Red Team\nLevel: {(red_level/red_count):.2f}",
+                    name=f"🔴 Red Team\nLevel: {(red_level / red_count):.2f}",
                     value=red_team_string,
                 )
                 pug_embed.add_field(
-                    name=f"🔵 Blu Team\nLevel: {(blu_level/blu_count):.2f}",
+                    name=f"🔵 Blu Team\nLevel: {(blu_level / blu_count):.2f}",
                     value=blu_team_string,
                 )
             else:
@@ -266,14 +372,14 @@ class PugRunningCog(commands.Cog):
 
             if team_generation_view.action == "random":
                 pug_embed.clear_fields()
-                teams = await self.generate_random_teams(
-                    await self.get_player_list(next_pug, add_up), team_size
+                teams = await generate_random_teams(
+                    await get_player_dict(next_pug, add_up), team_size
                 )
 
             if team_generation_view.action == "balanced":
                 pug_embed.clear_fields()
-                teams = await self.generate_balanced_teams(
-                    await self.get_player_list(next_pug, add_up),
+                teams = await generate_balanced_teams(
+                    await get_player_dict(next_pug, add_up),
                     team_size,
                     reg_settings,
                 )
@@ -298,92 +404,7 @@ class PugRunningCog(commands.Cog):
             players["add_up"].append(player)
         return players
 
-    async def generate_random_teams(
-        self, players: Dict[str, List[PugPlayer]], team_size: int
-    ) -> Dict[str, list[PugPlayer]]:
-        """Generate random teams for a pug.
-
-        Args:
-            players (list): A list of all players in the VC
-            team_size (int): The amount of players per team.
-            reg_settings (RegistrationSettings): The registration settings for the server.
-
-        Returns:
-            teams: The generated teams.
-        """
-        random.shuffle(players["next_pug"])
-        random.shuffle(players["add_up"])
-        all_players: List[PugPlayer] = players["next_pug"] + players["add_up"]
-
-        red_team: list[PugPlayer] = []
-        blu_team: list[PugPlayer] = []
-
-        while len(red_team) < team_size and len(blu_team) < team_size:
-            red_team.append(all_players.pop(0))
-            blu_team.append(all_players.pop(0))
-
-        teams = {"red": red_team, "blu": blu_team}
-        return teams
-
-    async def generate_balanced_teams(
-        self,
-        players: Dict[str, List[PugPlayer]],
-        team_size,
-        reg_settings: RegistrationSettings,
-    ) -> Dict[str, List[PugPlayer]]:
-        """Generate balanced teams for a pug.
-
-        Args:
-            players (list): A list of all players in the VC
-            team_size (int): The amount of players per team.
-            reg_settings (RegistrationSettings): The registration settings for the server.
-
-        Returns:
-            teams: The generated teams.
-        """
-        if reg_settings.mode == "" or reg_settings.gamemode == "":
-            teams = await self.generate_random_teams(players, team_size)
-            return teams
-
-        gamemode: str
-        if reg_settings.gamemode == "sixes":
-            gamemode = "sixes"
-        elif reg_settings.gamemode == "highlander":
-            gamemode = "hl"
-
-        random.shuffle(players["next_pug"])
-        random.shuffle(players["add_up"])
-        players["next_pug"].sort(
-            key=lambda x: 10
-            if x.division[gamemode][reg_settings.mode] == -1
-            else x.division[gamemode][reg_settings.mode],
-            reverse=False,
-        )
-        players["add_up"].sort(
-            key=lambda x: 10
-            if x.division[gamemode][reg_settings.mode] == -1
-            else x.division[gamemode][reg_settings.mode],
-            reverse=False,
-        )
-        all_players = players["next_pug"] + players["add_up"]
-
-        red_team: list[PugPlayer] = []
-        blu_team: list[PugPlayer] = []
-        count = 0
-
-        while len(red_team) < team_size and len(blu_team) < team_size:
-            if count % 2 == 0:
-                red_team.append(all_players.pop(0))
-                blu_team.append(all_players.pop(0))
-            else:
-                blu_team.append(all_players.pop(0))
-                red_team.append(all_players.pop(0))
-            count += 1
-
-        teams = {"red": red_team, "blu": blu_team}
-        return teams
-
-    @PugSetupCog.pug.subcommand(  # pylint: disable=no-member
+    @pug.subcommand(  # pylint: disable=no-member
         name="move", description="Moves players after a pug is done."
     )
     @is_setup()
@@ -397,15 +418,10 @@ class PugRunningCog(commands.Cog):
         # Get a list of pug categories
         try:
             result = await category_db.find_item({"_id": interaction.guild.id})
+            categories = result["categories"]
+            if len(categories) == 0:
+                raise LookupError
         except LookupError:
-            await interaction.send(
-                "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
-            )
-            return
-
-        categories = result["categories"]
-
-        if len(categories) == 0:
             await interaction.send(
                 "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
             )
@@ -522,9 +538,25 @@ class PugRunningCog(commands.Cog):
         game_players = [
             Player(discord=player.id) for player in red_players + blu_players
         ]
-        await LogSearcher.add_searcher_game(
-            interaction.guild.id, chosen_category, game_players
+        # Check if game was already added to searcher
+        genned: bool = True
+        last_players: list[PugPlayer]
+        timestamp: int
+        last_players, timestamp = await chosen_category.get_last_players(
+            interaction.guild.id
         )
+        print(last_players)
+        for player in last_players:
+            if player.discord not in [
+                int(player.id) for player in red_players + blu_players
+            ]:
+                genned = False
+                break
+        if not genned:
+            print("Adding game to searcher...")
+            await LogSearcher.add_searcher_game(
+                interaction.guild.id, chosen_category, game_players, timestamp
+            )
 
         move_view = MoveView()
         pug_embed.title = "Players moved!"

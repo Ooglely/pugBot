@@ -10,6 +10,7 @@ from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands, tasks
 
 import database
+from pug.med_immunity import PugMedicCog
 from rgl_api import RGL_API, Player, Team
 from constants import (
     BOT_COLOR,
@@ -22,8 +23,6 @@ from constants import (
 )
 from util import get_steam64
 from servers.servers import ServerCog
-from agg.stats import StatsCog
-from agg.pug import PugCog
 from logs.searcher import LogSearcher
 from logs.logs import LogsCog
 from pug.pug import PugRunningCog
@@ -41,12 +40,11 @@ activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.wat
 bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
 
 bot.add_cog(ServerCog(bot))
-bot.add_cog(StatsCog(bot))
-bot.add_cog(PugCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
+bot.add_cog(PugMedicCog(bot))
 bot.add_cog(LogsCog(bot))
 bot.remove_command("help")
 
@@ -297,7 +295,6 @@ async def rgl_link_listener(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
-    print(message.content)
     if "https://rgl.gg/Public/PlayerProfile?" in message.content:
         regex = re.search(
             r"(?<=https:\/\/rgl\.gg\/Public\/PlayerProfile\?p=)[0-9]*",
@@ -500,12 +497,6 @@ async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-
         value="/setup - Used to setup the bot for a guild (Admin only)\n/serveme - Used to set the serveme api key for a guild (Admin only)\n/registration - Sets up pugBot.tf registration (Admin only)\n/register - Registers a player in the bot's database\n/search - Search for a player's RGL profile\n/reserve - Get a new reservation from na.serveme.tf\n/map - Change the map on a running reservation\n/rcon - Run an rcon command on an active reservation",
         inline=False,
     )
-    if interaction.guild_id == 952817189893865482:
-        help_embed.add_field(
-            name="AGG Commands",
-            value="/stats - Show a player's pug stats\n/move - Move all players after a pug is over\n/pug - Not implemented yet",
-            inline=False,
-        )
     help_embed.set_footer(text=VERSION)
     await interaction.send(embed=help_embed)
 

@@ -297,7 +297,7 @@ class LogSearcher:
 
     @staticmethod
     async def add_searcher_game(
-        guild: int, category: PugCategory, players: list[Player]
+        guild: int, category: PugCategory, players: list[Player], timestamp=None
     ) -> None:
         """Add a game to the log searcher.
 
@@ -308,7 +308,9 @@ class LogSearcher:
         """
         for player in players:
             await player.link_player()
-        await searcher_db.add_item(PartialLog(guild, category, players).export())
+        await searcher_db.add_item(
+            PartialLog(guild, category, players, timestamp=timestamp).export()
+        )
 
     @staticmethod
     async def _delete_searcher_game(database_id: str) -> None:
@@ -348,7 +350,7 @@ async def check_map_score(log: FullLog) -> bool:
         if (log.log.red_team.score == 5) or (log.log.blue_team.score == 5):
             return True
     elif map_name.startswith("pt_"):
-        if (log.log.red_team.score >= 3) or (log.log.blue_team.score >= 3):
+        if (log.log.red_team.score >= 2) or (log.log.blue_team.score >= 2):
             return True
     return False
 
