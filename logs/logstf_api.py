@@ -1,4 +1,6 @@
 """File storing the LogsAPI class, which is used to interact with the Logs.tf API."""
+import asyncio
+
 import aiohttp
 
 BASE_URL = "https://logs.tf/api/v1/"
@@ -20,10 +22,17 @@ class LogsAPI:
         Returns:
             dict: The log data.
         """
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{BASE_URL}log/{str(log_id)}") as resp:
-                log = await resp.json()
-                return log
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{BASE_URL}log/{str(log_id)}") as resp:
+                    log = await resp.json()
+                    return log
+        except aiohttp.ContentTypeError:
+            await asyncio.sleep(30)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{BASE_URL}log/{str(log_id)}") as resp:
+                    log = await resp.json()
+                    return log
 
     @staticmethod
     async def search_for_log(
@@ -60,9 +69,7 @@ class LogsAPI:
             query_url += f"uploader={uploader}&"
 
         if players is not None:
-            steam_ids = ""
-            for steam_id in players:
-                steam_ids += f"{steam_id},"
+            steam_ids = ",".join([str(player) for player in players])
 
             steam_ids = steam_ids[:-1]
             query_url += f"player={steam_ids}&"

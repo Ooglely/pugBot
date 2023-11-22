@@ -59,6 +59,7 @@ class PugPlayer:
         )
         self.division: Dict[str, Dict[str, int]] = player_data["divison"]
         self.registered: bool = registered
+        self.elo: int = 0
 
 
 class PugCategory:
@@ -324,7 +325,7 @@ class TeamGenerationView(nextcord.ui.View):
         super().__init__()
         self.balancing_disabled = balancing_disabled
         if balancing_disabled:
-            self.children[1].disabled = True
+            self.children[2].disabled = True
         self.action = None
 
     @nextcord.ui.button(label="Move", style=nextcord.ButtonStyle.green)
@@ -334,6 +335,15 @@ class TeamGenerationView(nextcord.ui.View):
         """Moves the players"""
         await _interaction.response.defer()
         self.action = "move"
+        self.stop()
+
+    @nextcord.ui.button(label="Reroll Elo Teams", style=nextcord.ButtonStyle.gray)
+    async def elo(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Moves the players"""
+        await _interaction.response.defer()
+        self.action = "elo"
         self.stop()
 
     @nextcord.ui.button(label="Reroll Balanced Teams", style=nextcord.ButtonStyle.gray)

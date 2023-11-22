@@ -166,8 +166,8 @@ def add_player(steam: str, discord: str):
     """
     database = client.players.data
     database.update_one(
-        {"steam": steam},
-        {"$set": {"steam": steam, "discord": discord, "rgl_registered": False}},
+        {"steam": str(steam)},
+        {"$set": {"steam": str(steam), "discord": discord}},
         upsert=True,
     )
 
