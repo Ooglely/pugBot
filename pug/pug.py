@@ -176,7 +176,10 @@ async def generate_elo_teams(
     max_num = max(all_elos)
     additive = cardinality * max_num
     for player in all_players[0 : team_size * 2]:
-        player_elo = await get_elo(discord=player.discord)
+        try:
+            player_elo = await get_elo(discord=player.discord)
+        except LookupError:
+            player_elo = Elo(0)  # default elo value
         print(player_elo.as_dict())
         player.elo = (
             await player_elo.get_elo_from_mode(
