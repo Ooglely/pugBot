@@ -9,7 +9,7 @@ from constants import BOT_COLOR
 from database import BotCollection
 from logs import Player
 from logs.searcher import LogSearcher
-from logs.elo import get_elo
+from logs.elo import get_elo, Elo
 from logs.elo_cog import EloSettings
 from pug import (
     CategorySelect,
@@ -160,7 +160,10 @@ async def generate_elo_teams(
     all_elos: List[int] = []
     elo_players: List[PugPlayer] = []
     for player in all_players[0 : team_size * 2]:
-        player_elo = await get_elo(discord=player.discord)
+        try:
+            player_elo = await get_elo(discord=player.discord)
+        except LookupError:
+            player_elo = Elo(0)  # default elo value
         all_elos.append(
             await player_elo.get_elo_from_mode(
                 elo_settings.mode, elo_settings.guild_id, category.name, team_size
