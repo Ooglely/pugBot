@@ -121,6 +121,7 @@ class StatsCog(commands.Cog):
         await interaction.send(embed=stats_embed)
 
         elo_ratings: Elo = await get_elo(steam=int(steam_id))
+        print(elo_ratings.as_dict())
         stats_embed.description = None
         stats_embed.add_field(
             name="Sixes ELO",
@@ -134,7 +135,7 @@ class StatsCog(commands.Cog):
         )
         stats_embed.add_field(
             name="Passtime ELO",
-            value=f"{elo_ratings.global_elo.sixes}",
+            value=f"{elo_ratings.global_elo.passtime}",
             inline=True,
         )
 
@@ -144,6 +145,24 @@ class StatsCog(commands.Cog):
             value=server_elo,
             inline=False,
         )
+
+        try:
+            category_string = ""
+            for category, elo in elo_ratings.server_elo[
+                str(interaction.guild.id)
+            ].categories.items():
+                print(category)
+                print(elo)
+                category_string += f"{category}: {elo}\n"
+
+            if len(category_string) != 0:
+                stats_embed.add_field(
+                    name="Server ELO by category",
+                    value=category_string,
+                    inline=False,
+                )
+        except ValueError:
+            pass
 
         stats_embed.set_footer(text="See more detailed stats at pugbot.tf (soon)")
         await interaction.edit_original_message(embed=stats_embed)

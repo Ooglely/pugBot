@@ -10,6 +10,7 @@ from database import BotCollection
 from logs import Player
 from logs.searcher import LogSearcher
 from logs.elo import get_elo
+from logs.elo_cog import EloSettings
 from pug import (
     CategorySelect,
     CategoryButton,
@@ -135,6 +136,8 @@ async def generate_balanced_teams(
 async def generate_elo_teams(
     players: Dict[str, List[PugPlayer]],
     team_size: int,
+    elo_settings: EloSettings,
+    category: PugCategory,
 ) -> Dict[str, List[PugPlayer]]:
     """Generate balanced teams for a pug.
 
@@ -158,7 +161,11 @@ async def generate_elo_teams(
     elo_players: List[PugPlayer] = []
     for player in all_players[0 : team_size * 2]:
         player_elo = await get_elo(discord=player.discord)
-        all_elos.append(player_elo.elo)  # TODO: Change to use server settings
+        all_elos.append(
+            await player_elo.get_elo_from_mode(
+                elo_settings.mode, elo_settings.guild_id, category.name, team_size
+            )
+        )
     print(elo_players)
 
     # Add additive to all elos
@@ -168,7 +175,12 @@ async def generate_elo_teams(
     for player in all_players[0 : team_size * 2]:
         player_elo = await get_elo(discord=player.discord)
         print(player_elo.as_dict())
-        player.elo = player_elo.elo + additive
+        player.elo = (
+            await player_elo.get_elo_from_mode(
+                elo_settings.mode, elo_settings.guild_id, category.name, team_size
+            )
+            + additive
+        )
         total_elo += player.elo
         elo_players.append(player)
 
@@ -357,15 +369,22 @@ class PugRunningCog(commands.Cog):
 
         pug_embed.description = None
         balancing_disabled = False
-        elo_enabled = False  # pylint: disable=unused-variable
-        # TODO: Implement this ^
+        elo_disabled = True
         elo_used = False
 
         reg_settings = RegistrationSettings()
         reg_settings.import_from_db(interaction.guild.id)
         if reg_settings.mode == "" or reg_settings.gamemode == "":
-            pug_embed.description = "Teams are not able to be balanced as there are no registration settings set up.\nPlease run /registration setup to set up registration if you would like balanced teams."
             balancing_disabled = True
+
+        elo_settings = EloSettings(interaction.guild.id)
+        await elo_settings.load()
+        if elo_settings.enabled:
+            elo_disabled = False
+        else:
+            pug_embed.set_footer(
+                text="Elo is disabled for this server, enable using /elo setup!"
+            )
 
         gamemode: str
         if reg_settings.gamemode == "sixes":
@@ -373,9 +392,23 @@ class PugRunningCog(commands.Cog):
         elif reg_settings.gamemode == "highlander":
             gamemode = "hl"
 
-        teams = await generate_balanced_teams(
-            await get_player_dict(next_pug, add_up), team_size, reg_settings
-        )
+        teams: Dict[str, List[PugPlayer]]
+        if not elo_disabled:
+            teams = await generate_elo_teams(
+                await get_player_dict(next_pug, add_up),
+                team_size,
+                elo_settings,
+                chosen_category,
+            )
+            elo_used = True
+        elif not balancing_disabled:
+            teams = await generate_balanced_teams(
+                await get_player_dict(next_pug, add_up), team_size, reg_settings
+            )
+        else:
+            teams = await generate_random_teams(
+                await get_player_dict(next_pug, add_up), team_size
+            )
 
         while True:
             team_generation_view = TeamGenerationView(balancing_disabled)
@@ -514,7 +547,10 @@ class PugRunningCog(commands.Cog):
                 elo_used = True
                 pug_embed.clear_fields()
                 teams = await generate_elo_teams(
-                    await get_player_dict(next_pug, add_up), team_size
+                    await get_player_dict(next_pug, add_up),
+                    team_size,
+                    elo_settings,
+                    chosen_category,
                 )
 
             if team_generation_view.action == "balanced":

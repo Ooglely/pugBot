@@ -212,6 +212,7 @@ async def get_elo(steam: int | None = None, discord: int | None = None) -> Elo:
         data = await player_db.find_item({"discord": str(discord)})
         steam_64 = data["steam"]
     elo = Elo(steam=steam_64)
+    print(steam_64)
     await elo.retrieve()
     return elo
 

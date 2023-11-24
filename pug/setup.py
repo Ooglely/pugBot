@@ -24,7 +24,7 @@ class PugSetupCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
 
-    @PugRunningCog.pug.subcommand()
+    @PugRunningCog.pug.subcommand()  # pylint: disable=no-member
     async def category(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
