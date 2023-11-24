@@ -10,7 +10,6 @@ from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands, tasks
 
 import database
-from pug.med_immunity import PugMedicCog
 from rgl_api import RGL_API, Player, Team
 from constants import (
     BOT_COLOR,
@@ -25,8 +24,10 @@ from util import get_steam64
 from servers.servers import ServerCog
 from logs.searcher import LogSearcher
 from logs.logs import LogsCog
-from pug.pug import PugRunningCog
+from logs.elo_cog import EloCog
+from pug.med_immunity import PugMedicCog
 from pug.setup import PugSetupCog
+from pug.pug import PugRunningCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
 from registration.webserver import WebserverCog
@@ -46,6 +47,7 @@ bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
 bot.add_cog(PugMedicCog(bot))
 bot.add_cog(LogsCog(bot))
+bot.add_cog(EloCog(bot))
 bot.remove_command("help")
 
 RGL: RGL_API = RGL_API()

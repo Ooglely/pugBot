@@ -113,7 +113,7 @@ class Elo:
                 return self.global_elo.sixes
             if 18 <= num_players <= 20:
                 return self.global_elo.highlander
-            return 1000
+            return self.elo
         if mode == "server":
             try:
                 return self.server_elo[str(guild)].elo
