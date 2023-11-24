@@ -7,6 +7,7 @@ from nextcord.ext import tasks
 from pug import PugCategory
 from logs import Player, LogData
 from logs.logstf_api import LogsAPI
+from logs.elo import process_elo
 from database import BotCollection
 from util import get_steam64
 
@@ -293,6 +294,8 @@ class LogSearcher:
             content=f"{category_string}{log_url}\nGuild: {log.guild}"
         )
 
+        # Process elo changes
+        await process_elo(log)
         await logs_list_db.add_item(log.export())
 
     @staticmethod
