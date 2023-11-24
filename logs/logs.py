@@ -65,7 +65,7 @@ class LogsCog(commands.Cog):
         """
 
     @logs.subcommand(name="setup")
-    async def logs_setup(self, interaction: nextcord.Interaction):
+    async def logs_setup(self, interaction: nextcord.Interaction, default_member_permissions=nextcord.Permissions(manage_guild=True)):
         """Setup the logs channel."""
         setup_embed = nextcord.Embed(
             title="Logs Setup",

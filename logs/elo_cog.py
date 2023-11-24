@@ -107,7 +107,7 @@ class EloCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @nextcord.slash_command(name="elo")
+    @nextcord.slash_command(name="elo", description="Set up the ELO system for this server.", default_member_permissions=nextcord.Permissions(manage_guild=True))
     async def elo(self, _interaction: nextcord.Interaction):
         """Main elo command group"""
 
