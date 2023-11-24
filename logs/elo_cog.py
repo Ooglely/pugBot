@@ -123,7 +123,7 @@ class EloCog(commands.Cog):
         await elo_settings.load()
         print(elo_settings.__dict__)
 
-        setup_embed.description = "Would you like to enable elo?"
+        setup_embed.description = "Would you like to enable elo?\nPlease note that only players registered with the bot through pugbot.tf will be tracked in the elo system."
         elo_enable = TrueFalseSelect()
         await interaction.send(embed=setup_embed, view=elo_enable)
         setup_status = await elo_enable.wait()
@@ -169,6 +169,10 @@ class EloCog(commands.Cog):
 
         await elo_settings.save()
         setup_embed.description = f"Elo has been setup.\nEnabled: {elo_settings.enabled}\nMode: {elo_settings.mode}\nVisible: {elo_settings.visible}"
+        setup_embed.add_field(
+            name="Reminder",
+            value="Players must be registered with the bot to be tracked in the elo system.",
+        )
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=60)
 
