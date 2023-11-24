@@ -70,7 +70,7 @@ class ServerCog(commands.Cog):
                         continue
                     HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
 
-        print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
+        # print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
 
         map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
 
@@ -85,7 +85,7 @@ class ServerCog(commands.Cog):
         with open("map_list.txt", "r", encoding="UTF-8") as map_file:
             self.all_maps = map_file.read()
 
-        print(self.all_maps)
+        # print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")

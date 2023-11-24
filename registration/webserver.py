@@ -68,7 +68,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         await self.register_new_user(
             int(discord_user.id), int(util.get_steam64(steam_id))
         )
-        add_player(util.get_steam64(steam_id), str(discord_user.id))
+        add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
         await interaction.send(
             f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
             ephemeral=True,

@@ -166,8 +166,8 @@ def add_player(steam: str, discord: str):
     """
     database = client.players.data
     database.update_one(
-        {"steam": steam},
-        {"$set": {"steam": steam, "discord": discord, "rgl_registered": False}},
+        {"steam": str(steam)},
+        {"$set": {"steam": str(steam), "discord": discord}},
         upsert=True,
     )
 
@@ -294,6 +294,12 @@ def get_all_players():
 def player_count():
     """Returns the amount of players in the database."""
     database = client.players.data
+    return database.count_documents({})
+
+
+def log_count():
+    """Returns the amount of logs in the database."""
+    database = client.logs.list
     return database.count_documents({})
 
 
