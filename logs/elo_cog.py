@@ -1,4 +1,6 @@
 """This cog contains the elo cog with commands to configure elo and add missing logs."""
+import time
+
 from bson import Int64 as NumberLong
 import nextcord
 from nextcord.ext import commands
@@ -10,10 +12,12 @@ from logs import Player
 from logs.searcher import FullLog, PartialLog
 from logs.logstf_api import LogsAPI
 from logs.elo import process_elo
-from pug import PugCategory
+from pug import PugCategory, CategoryButton, CategorySelect
+from util import is_runner, get_steam64
 
 config_db: BotCollection = BotCollection("guilds", "config")
 logs_db: BotCollection = BotCollection("logs", "list")
+category_db: BotCollection = BotCollection("guilds", "categories")
 
 
 class EloSettings:
@@ -168,9 +172,79 @@ class EloCog(commands.Cog):
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=60)
 
+    @is_runner()
+    @elo.subcommand(name="update")
+    async def add_log(self, interaction: nextcord.Interaction, logstf_id: int):
+        """Update the elo of all players in a log."""
+        try:
+            # If the log already exists we don't wanna add it again.
+            result = await logs_db.find_item({"log_id": int(logstf_id)})
+            await interaction.send(
+                content=f"Log #{result['log_id']} already exists in the database."
+            )
+            return
+        except LookupError:
+            await interaction.send(content="Looking for log...")
+            players: list[Player] = []
+            log = await LogsAPI.get_single_log(logstf_id)
+            for player in log["players"]:
+                print(player)
+                log_player = Player(steam=get_steam64(player))
+                await log_player.link_player()
+                players.append(log_player)
+
+            # Need the category that the log was played in
+            try:
+                result = await category_db.find_item({"_id": interaction.guild.id})
+                categories = result["categories"]
+            except LookupError:
+                await interaction.send(
+                    "There are no pug categories setup for this server.\nPlease run /pug category add to add a pug category."
+                )
+                return
+            select_view = CategorySelect()
+
+            for name, _category in categories.items():
+                disabled: bool = False
+                color = nextcord.ButtonStyle.gray
+                button = CategoryButton(name=name, color=color, disabled=disabled)
+                select_view.add_item(button)
+
+            pug_embed = nextcord.Embed(
+                title="Generate Teams",
+                color=BOT_COLOR,
+                description="Select the category this log was played in.",
+            )
+            await interaction.edit_original_message(embed=pug_embed, view=select_view)
+            embed_status = await select_view.wait()
+            if embed_status or select_view.name == "cancel":
+                return
+
+            chosen_category: PugCategory = PugCategory(
+                select_view.name, categories[select_view.name]
+            )
+
+            full_log = FullLog(
+                PartialLog(
+                    interaction.guild.id,
+                    chosen_category,
+                    players,
+                    round(time.time()),
+                ),
+                logstf_id,
+                log,
+            )
+
+            await logs_db.add_item(full_log.export())
+            await process_elo(full_log)
+            await interaction.edit_original_message(
+                content="Elo has been updated.", embed=None, view=None
+            )
+
+    @commands.is_owner()
     @elo.subcommand(name="fullupdate")
     async def full_elo_update(self, interaction: nextcord.Interaction):
-        """Update the elo of all players."""
+        """Update the elo of all players using the full backlog of logs."""
         await interaction.send(content="Updating elo...")
         all_logs = await logs_db.find_all_items()
         for log in all_logs:
