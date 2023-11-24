@@ -3,7 +3,7 @@ import time
 
 from bson import Int64 as NumberLong
 import nextcord
-from nextcord.ext import commands
+from nextcord.ext import commands, application_checks
 
 from database import BotCollection
 from registration import TrueFalseSelect
@@ -111,10 +111,10 @@ class EloCog(commands.Cog):
     async def elo(self, _interaction: nextcord.Interaction):
         """Main elo command group"""
 
+    @application_checks.has_permissions(manage_guild=True)
     @elo.subcommand(
         name="setup",
         description="Set up the ELO system for this server.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
     )
     async def elo_setup(self, interaction: nextcord.Interaction):
         """Setup the elo settings for a guild."""
