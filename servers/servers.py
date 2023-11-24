@@ -649,25 +649,31 @@ class ServerCog(commands.Cog):
     async def server_status(self):
         """Update the status of the servers every minute."""
         for server in self.servers:
-            status: bool = await server.is_active()
-            if not status:
-                for message in server.messages:
-                    try:
-                        await message.delete()
-                    except nextcord.HTTPException:
+            try:
+                status: bool = await server.is_active()
+                if not status:
+                    for message in server.messages:
                         try:
-                            self.servers.remove(server)
-                        except ValueError:
-                            print("Server not in list")
-                            print(self.servers)
+                            await message.delete()
+                        except nextcord.HTTPException:
+                            try:
+                                self.servers.remove(server)
+                            except ValueError:
+                                print("Server not in list")
+                                print(self.servers)
+                                continue
                             continue
+                    try:
+                        self.servers.remove(server)
+                    except ValueError:
+                        print("Server not in list")
+                        print(self.servers)
                         continue
-                try:
-                    self.servers.remove(server)
-                except ValueError:
-                    print("Server not in list")
-                    print(self.servers)
-                    continue
+            except AttributeError:
+                print("Attribute error")
+                print(server)
+                print(server.messages)
+                continue
         return
 
     @server_status.error
