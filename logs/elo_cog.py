@@ -1,12 +1,19 @@
 """This cog contains the elo cog with commands to configure elo and add missing logs."""
+from bson import Int64 as NumberLong
 import nextcord
 from nextcord.ext import commands
 
 from database import BotCollection
 from registration import TrueFalseSelect
 from constants import BOT_COLOR
+from logs import Player
+from logs.searcher import FullLog, PartialLog
+from logs.logstf_api import LogsAPI
+from logs.elo import process_elo
+from pug import PugCategory
 
 config_db: BotCollection = BotCollection("guilds", "config")
+logs_db: BotCollection = BotCollection("logs", "list")
 
 
 class EloSettings:
@@ -21,12 +28,19 @@ class EloSettings:
     async def load(self):
         """Load elo settings from the database."""
         try:
-            guild_settings = await config_db.find_item({"guild": self.guild_id})
+            guild_settings = await config_db.find_item(
+                {"guild": NumberLong(str(self.guild_id))}
+            )
+            print(guild_settings)
+            if "elo" in guild_settings:
+                log_settings = guild_settings["elo"]
+            else:
+                log_settings = {
+                    "enabled": False,
+                    "mode": "global",
+                    "visible": False,
+                }
         except LookupError:
-            return
-        if "elo" in guild_settings:
-            log_settings = guild_settings["elo"]
-        else:
             log_settings = {
                 "enabled": False,
                 "mode": "global",
@@ -153,3 +167,23 @@ class EloCog(commands.Cog):
         setup_embed.description = f"Elo has been setup.\nEnabled: {elo_settings.enabled}\nMode: {elo_settings.mode}\nVisible: {elo_settings.visible}"
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=60)
+
+    @elo.subcommand(name="fullupdate")
+    async def full_elo_update(self, interaction: nextcord.Interaction):
+        """Update the elo of all players."""
+        await interaction.send(content="Updating elo...")
+        all_logs = await logs_db.find_all_items()
+        for log in all_logs:
+            print(log)
+            players = [Player(data=player) for player in log["players"]]
+            full_log = FullLog(
+                PartialLog(
+                    log["guild"],
+                    PugCategory(log["category"]["name"], log["category"]),
+                    players,
+                    log["timestamp"],
+                ),
+                log["log_id"],
+                await LogsAPI.get_single_log(log["log_id"]),
+            )
+            await process_elo(full_log)

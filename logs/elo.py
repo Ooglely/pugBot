@@ -4,10 +4,6 @@ from typing import Any
 from bson import Int64 as NumberLong
 
 from database import BotCollection
-from logs import Player
-from logs.searcher import FullLog, PartialLog
-from logs.logstf_api import LogsAPI
-from pug import PugCategory
 from util import get_steam64
 
 default_elo: dict = {
@@ -90,7 +86,7 @@ class Elo:
         )  # pylint: disable=no-member
 
     async def get_elo_from_mode(
-        self, mode: str, guild: int, category: str, num_players: int
+        self, mode: str, guild: int, category: str = "", num_players: int = 0
     ) -> int:
         # pylint: disable=too-many-return-statements
         """Get the elo of the player from a specific mode.
@@ -220,25 +216,6 @@ async def get_elo(steam: int | None = None, discord: int | None = None) -> Elo:
     return elo
 
 
-async def full_elo_update():
-    """Update the elo of all players."""
-    all_logs = await logs_db.find_all_items()
-    for log in all_logs:
-        print(log)
-        players = [Player(data=player) for player in log["players"]]
-        full_log = FullLog(
-            PartialLog(
-                log["guild"],
-                PugCategory(log["category"]["name"], log["category"]),
-                players,
-                log["timestamp"],
-            ),
-            log["log_id"],
-            await LogsAPI.get_single_log(log["log_id"]),
-        )
-        await process_elo(full_log)
-
-
 async def calculate_probability(team1_avg_elo: float, team2_avg_elo: float) -> float:
     """Calculate the probability of team1 winning against team2.
 
@@ -253,7 +230,7 @@ async def calculate_probability(team1_avg_elo: float, team2_avg_elo: float) -> f
     return 1 / (1 + pow(10, (team1_avg_elo - team2_avg_elo) / 300))
 
 
-async def calculate_elo_changes(log: FullLog, mode: str) -> None:
+async def calculate_elo_changes(log, mode: str) -> None:
     """Calculate the elo changes for each player in the log.
 
     Args:
@@ -326,7 +303,7 @@ async def calculate_elo_changes(log: FullLog, mode: str) -> None:
         await blu_player_elo.upload()
 
 
-async def process_elo(log: FullLog) -> None:
+async def process_elo(log) -> None:
     """Process elo changes for each gamemode.
 
     Args:
