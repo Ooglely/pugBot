@@ -64,8 +64,12 @@ class LogsCog(commands.Cog):
         This will never get called since it has subcommands.
         """
 
-    @logs.subcommand(name="setup")
-    async def logs_setup(self, interaction: nextcord.Interaction, default_member_permissions=nextcord.Permissions(manage_guild=True)):
+    @logs.subcommand(
+        name="setup",
+        description="Set up the logs channel for this server.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
+    async def logs_setup(self, interaction: nextcord.Interaction):
         """Setup the logs channel."""
         setup_embed = nextcord.Embed(
             title="Logs Setup",
