@@ -321,10 +321,11 @@ class CategoryButton(nextcord.ui.Button):
 class TeamGenerationView(nextcord.ui.View):
     """View to show generated teams."""
 
-    def __init__(self, balancing_disabled):
+    def __init__(self, elo_disabled, balancing_disabled):
         super().__init__()
-        self.balancing_disabled = balancing_disabled
-        if balancing_disabled:
+        if elo_disabled is True:
+            self.children[1].disabled = True
+        if balancing_disabled is True:
             self.children[2].disabled = True
         self.action = None
 
@@ -337,7 +338,7 @@ class TeamGenerationView(nextcord.ui.View):
         self.action = "move"
         self.stop()
 
-    @nextcord.ui.button(label="Reroll Elo Teams", style=nextcord.ButtonStyle.gray)
+    @nextcord.ui.button(label="🔁 ELO", style=nextcord.ButtonStyle.gray)
     async def elo(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
@@ -346,7 +347,7 @@ class TeamGenerationView(nextcord.ui.View):
         self.action = "elo"
         self.stop()
 
-    @nextcord.ui.button(label="Reroll Balanced Teams", style=nextcord.ButtonStyle.gray)
+    @nextcord.ui.button(label="🔁 RGL Divisions", style=nextcord.ButtonStyle.gray)
     async def balance(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
@@ -355,7 +356,7 @@ class TeamGenerationView(nextcord.ui.View):
         self.action = "balance"
         self.stop()
 
-    @nextcord.ui.button(label="Reroll Random Teams", style=nextcord.ButtonStyle.gray)
+    @nextcord.ui.button(label="🔁 Random", style=nextcord.ButtonStyle.gray)
     async def random(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):

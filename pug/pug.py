@@ -411,7 +411,7 @@ class PugRunningCog(commands.Cog):
             )
 
         while True:
-            team_generation_view = TeamGenerationView(balancing_disabled)
+            team_generation_view = TeamGenerationView(elo_disabled, balancing_disabled)
             if not elo_used:
                 if not balancing_disabled:
                     teams["red"].sort(
