@@ -52,7 +52,7 @@ class StatsCog(commands.Cog):
         )
         stats_embed.add_field(
             name="Passtime ELO",
-            value=f"{elo_ratings.global_elo.sixes}",
+            value=f"{elo_ratings.global_elo.passtime}",
             inline=True,
         )
 
