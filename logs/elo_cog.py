@@ -1,4 +1,5 @@
 """This cog contains the elo cog with commands to configure elo and add missing logs."""
+import asyncio
 import time
 
 from bson import Int64 as NumberLong
@@ -269,3 +270,4 @@ class EloCog(commands.Cog):
                 await LogsAPI.get_single_log(log["log_id"]),
             )
             await process_elo(full_log)
+            await asyncio.sleep(10)

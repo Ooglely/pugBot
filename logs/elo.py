@@ -1,4 +1,5 @@
 """Elo calculations, storage and utilities."""
+from difflib import SequenceMatcher
 from typing import Any
 
 from bson import Int64 as NumberLong
@@ -15,6 +16,7 @@ default_elo: dict = {
 player_db: BotCollection = BotCollection("players", "data")
 elo_db: BotCollection = BotCollection("players", "elo")
 logs_db: BotCollection = BotCollection("logs", "list")
+category_db: BotCollection = BotCollection("guilds", "categories")
 
 
 class Elo:
@@ -117,12 +119,13 @@ class Elo:
                 self.server_elo[str(guild)] = ServerElo(default_elo, str(guild))
                 return 1000
         if mode == "category":
+            correct_category = await find_similar_categories(category, guild)
             try:
-                return self.server_elo[str(guild)].categories[category]
+                return self.server_elo[str(guild)].categories[correct_category]
             except KeyError:
                 if str(guild) not in self.server_elo:
                     self.server_elo[str(guild)] = ServerElo(default_elo, str(guild))
-                self.server_elo[str(guild)].categories[category] = 1000
+                self.server_elo[str(guild)].categories[correct_category] = 1000
                 return 1000
         return 1000
 
@@ -154,12 +157,15 @@ class Elo:
                 self.server_elo[str(guild)] = ServerElo(default_elo, str(guild))
                 self.server_elo[str(guild)].elo += elo_change
         elif mode == "category":
+            correct_category = await find_similar_categories(category, guild)
             try:
-                self.server_elo[str(guild)].categories[category] += elo_change
+                self.server_elo[str(guild)].categories[correct_category] += elo_change
             except KeyError:
                 if str(guild) not in self.server_elo:
                     self.server_elo[str(guild)] = ServerElo(default_elo, str(guild))
-                self.server_elo[str(guild)].categories[category] = 1000 + elo_change
+                self.server_elo[str(guild)].categories[correct_category] = (
+                    1000 + elo_change
+                )
 
 
 class GlobalElo:
@@ -318,3 +324,34 @@ async def process_elo(log) -> None:
     await calculate_elo_changes(log, "server")
     print("Processing category elo")
     await calculate_elo_changes(log, "category")
+
+
+async def find_similar_categories(category: str, guild: int) -> str:
+    """If there are other similar categories (like an A/B pug category), return a combined name so that the elo is shared between them.
+
+    Args:
+        category (str): The category to find similar categories to.
+
+    Returns:
+        str: The combined category name.
+    """
+    all_categories = await category_db.find_item({"_id": NumberLong(str(guild))})
+    # Find category with same waiting channels
+    try:
+        add_up: int = all_categories["categories"][category]["add_up"]
+    except KeyError:
+        return category
+    similar_category: str | None = None
+    for name, category_data in all_categories["categories"].items():
+        if name == category:
+            continue
+        if category_data["add_up"] == add_up:
+            similar_category = name
+            break
+    if similar_category is None:
+        return category
+
+    match = SequenceMatcher(None, category, similar_category).find_longest_match()
+    combined = category[match.a : match.a + match.size]
+    combined = combined.replace(" - ", "")
+    return combined
