@@ -515,6 +515,7 @@ async def update_status():
         "sea otters :D",
         f"{database.player_count()} registered players",
         "meds drop :(",
+        f"{database.log_count()} recorded logs"
     ]
     await bot.change_presence(
         activity=nextcord.Activity(

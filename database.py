@@ -296,6 +296,11 @@ def player_count():
     database = client.players.data
     return database.count_documents({})
 
+def log_count():
+    """Returns the amount of logs in the database."""
+    database = client.logs.list
+    return database.count_documents({})
+
 
 def get_divisions(discord: int):
     """Get the RGL divisons of a player.
