@@ -1,7 +1,6 @@
 """This cog contains the logs command and its subcommands."""
 import nextcord
 from nextcord.ext import commands, application_checks
-
 from database import BotCollection
 from pug.pug import PugRunningCog
 from registration import TrueFalseSelect
@@ -66,8 +65,7 @@ class LogsCog(commands.Cog):
 
     @application_checks.has_permissions(manage_guild=True)
     @logs.subcommand(
-        name="setup",
-        description="Set up the logs channel for this server."
+        name="setup", description="Set up the logs channel for this server."
     )
     async def logs_setup(self, interaction: nextcord.Interaction):
         """Setup the logs channel."""
