@@ -54,7 +54,8 @@ def get_steam64(arg: str) -> str:
     if arg.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
         args = arg.split("=")
         steam64 = args[1].replace("&r", "")
-
+    else:
+        steam64 = steamid.steam64_from_url(f"https://steamcommunity.com/id/{arg}")
     return steam64
 
 
