@@ -164,5 +164,8 @@ class StatsCog(commands.Cog):
         except ValueError:
             pass
 
-        stats_embed.set_footer(text="See more detailed stats at pugbot.tf (soon)")
+        stats_embed.url = f"https://logs.tf/profile/{steam_id}"
+        stats_embed.set_footer(
+            text="See more detailed stats at pugbot.tf (soon) | Steam ID: " + steam_id
+        )
         await interaction.edit_original_message(embed=stats_embed)
