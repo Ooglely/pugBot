@@ -1,4 +1,5 @@
 """Files containing the server cog with commands for reserving/managing servers."""
+import asyncio
 import json
 import re
 import string
@@ -460,6 +461,7 @@ class ServerCog(commands.Cog):
         )
         await server_view.wait()
         server_id = server_view.server_chosen
+        print(reservations[server_id])
 
         map_versions = await ServemeAPI.fetch_newest_version(
             tf_map, self.all_maps
@@ -504,6 +506,18 @@ class ServerCog(commands.Cog):
         await interaction.edit_original_message(
             content="Changing map to `" + chosen_map + "`.", view=None
         )
+
+        # Try to reexec the whitelist after a map change
+        if reservations[server_id]["whitelist_id"] is None:
+            await asyncio.sleep(15)
+            with Client(
+                reservations[server_id]["server"]["ip"],
+                int(reservations[server_id]["server"]["port"]),
+                passwd=reservations[server_id]["rcon"],
+            ) as client:
+                client.run(
+                    f"tftrue_whitelist_id {reservations[server_id]['custom_whitelist_id']}"
+                )
 
     @util.is_setup()
     @util.is_runner()
