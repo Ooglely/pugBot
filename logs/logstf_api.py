@@ -71,7 +71,6 @@ class LogsAPI:
         if players is not None:
             steam_ids = ",".join([str(player) for player in players])
 
-            steam_ids = steam_ids[:-1]
             query_url += f"player={steam_ids}&"
 
         if limit is not None:
