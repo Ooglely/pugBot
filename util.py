@@ -43,19 +43,21 @@ def get_steam64(arg: str) -> str:
     """
     if arg.startswith("https://steamcommunity.com/id/"):
         steam64 = steamid.steam64_from_url(arg)
-    if arg.startswith("[U:1:"):
+    elif arg.startswith("[U:1:"):
         obj = SteamID(arg)
         steam64 = obj.as_64
-    if arg.startswith("STEAM_"):
+    elif arg.startswith("STEAM_"):
         obj = SteamID(arg)
         steam64 = obj.as_64
-    if arg.startswith("7656119"):
+    elif arg.startswith("7656119"):
         steam64 = arg
-    if arg.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
+    elif arg.startswith("https://rgl.gg/Public/PlayerProfile.aspx?"):
         args = arg.split("=")
         steam64 = args[1].replace("&r", "")
     else:
         steam64 = steamid.steam64_from_url(f"https://steamcommunity.com/id/{arg}")
+    if steam64 is None:
+        raise ValueError(f"Invalid steam id: {arg}")
     return steam64
 
 
