@@ -157,79 +157,47 @@ async def generate_elo_teams(
     blu_team: List[PugPlayer] = []
 
     total_elo: int = 0
-    all_elos: List[int] = []
     elo_players: List[PugPlayer] = []
-    for player in all_players[0 : team_size * 2]:
-        try:
-            player_elo = await get_elo(discord=player.discord)
-        except LookupError:
-            player_elo = Elo(0)  # default elo value
-        all_elos.append(
-            await player_elo.get_elo_from_mode(
-                elo_settings.mode, elo_settings.guild_id, category.name, team_size
-            )
-        )
-    print(elo_players)
 
-    # Add additive to all elos
-    cardinality = len(all_elos)
-    max_num = max(all_elos)
-    additive = cardinality * max_num
     for player in all_players[0 : team_size * 2]:
         try:
             player_elo = await get_elo(discord=player.discord)
         except LookupError:
             player_elo = Elo(0)  # default elo value
         print(player_elo.as_dict())
-        player.elo = (
-            await player_elo.get_elo_from_mode(
-                elo_settings.mode, elo_settings.guild_id, category.name, team_size
-            )
-            + additive
+        player.elo = await player_elo.get_elo_from_mode(
+            elo_settings.mode, elo_settings.guild_id, category.name, team_size
         )
         total_elo += player.elo
         elo_players.append(player)
 
     # Find balanced teams
-    if team_size > 1:
-        try:
-            red_team = find_subset(elo_players, int(total_elo / 2))
-            blu_team = elo_players.copy()
-        except ValueError:
-            try:
-                tolerance = (max(all_elos) - min(all_elos)) / 2
-                red_team = find_subset(
-                    elo_players, int(total_elo / 2), tolerance=int(tolerance)
-                )
-                blu_team = elo_players.copy()
-            except ValueError:
-                red_team = list(elo_players[0:team_size])
-                blu_team = list(elo_players[team_size : team_size * 2])
-    else:
-        red_team = [elo_players[0]]
-        blu_team = [elo_players[1]]
+    try:
+        red_team = find_subset(elo_players, team_size, int(total_elo / 2))
+        blu_team = elo_players.copy()
+    except ValueError:
+        print("No subset found, generating random teams...")
+        red_team = elo_players[0:team_size]
+        blu_team = elo_players[team_size : team_size * 2]
+
+    # Remove players from blu team
     for item in red_team:
         for i, item_blu in enumerate(blu_team):
             if item_blu.discord == item.discord:
                 blu_team.pop(i)
                 break
 
-    for i in range(0, team_size):
-        red_team[i].elo = red_team[i].elo - additive
-        blu_team[i].elo = blu_team[i].elo - additive
-
     teams = {"red": red_team, "blu": blu_team}
     return teams
 
 
-def find_subset(
-    arr: List[PugPlayer], total: int, tolerance: int = 1
-) -> List[PugPlayer]:
-    """Find a subset of a list that adds up to a total.
+def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
+    """Find a subset of players of size num that gets as close to total as possible.
 
     Args:
         arr (List[EloPlayer]): The list of all players
-        total (int): The total elo of the teams
+        num (int): Team size
+        goal (int): The target average ELO for each team
 
     Raises:
         ValueError: Subset not found
@@ -237,20 +205,28 @@ def find_subset(
     Returns:
         List[EloPlayer]: One subset of players that adds up to the total elo
     """
-    if (tolerance * -1) <= total <= tolerance:
-        return arr
-    if arr is None:
-        raise ValueError("Subset not found")
-    for item in arr:
-        new_arr: List = arr.copy()
-        new_arr.remove(item)
-        new_sum = total - item.elo
-        if new_sum < 0:
-            continue
-        if find_subset(new_arr, new_sum) is not None:
-            return find_subset(new_arr, new_sum)
-        continue
-    raise ValueError("Subset not found")
+    # Use dynamic programming to find a subset of players that gets as close to total as possible
+    subset = [[False for i in range(goal + 1)] for j in range(num + 1)]
+    for i in range(num + 1):
+        subset[i][0] = True
+    for i in range(1, goal + 1):
+        subset[0][i] = False
+    for i in range(1, num + 1):
+        for j in range(1, goal + 1):
+            if j < arr[i - 1].elo:
+                subset[i][j] = subset[i - 1][j]
+            if j >= arr[i - 1].elo:
+                subset[i][j] = subset[i - 1][j] or subset[i - 1][j - arr[i - 1].elo]
+
+    i = num
+    j = goal
+    subset_list = []
+    while i > 0 and j > 0:
+        if not subset[i - 1][j]:
+            subset_list.append(arr[i - 1])
+            j -= arr[i - 1].elo
+        i -= 1
+    return subset_list
 
 
 class PugRunningCog(commands.Cog):
