@@ -1,3 +1,5 @@
+-------------
+PENDING:   (fs)
 PENDING:   (fs) 123_okwtfisthis
 PENDING:   (fs) 123_okwtfisthis_v2
 PENDING:   (fs) 1529699336
@@ -118,7 +120,6 @@ PENDING:   (fs) arena_enis
 PENDING:   (fs) arena_epsilon
 PENDING:   (fs) arena_firstevermap
 PENDING:   (fs) arena_firstroom
-PENDING:   (fs) arena_flourmill_b12
 PENDING:   (fs) arena_freight
 PENDING:   (fs) arena_frogcenter
 PENDING:   (fs) arena_funny
@@ -150,7 +151,6 @@ PENDING:   (fs) arena_process
 PENDING:   (fs) arena_ravine
 PENDING:   (fs) arena_redblue_b_10
 PENDING:   (fs) arena_restraint
-PENDING:   (fs) arena_rivet_rc2a
 PENDING:   (fs) arena_rockhill
 PENDING:   (fs) arena_room
 PENDING:   (fs) arena_sawmill
@@ -251,6 +251,7 @@ PENDING:   (fs) car_parkv6
 PENDING:   (fs) car_test
 PENDING:   (fs) cavev2
 PENDING:   (fs) cdtf_robotmap_concept
+PENDING:   (fs) changelevel
 PENDING:   (fs) charge_pork
 PENDING:   (fs) chemo
 PENDING:   (fs) chemplant1
@@ -747,6 +748,7 @@ PENDING:   (fs) cp_metalworks_f2
 PENDING:   (fs) cp_metalworks_f3
 PENDING:   (fs) cp_metalworks_f4
 PENDING:   (fs) cp_metalworks_f5
+PENDING:   (fs) cp_metalworks_f6
 PENDING:   (fs) cp_metalworks_mfm
 PENDING:   (fs) cp_metalworks_rc5
 PENDING:   (fs) cp_metalworks_rc7
@@ -850,6 +852,7 @@ PENDING:   (fs) cp_priderock_b1
 PENDING:   (fs) cp_priderock_b2
 PENDING:   (fs) cp_pro_dustbowl
 PENDING:   (fs) cp_probowl_rc1
+PENDING:   (fs) cp_process
 PENDING:   (fs) cp_process_a1
 PENDING:   (fs) cp_process_a9
 PENDING:   (fs) cp_process_b4
@@ -868,6 +871,7 @@ PENDING:   (fs) cp_process_final_small_fix
 PENDING:   (fs) cp_process_night_a6
 PENDING:   (fs) cp_process_pro_rc4
 PENDING:   (fs) cp_process_rc3
+PENDING:   (fs) cp_process_spooky_a1
 PENDING:   (fs) cp_prolands_b1a
 PENDING:   (fs) cp_prolands_b1b
 PENDING:   (fs) cp_prolands_b2
@@ -979,6 +983,7 @@ PENDING:   (fs) cp_sluice_box_a5
 PENDING:   (fs) cp_small
 PENDING:   (fs) cp_smallbowl
 PENDING:   (fs) cp_snakewater
+PENDING:   (fs) cp_snakewater_final
 PENDING:   (fs) cp_snakewater_final1
 PENDING:   (fs) cp_snakewater_final1_d
 PENDING:   (fs) cp_snakewater_u10
@@ -1018,6 +1023,7 @@ PENDING:   (fs) cp_steel_f6
 PENDING:   (fs) cp_steel_f7
 PENDING:   (fs) cp_steel_f8
 PENDING:   (fs) cp_steel_f9
+PENDING:   (fs) cp_steel_final
 PENDING:   (fs) cp_steel_scrambled
 PENDING:   (fs) cp_steel_ugc
 PENDING:   (fs) cp_steiner_a10
@@ -1664,6 +1670,7 @@ PENDING:   (fs) jump_ablation_b3
 PENDING:   (fs) jump_ablation_b4
 PENDING:   (fs) jump_above_rc1
 PENDING:   (fs) jump_abyss_rc1
+PENDING:   (fs) jump_academy2_r8__1_
 PENDING:   (fs) jump_academy2_rc7
 PENDING:   (fs) jump_academy2_rc9a
 PENDING:   (fs) jump_academy_beta3a_v1
@@ -1938,6 +1945,7 @@ PENDING:   (fs) koth1noprev
 PENDING:   (fs) koth_1tower_a1
 PENDING:   (fs) koth_2spaw
 PENDING:   (fs) koth_3007_3way_a1b
+PENDING:   (fs) koth_3am
 PENDING:   (fs) koth_4rollout_a1
 PENDING:   (fs) koth_FirstMap
 PENDING:   (fs) koth_FirstMapSecondIteration
@@ -1994,7 +2002,6 @@ PENDING:   (fs) koth_autumnkothmap_b1a
 PENDING:   (fs) koth_autumnkothmap_b2
 PENDING:   (fs) koth_avalanche_pro4__1_
 PENDING:   (fs) koth_avalanche_pro5
-PENDING:   (fs) koth_avalanche_rc13
 PENDING:   (fs) koth_avalanche_rc7
 PENDING:   (fs) koth_avalanche_rc9
 PENDING:   (fs) koth_awesome_box_b6
@@ -2148,6 +2155,7 @@ PENDING:   (fs) koth_clearcut_b14d
 PENDING:   (fs) koth_clearcut_b15b
 PENDING:   (fs) koth_clearcut_b15c
 PENDING:   (fs) koth_clearcut_b15d
+PENDING:   (fs) koth_clearcut_b16a
 PENDING:   (fs) koth_clearcut_b3
 PENDING:   (fs) koth_clearcut_b4
 PENDING:   (fs) koth_clearcut_b6_01
@@ -2330,7 +2338,6 @@ PENDING:   (fs) koth_greenhouse_b3a
 PENDING:   (fs) koth_greenwall_a3__1_
 PENDING:   (fs) koth_grouse_a4
 PENDING:   (fs) koth_hangar_rc2
-PENDING:   (fs) koth_harter_rc1
 PENDING:   (fs) koth_harvest
 PENDING:   (fs) koth_harvest_ccv8
 PENDING:   (fs) koth_harvest_event
@@ -2412,7 +2419,6 @@ PENDING:   (fs) koth_jolly_01
 PENDING:   (fs) koth_jolly_03
 PENDING:   (fs) koth_jolly_04
 PENDING:   (fs) koth_karnak_rc4
-PENDING:   (fs) koth_kemptown_rc1
 PENDING:   (fs) koth_king
 PENDING:   (fs) koth_kingofthedesert
 PENDING:   (fs) koth_kool_01
@@ -2845,6 +2851,7 @@ PENDING:   (fs) koth_twinfalls
 PENDING:   (fs) koth_ulti_trio_aerialcage_v1_3
 PENDING:   (fs) koth_ultiduo
 PENDING:   (fs) koth_ultiduo_r_b7
+PENDING:   (fs) koth_ultiduo_spytech_a4
 PENDING:   (fs) koth_ultiduotrainsaw_b5
 PENDING:   (fs) koth_ultitrio_altar_a2
 PENDING:   (fs) koth_undergrove_event
@@ -2938,6 +2945,7 @@ PENDING:   (fs) mge_chillypunch_b5
 PENDING:   (fs) mge_chillypunch_final2_fix
 PENDING:   (fs) mge_chillypunch_final3
 PENDING:   (fs) mge_chillypunch_final4
+PENDING:   (fs) mge_chillypunch_final4_fix
 PENDING:   (fs) mge_chillypunch_final4_fix2
 PENDING:   (fs) mge_dueling_v1_fix1
 PENDING:   (fs) mge_oihguv_sucks_a12
@@ -3130,6 +3138,7 @@ PENDING:   (fs) pd_suijin_event_void_a1d
 PENDING:   (fs) pd_sus_a0
 PENDING:   (fs) pd_tribute_b3
 PENDING:   (fs) pd_watergate
+PENDING:   (fs) pdr_espresso_a2a
 PENDING:   (fs) ph_woods_a1
 PENDING:   (fs) pinecrest
 PENDING:   (fs) pk_bigcity_tf
@@ -3522,6 +3531,7 @@ PENDING:   (fs) pointbuilding
 PENDING:   (fs) pool_parties_are_dumb
 PENDING:   (fs) preload_room
 PENDING:   (fs) present
+PENDING:   (fs) prisonyard
 PENDING:   (fs) propermgemapbyme
 PENDING:   (fs) proud_map
 PENDING:   (fs) quiz_millionaire
@@ -3602,6 +3612,7 @@ PENDING:   (fs) strange_weapons_upgrade_v2
 PENDING:   (fs) surf_air_arena_v5
 PENDING:   (fs) surf_bluetowers_v5f
 PENDING:   (fs) surf_classics
+PENDING:   (fs) surf_dick
 PENDING:   (fs) surf_dicks_v4
 PENDING:   (fs) surf_forbidden_ways_njv
 PENDING:   (fs) surf_forbidden_ways_reloaded
@@ -3789,6 +3800,7 @@ PENDING:   (fs) ulti_hotgaysex_a5
 PENDING:   (fs) ulti_jonathanraymegacock
 PENDING:   (fs) ulti_venu
 PENDING:   (fs) ultidickl_a6_b_fix
+PENDING:   (fs) ultidou_baloo_v2
 PENDING:   (fs) ultiduo3_a12
 PENDING:   (fs) ultiduo_3cp_a1
 PENDING:   (fs) ultiduo_acropolis_b1
@@ -3797,6 +3809,7 @@ PENDING:   (fs) ultiduo_acropolis_b2a
 PENDING:   (fs) ultiduo_amperage_a4
 PENDING:   (fs) ultiduo_assembly_a7
 PENDING:   (fs) ultiduo_badlands_b1
+PENDING:   (fs) ultiduo_balloo
 PENDING:   (fs) ultiduo_baloo
 PENDING:   (fs) ultiduo_baloo_v2
 PENDING:   (fs) ultiduo_baloo_windowfix
@@ -3924,6 +3937,7 @@ PENDING:   (fs) ultiduo_staten_v6
 PENDING:   (fs) ultiduo_staten_v7
 PENDING:   (fs) ultiduo_strafe_b2
 PENDING:   (fs) ultiduo_style
+PENDING:   (fs) ultiduo_summer_f5
 PENDING:   (fs) ultiduo_swine_b04b
 PENDING:   (fs) ultiduo_thaw_A3
 PENDING:   (fs) ultiduo_thaw_b1
@@ -3944,6 +3958,8 @@ PENDING:   (fs) ultitrio_aesthetic_b5
 PENDING:   (fs) ultitrio_aesthetic_b6
 PENDING:   (fs) ultitrio_aesthetic_b7
 PENDING:   (fs) ultitrio_aesthetic_b8
+PENDING:   (fs) ultitrio_aesthetic_b9
+PENDING:   (fs) ultitrio_aetheitc_b8
 PENDING:   (fs) ultitrio_altar_a3
 PENDING:   (fs) ultitrio_altar_a4
 PENDING:   (fs) ultitrio_bound_rc1
@@ -3961,6 +3977,9 @@ PENDING:   (fs) ultitrio_caffa_final5
 PENDING:   (fs) ultitrio_caffa_final8
 PENDING:   (fs) ultitrio_caffa_final9
 PENDING:   (fs) ultitrio_caffa_final9teset1
+PENDING:   (fs) ultitrio_caffapro_a1
+PENDING:   (fs) ultitrio_caffapro_b1
+PENDING:   (fs) ultitrio_caffapro_b2
 PENDING:   (fs) ultitrio_dockport_b3
 PENDING:   (fs) ultitrio_dockport_final2
 PENDING:   (fs) ultitrio_dockport_final3
@@ -3977,6 +3996,8 @@ PENDING:   (fs) ultitrio_ghoulflame_a2
 PENDING:   (fs) ultitrio_ghoulflame_a3
 PENDING:   (fs) ultitrio_goulflame_a1
 PENDING:   (fs) ultitrio_minecraft
+PENDING:   (fs) ultitrio_prisonyard_a1
+PENDING:   (fs) ultitrio_prisonyard_a2
 PENDING:   (fs) ultitrio_staten_b2
 PENDING:   (fs) ultitrio_swine_b01
 PENDING:   (fs) ultitrio_swine_b02a
@@ -3995,6 +4016,7 @@ PENDING:   (fs) vsh_bianco_hills_v5_koth
 PENDING:   (fs) vsh_dirtmound_final
 PENDING:   (fs) vsh_distillery
 PENDING:   (fs) vsh_dr_bank_v11
+PENDING:   (fs) vsh_fnaf_v3
 PENDING:   (fs) vsh_idiotbox_b2
 PENDING:   (fs) vsh_moving_in_v3
 PENDING:   (fs) vsh_nucleus
