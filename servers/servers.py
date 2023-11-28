@@ -130,6 +130,7 @@ class ServerCog(commands.Cog):
                 "6s": "sixes",
                 "Highlander": "highlander",
                 "Passtime": "passtime",
+                "Ultitrio": "ultitrio",
                 "None": "none",
             },
         ),
@@ -297,6 +298,9 @@ class ServerCog(commands.Cog):
         elif gamemode == "passtime":
             whitelist_id = 26  # PT whitelist ID
             server_config_id = 116  # RGL PT_Push config ID in serveme
+        elif gamemode == "ultitrio":
+            server_config_id = 111  # Ultitrio config ID in serveme
+            whitelist_id = None  # Should be fine because config execs whitelist
         elif gamemode == "none":
             whitelist_id = None
             server_config_id = None
@@ -325,17 +329,20 @@ class ServerCog(commands.Cog):
         print(reserve_string)
         reserve_json = json.dumps(reserve_string)
 
-        server_id: int
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
-                data=reserve_json,
-                headers={"Content-type": "application/json"},
-            ) as resp:
-                server_data = await resp.json()
-                print(server_data)
-                server_id = server_data["reservation"]["id"]
-                print(await resp.text())
+        try:
+            server_id: int
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
+                    data=reserve_json,
+                    headers={"Content-type": "application/json"},
+                ) as resp:
+                    server_data = await resp.json()
+                    print(server_data)
+                    server_id = server_data["reservation"]["id"]
+                    print(await resp.text())
+        except ValueError:
+            await interaction.send("Serveme error: " + str(server_data["errors"]))
 
         connect = (
             "connect "
