@@ -5,7 +5,7 @@ import re
 import string
 import random
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Optional, Set
 
 import aiohttp
 import nextcord
@@ -41,7 +41,7 @@ class ServerCog(commands.Cog):
     """
 
     def __init__(self, bot: nextcord.Client):
-        self.servers: List[Reservation] = []
+        self.servers: Set[Reservation] = set()
         self.bot = bot
         self.all_maps: str = ""
         self.map_updater.start()  # pylint: disable=no-member
@@ -267,7 +267,6 @@ class ServerCog(commands.Cog):
                 if "ks" in server["ip"]:
                     print("New server reserved: " + str(server))
                     reserve = server
-                    server_found = True
                     break
 
         connect_password = "pug." + "".join(
@@ -384,19 +383,23 @@ class ServerCog(commands.Cog):
         )
         embed.add_field(name="Connect", value=connect, inline=False)
 
+        message_list = list()
+
         # RCON message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
         if rcon_channel == interaction.channel:
             # Include RCON in this embed if we are already in the RCON channel
             embed.add_field(name="RCON", value=rcon, inline=False)
         else:
-            await rcon_channel.send(rcon)
+            rcon_msg = await rcon_channel.send(rcon)
+            message_list.append((rcon_channel.id, rcon_msg.id))
 
         embed.add_field(name="Map", value=chosen_map, inline=False)
         embed.set_footer(text=VERSION)
         reserve_msg = await interaction.edit_original_message(
             content=None, embed=embed, view=None
         )
+        message_list.append((interaction.channel_id, reserve_msg.id))
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -420,11 +423,11 @@ class ServerCog(commands.Cog):
                 connect_channel = self.bot.get_channel(guild_data["connect"])
         else:
             connect_channel = self.bot.get_channel(guild_data["connect"])
-
         connect_msg = await connect_channel.send(embed=connect_embed)
+        message_list.append((connect_channel.id, connect_msg.id))
 
-        self.servers.append(
-            Reservation(server_id, serveme_api_key, [reserve_msg, connect_msg])
+        self.servers.add(
+            Reservation(server_id, serveme_api_key, message_list)
         )
 
     @util.is_setup()
@@ -610,8 +613,11 @@ class ServerCog(commands.Cog):
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
+
             status = await server_view.wait()
             if status:
+                # Interaction timed out, cleanup
+                await interaction.delete_original_message()
                 return
             server_id = server_view.server_chosen
 
@@ -619,20 +625,18 @@ class ServerCog(commands.Cog):
                 f"https://na.serveme.tf/api/reservations/{reservations[server_id]['id']}?api_key={serveme_api_key}",
             ) as resp:
                 if resp.status == 200:
-                    await interaction.edit_original_message(
-                        content=f"Ending reservation `#{reservations[server_id]['id']}`.",
-                        view=None,
-                    )
+                    content = f"Ending reservation `#{reservations[server_id]['id']}`."
                 elif resp.status == 204:
-                    await interaction.edit_original_message(
-                        content=f"Canceling future reservation `#{reservations[server_id]['id']}`.",
-                        view=None,
-                    )
+                    content = f"Canceling future reservation `#{reservations[server_id]['id']}`."
                 else:
-                    await interaction.edit_original_message(
-                        content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
-                        view=None,
-                    )
+                    content = f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}"
+
+            # Update the message and delete it after 30 seconds
+            await interaction.edit_original_message(
+                content=content,
+                view=None,
+            )
+            await interaction.delete_original_message(delay=30.0)
 
     @reserve.on_autocomplete("tf_map")
     @change_map.on_autocomplete("tf_map")
@@ -651,10 +655,10 @@ class ServerCog(commands.Cog):
             if map_search is None:
                 await interaction.response.send_autocomplete(["No results."])
                 return
-            if isinstance(map_search, str):
+            elif isinstance(map_search, str):
                 await interaction.response.send_autocomplete([map_search])
                 return
-            if len(map_search) > 25:
+            elif len(map_search) > 25:
                 await interaction.response.send_autocomplete(
                     ["Too many results. Please narrow your search."]
                 )
@@ -668,34 +672,20 @@ class ServerCog(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def server_status(self):
-        """Update the status of the servers every minute."""
+        """
+        Attempt to clear ended Reservations
+        On a one-minute loop
+        """
+
         for server in self.servers:
-            try:
-                status: bool = await server.is_active()
-                if not status:
-                    for message in server.messages:
-                        try:
-                            await message.delete()
-                        except nextcord.HTTPException:
-                            try:
-                                self.servers.remove(server)
-                            except ValueError:
-                                print("Server not in list")
-                                print(self.servers)
-                                continue
-                            continue
-                    try:
-                        self.servers.remove(server)
-                    except ValueError:
-                        print("Server not in list")
-                        print(self.servers)
-                        continue
-            except AttributeError:
-                print("Attribute error")
-                print(server)
-                print(server.messages)
-                continue
-        return
+            active: bool = await server.is_active()
+            if not active:
+                await server.stop_tracking(self.bot)
+                try:
+                    print("Attempting to remove a server from this loop")
+                    self.servers.remove(server)
+                except KeyError:
+                    print("Server already removed")
 
     @server_status.error
     async def error_handler(self, exception: Exception):

@@ -41,18 +41,26 @@ class ServerButton(nextcord.ui.Button):
 
 
 class Reservation:
-    """Represents a reservation on serveme.tf
+    """
+    Represents a reservation on na.serveme.tf
+    Hashable on the unique reservation id
 
     Attributes:
-        id (int): The ID of the reservation
+        reservation_id (int): The ID of the reservation
         api_key (str): The API key associated with the reservation
-        message_ids (list[int]): The message IDs associated with the reservation
+        messages (list[tuple[int]]): List of the channel and message ids associated with this reservation
     """
 
-    def __init__(self, id_num: int, api_key: str, messages) -> None:
-        self.id_num = id_num
+    def __init__(self, reservation_id: int, api_key: str, messages) -> None:
+        self.reservation_id = reservation_id
         self.api_key = api_key
         self.messages = messages
+
+    def __hash__(self):
+        return hash(self.reservation_id)
+
+    def __eq__(self, other):
+        return type(other) is type(self) and self.reservation_id == other.reservation_id
 
     async def is_active(self) -> bool:
         """Checks if the reservation is still active
@@ -62,7 +70,7 @@ class Reservation:
         """
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://na.serveme.tf/api/reservations/{self.id_num}?api_key={self.api_key}",
+                f"https://na.serveme.tf/api/reservations/{self.reservation_id}?api_key={self.api_key}",
             ) as resp:
                 server = await resp.json()
                 print(server)
@@ -70,6 +78,12 @@ class Reservation:
                     return False
                 return True
 
+    async def stop_tracking(self, bot: nextcord.Client):
+        for message in self.messages:
+            try:
+                await (await bot.get_channel(message[0]).fetch_message(message[1])).delete()
+            except nextcord.HTTPException as err:
+                print(f"Couldn't delete reservation message: {err}\n{message}")
 
 class MapSelection(nextcord.ui.View):
     """Displays the different map options and allows the user to select one."""
