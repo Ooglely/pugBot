@@ -10,6 +10,7 @@ from typing import Optional, Set
 import aiohttp
 import nextcord
 import pytz
+from aiohttp import ContentTypeError
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
@@ -247,7 +248,7 @@ class ServerCog(commands.Cog):
 
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await ServemeAPI().get_new_reservation(
+        servers, times = await ServemeAPI().get_server_list(
             serveme_api_key, dt_start, duration
         )
 
@@ -308,7 +309,7 @@ class ServerCog(commands.Cog):
         if whitelist in (13798, 13797):
             whitelist_id = None  # type: ignore
 
-        reserve_string = {
+        reserve_dict = {
             "reservation": {
                 "starts_at": times["reservation"]["starts_at"],
                 "ends_at": times["reservation"]["ends_at"],
@@ -325,23 +326,16 @@ class ServerCog(commands.Cog):
             }
         }
 
-        print(reserve_string)
-        reserve_json = json.dumps(reserve_string)
-
+        print(reserve_dict)
         try:
-            server_id: int
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
-                    data=reserve_json,
-                    headers={"Content-type": "application/json"},
-                ) as resp:
-                    server_data = await resp.json()
-                    print(server_data)
-                    server_id = server_data["reservation"]["id"]
-                    print(await resp.text())
+            server_data = await ServemeAPI().reserve_server(serveme_api_key, reserve_dict)
+            server_id = server_data["reservation"]["id"]
         except ValueError:
             await interaction.send("Serveme error: " + str(server_data["errors"]))
+            return
+        except ContentTypeError:
+            await interaction.send("Reservation failed. If other attempts fail you may need to re-enter your Serveme API key.")
+            return
 
         connect = (
             "connect "

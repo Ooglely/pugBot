@@ -17,10 +17,10 @@ class ServemeAPI:
     def __init__(self):
         self.base_url = "https://na.serveme.tf/api/reservations/"
 
-    async def get_new_reservation(
+    async def get_server_list(
         self, serveme_key: str, start_time: datetime | None = None, duration: float = 2
     ):
-        """Gets a new reservation from na.serveme.tf.
+        """Gets the list of servers from na.serveme.tf.
 
         Args:
             serveme_key (str): The serveme.tf API key.
@@ -28,7 +28,7 @@ class ServemeAPI:
             duration (float): Optional length of the reservation
 
         Returns:
-            dict: The reservation data.
+            dict: The server data.
         """
 
         times_json: dict
@@ -62,6 +62,26 @@ class ServemeAPI:
             ) as resp:
                 servers = await resp.json(content_type=None)
                 return servers, times_json
+
+    async def reserve_server(self, serveme_key: str, reservation_data: dict):
+        """
+        Reserve a new server
+        :param serveme_key: The api key to reserve with
+        :param reservation_data: Dict with the desired reservation information
+        :return: JSON of the response
+        """
+        reserve_json = json.dumps(reservation_data)
+
+        server_id: int
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                self.base_url + "?api_key=" + serveme_key,
+                data=reserve_json,
+                headers={"Content-type": "application/json"},
+            ) as resp:
+                server_data = await resp.json()
+                print(server_data)
+                return server_data
 
     async def get_reservation_times(self, serveme_key: str):
         """Gets the reservation times from na.serveme.tf.
@@ -128,6 +148,7 @@ class ServemeAPI:
 
         Args:
             map_name (str): The name of the map.
+            maps_list
 
         Returns:
             str: The newest version of the map.
