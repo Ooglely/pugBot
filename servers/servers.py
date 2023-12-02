@@ -694,6 +694,7 @@ class ServerCog(commands.Cog):
                 print("Attribute error")
                 print(server)
                 print(server.messages)
+                self.servers.remove(server)
                 continue
         return
 
