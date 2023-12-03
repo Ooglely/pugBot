@@ -143,7 +143,7 @@ class ServemeAPI:
 
     @staticmethod
     @no_type_check  # LOLLLLL
-    async def fetch_newest_version(map_name: str, maps_list: str = None):
+    async def fetch_newest_version(map_name: str, maps_list: list = None) -> list[str] | None:
         """Fetches the newest version of a map from the serveme.tf FastDL.
 
         Args:
@@ -151,23 +151,21 @@ class ServemeAPI:
             maps_list
 
         Returns:
-            str: The newest version of the map.
+            list[str]: The newest version of the map.
             None: if no matching map is found.
         """
         if map_name in COMP_MAPS:
-            return COMP_MAPS[map_name]
+            return [COMP_MAPS[map_name]]
         if maps_list is None:
             async with aiohttp.ClientSession() as session:
                 async with session.get("http://dl.serveme.tf/maps/") as resp:
-                    map_list = await resp.text()
+                    maps_list = await resp.text()
 
         # Get all maps that match the beginning of the input
-        if maps_list is None:
-            maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", map_list)
-        else:  # If maps_list is provided, use that
-            # maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
-            # Use temporary fix for now
-            maps = re.findall(rf"(?<=\(fs\) ){map_name}.*", maps_list)
+        # maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
+        # Use temporary fix for now
+        maps = re.findall(rf"(?<=\(fs\) ){map_name}.*", maps_list)
+
         # Deduplicate results
         maps_set = set(maps)
         print(maps_set)
@@ -175,7 +173,7 @@ class ServemeAPI:
         if len(maps_set) == 0:
             return None
         if len(maps_set) == 1:
-            return maps_set.pop()
+            return list(maps_set)
         # For each different type, get the newest version
         versions: Dict[str, str] = {}
         for map_version in maps_set:
@@ -184,9 +182,8 @@ class ServemeAPI:
             version_type = re.search(r"^.*(?<!(\d))", version_name)
             if version_number is not None:
                 version_number = version_number.group(0)
-            else:
-                version_number = None
             version_type = version_type.group(0)
+
             if version_type in versions:
                 if versions[version_type] == "" or version_number == "":
                     versions[version_type] = version_number
@@ -194,9 +191,8 @@ class ServemeAPI:
                     versions[version_type] = version_number
             else:
                 versions[version_type] = version_number
-        newest_versions = [f"{map_name}{type}{num}" for type, num in versions.items()]
-        if len(newest_versions) == 1:
-            return newest_versions.pop()
+
+        newest_versions = [f"{map_name}{letter}{num}" for letter, num in versions.items()]
         return newest_versions
 
 
