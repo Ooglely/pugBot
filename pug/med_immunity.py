@@ -92,20 +92,25 @@ class PugMedicCog(commands.Cog):
             next_pug_channel: nextcord.VoiceChannel = interaction.guild.get_channel(
                 category["next_pug"]
             )
-            if (
-                len(add_up_channel.members) + len(next_pug_channel.members)
-            ) < team_size * 2:
+            try:
+                if (
+                    len(add_up_channel.members) + len(next_pug_channel.members)
+                ) < team_size * 2:
+                    disabled = True
+                    name += " (Not enough players)"
+                if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
+                    disabled = True
+                    name += " (Pug in progress)"
+                if (
+                    interaction.user.voice is not None
+                    and interaction.user.voice.channel
+                    == (next_pug_channel or add_up_channel)
+                ):
+                    color = nextcord.ButtonStyle.green
+            except AttributeError:
+                print(f"Error getting channels for {name}")
+                name += " (Error getting channels)"
                 disabled = True
-                name += " (Not enough players)"
-            if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
-                disabled = True
-                name += " (Pug in progress)"
-            if (
-                interaction.user.voice is not None
-                and interaction.user.voice.channel
-                == (next_pug_channel or add_up_channel)
-            ):
-                color = nextcord.ButtonStyle.green
 
             button = CategoryButton(name=name, color=color, disabled=disabled)
             select_view.add_item(button)
