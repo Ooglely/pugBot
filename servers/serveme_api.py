@@ -143,7 +143,9 @@ class ServemeAPI:
 
     @staticmethod
     @no_type_check  # LOLLLLL
-    async def fetch_newest_version(map_name: str, maps_list: list = None) -> list[str] | None:
+    async def fetch_newest_version(
+        map_name: str, maps_list: list = None
+    ) -> list[str] | None:
         """Fetches the newest version of a map from the serveme.tf FastDL.
 
         Args:
@@ -192,7 +194,9 @@ class ServemeAPI:
             else:
                 versions[version_type] = version_number
 
-        newest_versions = [f"{map_name}{letter}{num}" for letter, num in versions.items()]
+        newest_versions = [
+            f"{map_name}{letter}{num}" for letter, num in versions.items()
+        ]
         return newest_versions
 
 

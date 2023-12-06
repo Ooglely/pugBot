@@ -223,9 +223,7 @@ class ServerCog(commands.Cog):
                 await interaction.send(f"Start time input error: {err}", ephemeral=True)
                 return
 
-        map_versions = await ServemeAPI.fetch_newest_version(
-            tf_map, self.all_maps
-        )
+        map_versions = await ServemeAPI.fetch_newest_version(tf_map, self.all_maps)
         print(map_versions)
         if map_versions is None:
             await interaction.send(
@@ -255,7 +253,7 @@ class ServerCog(commands.Cog):
         reserve = dict()
         server_found: bool = False
 
-        for location in ["chi","ks"]:
+        for location in ["chi", "ks"]:
             for server in servers["servers"]:
                 if location in server["ip"]:
                     if 536 != server["id"]:
@@ -324,7 +322,9 @@ class ServerCog(commands.Cog):
         print(reserve_dict)
         server_data = {"errors": "Unable to decode error, please report issue."}
         try:
-            server_data = await ServemeAPI().reserve_server(serveme_api_key, reserve_dict)
+            server_data = await ServemeAPI().reserve_server(
+                serveme_api_key, reserve_dict
+            )
             server_id = server_data["reservation"]["id"]
         except ValueError:
             await interaction.send("Serveme error: " + str(server_data["errors"]))
@@ -418,9 +418,7 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
         message_list.append((connect_channel.id, connect_msg.id))
 
-        self.servers.add(
-            Reservation(server_id, serveme_api_key, message_list)
-        )
+        self.servers.add(Reservation(server_id, serveme_api_key, message_list))
 
     @util.is_setup()
     @util.is_runner()
@@ -495,7 +493,7 @@ class ServerCog(commands.Cog):
         except Exception:
             await interaction.edit_original_message(
                 content="Unable to detect the current gamemode. The whitelist on the server is not associated with a "
-                        "gamemode."
+                "gamemode."
             )
             return
 
@@ -622,8 +620,10 @@ class ServerCog(commands.Cog):
                 elif resp.status == 204:
                     content = f"Canceling future reservation `#{reservations[server_id]['id']}`."
                 else:
-                    content = (f"Failed to end reservation `#{reservations[server_id]['id']}`.\n"
-                               f"Status code: {resp.status}")
+                    content = (
+                        f"Failed to end reservation `#{reservations[server_id]['id']}`.\n"
+                        f"Status code: {resp.status}"
+                    )
 
             # Update the message and delete it after 30 seconds
             await interaction.edit_original_message(

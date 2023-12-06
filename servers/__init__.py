@@ -81,9 +81,12 @@ class Reservation:
     async def stop_tracking(self, bot: nextcord.Client):
         for message in self.messages:
             try:
-                await (await bot.get_channel(message[0]).fetch_message(message[1])).delete()
+                await (
+                    await bot.get_channel(message[0]).fetch_message(message[1])
+                ).delete()
             except nextcord.HTTPException as err:
                 print(f"Couldn't delete reservation message: {err}\n{message}")
+
 
 class MapSelection(nextcord.ui.View):
     """Displays the different map options and allows the user to select one."""

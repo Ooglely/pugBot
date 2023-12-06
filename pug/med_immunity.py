@@ -98,7 +98,10 @@ class PugMedicCog(commands.Cog):
                 ) < team_size * 2:
                     disabled = True
                     name += " (Not enough players)"
-                if len(red_team_channel.members) > 0 or len(blu_team_channel.members) > 0:
+                if (
+                    len(red_team_channel.members) > 0
+                    or len(blu_team_channel.members) > 0
+                ):
                     disabled = True
                     name += " (Pug in progress)"
                 if (
