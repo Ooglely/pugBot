@@ -302,6 +302,12 @@ class ServerCog(commands.Cog):
         if whitelist in (13798, 13797):
             whitelist_id = None  # type: ignore
 
+        if not await ServemeAPI.check_whitelist_status():
+            await interaction.send(
+                "whitelist.tf appears to be providing errors and a custom whitelist cannot be loaded. Try reserving with the whitelist field left empty"
+            )
+            return
+
         reserve_dict = {
             "reservation": {
                 "starts_at": times["reservation"]["starts_at"],

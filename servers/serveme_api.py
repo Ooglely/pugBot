@@ -199,6 +199,20 @@ class ServemeAPI:
         ]
         return newest_versions
 
+    @staticmethod
+    async def check_whitelist_status() -> bool:
+        """
+        Checks if whitelist.tf is working as expected
+        Returns:
+            bool: Working as expected, or not
+        """
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://whitelist.tf") as resp:
+                if resp.status < 300:
+                    return True
+        return False
+
 
 if __name__ == "__main__":
     import asyncio
