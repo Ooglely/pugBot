@@ -520,3 +520,35 @@ class UpdateRolesCog(commands.Cog):
 
         logs_channel = loaded["channels"]["log_channel"]
         await logs_channel.send(embed=log_embed)
+
+    @TestCog.test.subcommand(
+        name="newjoin",
+        description="For testing only. Simulates an existing member as a new guild join"
+    )
+    async def simulate_new_member(self,
+                                  interaction: nextcord.Interaction,
+                                  user: nextcord.User = nextcord.SlashOption(
+                                      name="discord", description="The user to look up.", required=True
+                                  ),
+                                  banned: bool = nextcord.SlashOption(
+                                      name="banned", description="Pretend the user is banned or not", required=False
+                                  )):
+        """
+        Command to simulate a member joining the guild, can pretend that a user is RGL banned
+        :param interaction: The interaction
+        :param user: User to simulate
+        :param banned: Optional fake RGL ban or not
+        :return: None
+        """
+
+        embed = nextcord.Embed(description=f"Pretending that <@{user.id}> just joined")
+        await interaction.send(embed=embed)
+        if interaction.user.get_role(1144720671558078485) is None:
+            await interaction.send(
+                "You do not have the Contributors role and cannot run this command.",
+                ephemeral=True,
+            )
+            return
+
+        member = interaction.guild.get_member(user.id)
+        await self.new_member(member, banned)
