@@ -9,10 +9,10 @@ import util
 from constants import API_PASSWORD, BOT_COLOR, PORT
 from database import add_player, get_all_servers, update_divisons
 from registration import RegistrationSettings
-from rgl_api import RGL_API
+from rglapi import RglApi
 
 app: FastAPI = FastAPI()
-RGL: RGL_API = RGL_API()
+RGL: RglApi = RglApi()
 
 
 class NewUser(BaseModel):

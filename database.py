@@ -3,9 +3,9 @@
 import pymongo
 
 import constants
-from rgl_api import RGL_API
+from rglapi import RglApi
 
-RGL: RGL_API = RGL_API()
+RGL: RglApi = RglApi()
 
 
 class BotDatabase(pymongo.MongoClient):

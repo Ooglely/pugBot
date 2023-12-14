@@ -209,6 +209,7 @@ class ServemeAPI:
 
         async with aiohttp.ClientSession() as session:
             async with session.get("https://whitelist.tf") as resp:
+                print(type(resp.status))
                 if resp.status < 300:
                     return True
         return False
@@ -216,7 +217,7 @@ class ServemeAPI:
 
 if __name__ == "__main__":
     import asyncio
-
+    print(asyncio.run(ServemeAPI.check_whitelist_status()))
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product'))}")
