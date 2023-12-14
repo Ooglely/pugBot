@@ -283,17 +283,14 @@ def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
         "roles": {
             "divisions": division_roles,
             "rgl_ban": ban_role,
-            "bypass": bypass_role
+            "bypass": bypass_role,
         },
-        "channels": {
-            "logs": logs_channel,
-            "registration": registration_channel
-        },
+        "channels": {"logs": logs_channel, "registration": registration_channel},
         "settings": {
             "game_mode": reg_settings.gamemode,
             "mode": reg_settings.mode,
-            "ban": reg_settings.ban
-        }
+            "ban": reg_settings.ban,
+        },
     }
 
     if reg_settings.gamemode == "sixes":
