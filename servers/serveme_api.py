@@ -217,6 +217,7 @@ class ServemeAPI:
 
 if __name__ == "__main__":
     import asyncio
+
     print(asyncio.run(ServemeAPI.check_whitelist_status()))
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
