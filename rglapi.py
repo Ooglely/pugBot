@@ -1,5 +1,4 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
-import asyncio
 from datetime import datetime, timedelta
 
 import aiohttp
@@ -19,6 +18,11 @@ divs = {
     "Admin Placement": 0,
     "Dead Teams": 0,
 }
+
+
+class RateLimitException(Exception):
+    """Rate Limited by an API"""
+    pass
 
 
 class Player:
@@ -42,42 +46,42 @@ class Team:
 
     def __init__(
         self,
-        teamid,
+        team_id,
         name,
         tag,
         division,
-        seasonid,
-        seasonname,
+        season_id,
+        season_name,
         players,
         rank,
-        linkedteams,
+        linked_teams,
     ):
-        self.teamid = teamid
+        self.team_id = team_id
         self.name = name
         self.tag = tag
         self.division = division
-        self.seasonid = seasonid
-        self.seasonname = seasonname
-        self.currentplayers = []
-        self.formerplayers = []
+        self.season_id = season_id
+        self.season_name = season_name
+        self.current_players = []
+        self.former_players = []
         for player in players:
             if player["leftAt"] is None:
-                self.currentplayers.append(player)
+                self.current_players.append(player)
             else:
-                self.formerplayers.append(player)
+                self.former_players.append(player)
         self.rank = rank
-        self.linkedteams = linkedteams
+        self.linked_teams = linked_teams
 
     def __str__(self):
-        return f"""ID: {self.teamid}\nName: {self.name}\nTag: {self.tag}\nSeason ID: {self.seasonid}
-                Season: {self.seasonname}\nDivision: {self.division}\nPlayers: {self.currentplayers}"""
+        return f"""ID: {self.team_id}\nName: {self.name}\nTag: {self.tag}\nSeason ID: {self.season_id}
+                Season: {self.season_name}\nDivision: {self.division}\nPlayers: {self.current_players}"""
 
 
-class RGL_API:
+class RglApi:
     """Class used to interact with the RGL API.
 
     Attributes:
-        apiURL (str): The base URL for the RGL API.
+        api_url (str): The base URL for the RGL API.
     """
 
     def __init__(self):
@@ -87,7 +91,7 @@ class RGL_API:
         """Gets a player from the RGL API.
 
         Args:
-            steamid (int): The steamid of the player to get.
+            steam_id (int): The steamid of the player to get.
 
         Raises:
             LookupError: If the player does not exist in RGL.
@@ -99,16 +103,17 @@ class RGL_API:
             async with session.get(
                 self.api_url + "profile/" + str(steam_id)
             ) as player_data:
-                player = await player_data.json()
-                if "statusCode" in player:
+                if player_data.status == 429:
+                    raise RateLimitException("Rate limited by the RGL API")
+                elif player_data.status != 200:
                     raise LookupError("Player does not exist in RGL")
-                return player
+                return await player_data.json()
 
     async def get_all_teams(self, steam_id: int):
         """Gets all teams a player has been on.
 
         Args:
-            steamid (int): The steamid of the player to get.
+            steam_id (int): The steamid of the player to get.
 
         Returns:
             dict: The team data.
@@ -117,6 +122,10 @@ class RGL_API:
             async with session.get(
                 self.api_url + "profile/" + str(steam_id) + "/teams"
             ) as team_data:
+                if team_data.status == 429:
+                    raise RateLimitException("Rate limited by the RGL API")
+                elif team_data.status != 200:
+                    raise LookupError("Player does not exist in RGL")
                 teams = await team_data.json()
                 return teams
 
@@ -124,15 +133,13 @@ class RGL_API:
         """Gets all 6s and HL season teams a player has been on.
 
         Args:
-            steamid (int): The steamid of the player to get.
+            steam_id (int): The steamid of the player to get.
 
         Returns:
             dict: The team data.
         """
         all_teams = await self.get_all_teams(steam_id)
-        if "statusCode" in all_teams:
-            if all_teams["statusCode"] == 429:
-                raise LookupError("Rate limit exceeded")
+
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
@@ -161,7 +168,7 @@ class RGL_API:
         """Checks if a player is currently banned.
 
         Args:
-            steamid (int): The steamid of the player to check.
+            steam_id (int): The steamid of the player to check.
 
         Returns:
             bool: True if the player is currently banned, False if not.
@@ -176,7 +183,7 @@ class RGL_API:
         """Gets the highest division a player has played in for 6s and HL.
 
         Args:
-            steamid (int): The steamid of the player to get.
+            steam_id (int): The steamid of the player to get.
 
         Returns:
             list: A list containing the highest division for 6s and HL.
@@ -184,29 +191,29 @@ class RGL_API:
         player = await self.get_core_teams(steam_id)
         if player is None:
             return [[-1, -1], [-1, -1]]
-        sixesdiv = [0, 0]
-        hldiv = [0, 0]
+        sixes_div = [0, 0]
+        hl_div = [0, 0]
         for season in player["sixes"]:
             division_name: str = season["divisionName"].replace("RGL-", "")
             if division_name in divs:
-                if divs[division_name] > sixesdiv[0]:
-                    sixesdiv[0] = divs[division_name]
-                    sixesdiv[1] = 1
-                elif divs[division_name] == sixesdiv[0]:
-                    sixesdiv[1] += 1
+                if divs[division_name] > sixes_div[0]:
+                    sixes_div[0] = divs[division_name]
+                    sixes_div[1] = 1
+                elif divs[division_name] == sixes_div[0]:
+                    sixes_div[1] += 1
             else:
                 print(f"Division not found: {division_name}")
         for season in player["hl"]:
             division_name = season["divisionName"].replace("RGL-", "")
             if division_name in divs:
-                if divs[division_name] > hldiv[0]:
-                    hldiv[0] = divs[division_name]
-                    hldiv[1] = 1
-                elif divs[division_name] == hldiv[0]:
-                    hldiv[1] += 1
+                if divs[division_name] > hl_div[0]:
+                    hl_div[0] = divs[division_name]
+                    hl_div[1] = 1
+                elif divs[division_name] == hl_div[0]:
+                    hl_div[1] += 1
             else:
                 print(f"Division not found: {division_name}")
-        return [sixesdiv, hldiv]
+        return [sixes_div, hl_div]
 
     async def get_div_data(self, steam_id: int):
         """Get both the highest div and the last div played for both 6s and HL.
@@ -256,7 +263,7 @@ class RGL_API:
         """Creates a Player object from a steamid.
 
         Args:
-            steamid (int): The steamid of the player to create.
+            steam_id (int): The steamid of the player to create.
 
         Returns:
             Player: The Player object.
@@ -264,7 +271,6 @@ class RGL_API:
         sixes = []
         highlander = []
         player_data = await self.get_player(steam_id)
-        await asyncio.sleep(2)
         team_data = await self.get_core_teams(steam_id)
 
         for season in team_data["sixes"]:
