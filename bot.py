@@ -20,6 +20,7 @@ from constants import (
     GITHUB_API_KEY,
     RAILWAY_API_KEY,
 )
+from test_cog import TestCog
 from util import get_steam64
 from servers.servers import ServerCog
 from logs.searcher import LogSearcher
