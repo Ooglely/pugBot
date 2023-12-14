@@ -1,7 +1,6 @@
+import gql
 import nextcord
-from gql import gql
 from gql.transport.aiohttp import AIOHTTPTransport
-from nextcord import Client
 from nextcord.ext import commands
 
 from constants import TESTING_GUILDS, GITHUB_API_KEY, RAILWAY_API_KEY
@@ -59,11 +58,11 @@ class TestCog(commands.Cog):
         )
 
         branch_names = []
-        async with Client(
+        async with gql.Client(
             transport=github_api,
             fetch_schema_from_transport=False,
         ) as session:
-            list_branches = gql(
+            list_branches = gql.gql(
                 """
                 query getBranches {
                     repository(name: "pugBot", owner: "Ooglely") {
@@ -94,11 +93,11 @@ class TestCog(commands.Cog):
                 headers={"Authorization": f"Bearer {RAILWAY_API_KEY}"},
             )
 
-            async with Client(
+            async with gql.Client(
                 transport=railway_api,
                 fetch_schema_from_transport=False,
             ) as session:
-                set_deployment_trigger = gql(
+                set_deployment_trigger = gql.gql(
                     f"""
                     mutation setDeploymentTrigger {{
                         deploymentTriggerUpdate(
@@ -115,7 +114,7 @@ class TestCog(commands.Cog):
                     """
                 )
 
-                redeploy_environment = gql(
+                redeploy_environment = gql.gql(
                     """
                     mutation deployNewDeployment {
                         environmentTriggersDeploy(
