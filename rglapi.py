@@ -22,6 +22,7 @@ divs = {
 
 class RateLimitException(Exception):
     """Rate Limited by an API"""
+
     pass
 
 

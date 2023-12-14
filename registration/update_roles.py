@@ -34,8 +34,13 @@ def get_guild_old_div(loaded: dict, member: nextcord.Member) -> set[nextcord.Rol
     return roles
 
 
-async def send_update_embed(loaded, member: nextcord.Member, steam_id, old_roles: set[nextcord.Role],
-                            new_role: nextcord.Role):
+async def send_update_embed(
+    loaded,
+    member: nextcord.Member,
+    steam_id,
+    old_roles: set[nextcord.Role],
+    new_role: nextcord.Role,
+):
     """
     Outputs an embed to the member's discord and updates the members roles
     :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
@@ -66,13 +71,10 @@ async def send_update_embed(loaded, member: nextcord.Member, steam_id, old_roles
 
     log_embed = nextcord.Embed(
         title="Updated Division",
-        url="https://rgl.gg/Public/PlayerProfile.aspx?p="
-            + str(steam_id),
+        url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
         color=BOT_COLOR,
     )
-    log_embed.add_field(
-        name="Discord", value=f"<@{member.id}>", inline=True
-    )
+    log_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
     log_embed.add_field(name="Steam", value=str(steam_id), inline=True)
     log_embed.add_field(
         name="Roles Added",
@@ -91,8 +93,13 @@ async def send_update_embed(loaded, member: nextcord.Member, steam_id, old_roles
         print("Error sending embed message.")
 
 
-async def send_banned_embed(loaded: dict, member: nextcord.Member, steam_id, old_roles: set[nextcord.Role],
-                            ban_role: nextcord.Role):
+async def send_banned_embed(
+    loaded: dict,
+    member: nextcord.Member,
+    steam_id,
+    old_roles: set[nextcord.Role],
+    ban_role: nextcord.Role,
+):
     """
     Outputs a ban embed to the member's discord and updates the members roles
     :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
@@ -114,16 +121,11 @@ async def send_banned_embed(loaded: dict, member: nextcord.Member, steam_id, old
 
     ban_embed = nextcord.Embed(
         title="RGL Banned Player",
-        url="https://rgl.gg/Public/PlayerProfile.aspx?p="
-            + str(steam_id),
+        url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
         color=BOT_COLOR,
     )
-    ban_embed.add_field(
-        name="Discord", value=f"<@{member.id}>", inline=True
-    )
-    ban_embed.add_field(
-        name="Steam", value=str(steam_id), inline=True
-    )
+    ban_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
+    ban_embed.add_field(name="Steam", value=str(steam_id), inline=True)
     ban_embed.add_field(
         name="Roles Added",
         value=f"<@&{ban_role.id}>",
@@ -138,8 +140,13 @@ async def send_banned_embed(loaded: dict, member: nextcord.Member, steam_id, old
     await logs_channel.send(embed=ban_embed)
 
 
-async def send_unbanned_embed(loaded: dict, member: nextcord.Member, steam_id, ban_role: nextcord.Role,
-                              new_role: nextcord.Role):
+async def send_unbanned_embed(
+    loaded: dict,
+    member: nextcord.Member,
+    steam_id,
+    ban_role: nextcord.Role,
+    new_role: nextcord.Role,
+):
     """
     Outputs an unban embed to the member's discord and updates the members roles
     :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
@@ -156,16 +163,11 @@ async def send_unbanned_embed(loaded: dict, member: nextcord.Member, steam_id, b
 
     ban_embed = nextcord.Embed(
         title="RGL Unbanned Player",
-        url="https://rgl.gg/Public/PlayerProfile.aspx?p="
-            + str(steam_id),
+        url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
         color=BOT_COLOR,
     )
-    ban_embed.add_field(
-        name="Discord", value=f"<@{member.id}>", inline=True
-    )
-    ban_embed.add_field(
-        name="Steam", value=str(steam_id), inline=True
-    )
+    ban_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
+    ban_embed.add_field(name="Steam", value=str(steam_id), inline=True)
     ban_embed.add_field(
         name="Roles Added",
         value=f"<@&{new_role.id}>",
@@ -179,7 +181,9 @@ async def send_unbanned_embed(loaded: dict, member: nextcord.Member, steam_id, b
     await logs_channel.send(embed=ban_embed)
 
 
-async def update_guild_player(loaded: dict, player_divs: dict, banned, steam_id, discord_id):
+async def update_guild_player(
+    loaded: dict, player_divs: dict, banned, steam_id, discord_id
+):
     """
     Updates a single player and sends messages if the player is updated
     :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
@@ -244,9 +248,7 @@ def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
     no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
     nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
     am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
-    im_role: nextcord.Role = guild.get_role(
-        reg_settings.roles["intermediate"]
-    )
+    im_role: nextcord.Role = guild.get_role(reg_settings.roles["intermediate"])
     main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
     adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
     inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
@@ -364,7 +366,9 @@ class UpdateRolesCog(commands.Cog):
 
             # Attempt to update this player in every guild they are in
             for loaded in guilds.values():
-                await update_guild_player(loaded, player_divs, new_ban, steam_id, discord_id)
+                await update_guild_player(
+                    loaded, player_divs, new_ban, steam_id, discord_id
+                )
 
     @update_rgl.error
     async def error_handler(self, exception: Exception):
@@ -431,7 +435,9 @@ class UpdateRolesCog(commands.Cog):
                 continue
 
             # Attempt to update this player
-            await update_guild_player(loaded, player_divs, new_ban, steam_id, discord_id)
+            await update_guild_player(
+                loaded, player_divs, new_ban, steam_id, discord_id
+            )
 
     @commands.Cog.listener("on_member_join")
     async def new_member(self, member: nextcord.Member, banned: Optional[bool] = None):
@@ -529,16 +535,20 @@ class UpdateRolesCog(commands.Cog):
 
     @TestCog.test.subcommand(
         name="newjoin",
-        description="For testing only. Simulates an existing member as a new guild join"
+        description="For testing only. Simulates an existing member as a new guild join",
     )
-    async def simulate_new_member(self,
-                                  interaction: nextcord.Interaction,
-                                  user: nextcord.User = nextcord.SlashOption(
-                                      name="discord", description="The user to look up.", required=True
-                                  ),
-                                  banned: bool = nextcord.SlashOption(
-                                      name="banned", description="Pretend the user is banned or not", required=False
-                                  )):
+    async def simulate_new_member(
+        self,
+        interaction: nextcord.Interaction,
+        user: nextcord.User = nextcord.SlashOption(
+            name="discord", description="The user to look up.", required=True
+        ),
+        banned: bool = nextcord.SlashOption(
+            name="banned",
+            description="Pretend the user is banned or not",
+            required=False,
+        ),
+    ):
         """
         Command to simulate a member joining the guild, can pretend that a user is RGL banned
         :param interaction: The interaction

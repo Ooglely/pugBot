@@ -21,7 +21,7 @@ class BranchSelect(nextcord.ui.View):
 
     @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green, row=2)
     async def finish(
-            self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
     ):
         """Continues setup"""
         self.stop()
@@ -40,7 +40,8 @@ class TestCog(commands.Cog):
         """
 
     @test.subcommand(
-        name="branch", description="Switch the branch that the test bot is deployed under."
+        name="branch",
+        description="Switch the branch that the test bot is deployed under.",
     )
     async def switch_branch(self, interaction: nextcord.Interaction):
         """Switches the branch that the test bot account is currently deployed off of."""
@@ -134,4 +135,3 @@ class TestCog(commands.Cog):
                 content=f"Switching branch to `{selected_branch}`... Please check <#1144720434370203698> to see deployment progress.",
                 view=None,
             )
-

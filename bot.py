@@ -37,7 +37,9 @@ intents.voice_states = True
 activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.watching)
 bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
 
-bot.add_cog(TestCog(bot))   # Keep this Cog at the top as the test command might need to be loaded first
+bot.add_cog(
+    TestCog(bot)
+)  # Keep this Cog at the top as the test command might need to be loaded first
 bot.add_cog(ServerCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
