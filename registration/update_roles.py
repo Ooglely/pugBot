@@ -46,7 +46,7 @@ async def send_update_embed(loaded, member: nextcord.Member, steam_id, old_roles
     :return: None
     """
 
-    logs_channel = loaded["channels"]["log_channel"]
+    logs_channel = loaded["channels"]["logs"]
     removed_value = ""
 
     try:
@@ -102,7 +102,7 @@ async def send_banned_embed(loaded: dict, member: nextcord.Member, steam_id, old
     :param ban_role: The ban role to add to the member
     :return: None
     """
-    logs_channel = loaded["channels"]["log_channel"]
+    logs_channel = loaded["channels"]["logs"]
     removed_value = ""
 
     for role in old_roles:
@@ -149,7 +149,7 @@ async def send_unbanned_embed(loaded: dict, member: nextcord.Member, steam_id, b
     :param new_role: The new division role to give to the member
     :return: None
     """
-    logs_channel = loaded["channels"]["log_channel"]
+    logs_channel = loaded["channels"]["logs"]
 
     await member.remove_roles(ban_role)
     await member.add_roles(new_role)
@@ -200,11 +200,11 @@ async def update_guild_player(loaded: dict, player_divs: dict, banned, steam_id,
         # Guild has a valid bypass role and this user has it, skip
         return
 
-    gamemode = loaded["settings"]["gamemode"]
+    game_mode = loaded["settings"]["game_mode"]
     mode = loaded["settings"]["mode"]
 
     # Division from RGL
-    division = player_divs[gamemode][mode]
+    division = player_divs[game_mode][mode]
     new_role = loaded["roles"]["divisions"][division]
 
     roles = get_guild_old_div(loaded, member)
@@ -226,82 +226,88 @@ async def update_guild_player(loaded: dict, player_divs: dict, banned, steam_id,
         await send_update_embed(loaded, member, steam_id, roles, new_role)
 
 
+def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
+    """
+    Loads all guild registration settings, roles, and channels
+    :param bot: The nextcord bot client
+    :param guild_id: Guild ID to load
+    :return: A dictionary containing the information
+    """
+    guild = bot.get_guild(guild_id)
+
+    if guild is None:
+        return None
+
+    reg_settings = RegistrationSettings()
+    reg_settings.import_from_db(guild_id)
+
+    no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
+    nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
+    am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
+    im_role: nextcord.Role = guild.get_role(
+        reg_settings.roles["intermediate"]
+    )
+    main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
+    adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
+    inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
+    ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
+
+    bypass_role = None
+    if reg_settings.bypass:
+        bypass_role = guild.get_role(reg_settings.roles["bypass"])
+
+    logs_channel: nextcord.TextChannel = guild.get_channel(
+        reg_settings.channels["logs"]
+    )
+    registration_channel: nextcord.TextChannel = guild.get_channel(
+        reg_settings.channels["registration"]
+    )
+
+    # Yes the double adv_role is intentional...
+    # It's to handle people whos top div is Challenger
+    division_roles: list[nextcord.Role] = [
+        no_exp_role,
+        nc_role,
+        am_role,
+        im_role,
+        main_role,
+        adv_role,
+        adv_role,
+        inv_role,
+    ]
+
+    loaded = {
+        "guild": guild,
+        "roles": {
+            "divisions": division_roles,
+            "rgl_ban": ban_role,
+            "bypass": bypass_role
+        },
+        "channels": {
+            "logs": logs_channel,
+            "registration": registration_channel
+        },
+        "settings": {
+            "game_mode": reg_settings.gamemode,
+            "mode": reg_settings.mode,
+            "ban": reg_settings.ban
+        }
+    }
+
+    if reg_settings.gamemode == "sixes":
+        loaded["settings"]["game_mode"] = "sixes"
+    elif reg_settings.gamemode == "highlander":
+        loaded["settings"]["game_mode"] = "hl"
+
+    return loaded
+
+
 class UpdateRolesCog(commands.Cog):
     """Contains the cog to update users roles over time."""
 
     def __init__(self, bot: nextcord.Client):
         self.bot: nextcord.Client = bot
         self.update_rgl.start()  # pylint: disable=no-member
-
-    def load_guild_settings(self, guild_id: int) -> dict | None:
-        """
-        Loads all guild registration settings, roles, and channels
-        :param guild_id: Guild ID to load
-        :return: A dictionary containing the information
-        """
-        guild = self.bot.get_guild(guild_id)
-
-        if guild is None:
-            return None
-
-        reg_settings = RegistrationSettings()
-        reg_settings.import_from_db(guild_id)
-
-        no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
-        nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
-        am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
-        im_role: nextcord.Role = guild.get_role(
-            reg_settings.roles["intermediate"]
-        )
-        main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
-        adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
-        inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
-        ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
-
-        bypass_role = None
-        if reg_settings.bypass:
-            bypass_role = guild.get_role(reg_settings.roles["bypass"])
-
-        logs_channel: nextcord.TextChannel = guild.get_channel(
-            reg_settings.channels["logs"]
-        )
-
-        # Yes the double adv_role is intentional...
-        # It's to handle people whos top div is Challenger
-        divison_roles: list[nextcord.Role] = [
-            no_exp_role,
-            nc_role,
-            am_role,
-            im_role,
-            main_role,
-            adv_role,
-            adv_role,
-            inv_role,
-        ]
-
-        loaded = {
-            "guild": guild,
-            "roles": {
-                "divisions": divison_roles,
-                "rgl_ban": ban_role,
-                "bypass": bypass_role
-            },
-            "channels": {
-                "log_channel": logs_channel
-            },
-            "settings": {
-                "gamemode": reg_settings.gamemode,
-                "mode": reg_settings.mode,
-                "ban": reg_settings.ban
-            }
-        }
-
-        if reg_settings.gamemode == "sixes":
-            loaded["settings"]["gamemode"] = "sixes"
-        elif reg_settings.gamemode == "highlander":
-            loaded["settings"]["gamemode"] = "hl"
-
-        return loaded
 
     @tasks.loop(time=update_time)  # time=update_time
     async def update_rgl(self):
@@ -331,7 +337,7 @@ class UpdateRolesCog(commands.Cog):
             if not server["registration"]["enabled"]:
                 continue
 
-            guilds[server["guild"]] = self.load_guild_settings(server["guild"])
+            guilds[server["guild"]] = load_guild_settings(self.bot, server["guild"])
 
         for player in all_players:
             print(player)
@@ -399,7 +405,7 @@ class UpdateRolesCog(commands.Cog):
             )
             return
 
-        loaded = self.load_guild_settings(server["guild"])
+        loaded = load_guild_settings(self.bot, server["guild"])
 
         for player in players:
             print(player)
@@ -445,7 +451,7 @@ class UpdateRolesCog(commands.Cog):
         if "registration" not in server or not server["registration"]["enabled"]:
             return
 
-        loaded = self.load_guild_settings(server["guild"])
+        loaded = load_guild_settings(self.bot, server["guild"])
 
         bypass_role: nextcord.Role | None = loaded["roles"]["bypass"]
         if bypass_role and member.get_role(bypass_role.id):
@@ -473,11 +479,11 @@ class UpdateRolesCog(commands.Cog):
                 print(err, "Somehow this player is registered though??")
                 return
 
-        gamemode = loaded["settings"]["gamemode"]
+        game_mode = loaded["settings"]["game_mode"]
         mode = loaded["settings"]["mode"]
 
         # Division from RGL
-        division = player_divs[gamemode][mode]
+        division = player_divs[game_mode][mode]
         new_role = loaded["roles"]["divisions"][division]
 
         roles = get_guild_old_div(loaded, member)
@@ -518,7 +524,7 @@ class UpdateRolesCog(commands.Cog):
                 inline=True,
             )
 
-        logs_channel = loaded["channels"]["log_channel"]
+        logs_channel = loaded["channels"]["logs"]
         await logs_channel.send(embed=log_embed)
 
     @TestCog.test.subcommand(
