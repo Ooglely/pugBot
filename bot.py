@@ -5,8 +5,6 @@ from typing import Optional
 
 import logging
 import nextcord
-from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands, tasks
 
 import database
@@ -16,9 +14,6 @@ from constants import (
     NEW_COMMIT_NAME,
     VERSION,
     DISCORD_TOKEN,
-    TESTING_GUILDS,
-    GITHUB_API_KEY,
-    RAILWAY_API_KEY,
 )
 from test_cog import TestCog
 from util import get_steam64
@@ -256,7 +251,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
     else:
         embed_color = 0xFEF0C7
 
-    url = "https://rgl.gg/Public/Team?t=" + str(team.teamid)
+    url = "https://rgl.gg/Public/Team?t=" + str(team.team_id)
 
     embed = nextcord.Embed(title=team.name, url=url, color=embed_color)
 
@@ -341,6 +336,7 @@ async def search(
 
     Args:
         interaction (nextcord.Interaction): The interaction to respond to.
+        discord_user (User): The player to search for
         steamid (str): The player to search for.
     """
     await interaction.response.defer()
