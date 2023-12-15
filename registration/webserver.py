@@ -288,9 +288,7 @@ async def register(registration: NewUser, request: Request):
             )
             if result:
                 user = app.bot.get_user(int(registration))
-                await user.send(
-                    content=f"Registration failed: Your {result}"
-                )
+                await user.send(content=f"Registration failed: Your {result}")
 
             return {"message": "Success"}
         return {"message": "Wrong password"}
