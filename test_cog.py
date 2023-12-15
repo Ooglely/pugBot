@@ -3,7 +3,7 @@ import nextcord
 from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands
 
-from constants import TESTING_GUILDS, GITHUB_API_KEY, RAILWAY_API_KEY
+from constants import TESTING_GUILDS, GITHUB_API_KEY, RAILWAY_API_KEY, DEV_CONTRIBUTOR_ROLE
 
 
 class BranchSelect(nextcord.ui.View):
@@ -46,7 +46,7 @@ class TestCog(commands.Cog):
     async def switch_branch(self, interaction: nextcord.Interaction):
         """Switches the branch that the test bot account is currently deployed off of."""
         await interaction.response.defer()
-        if interaction.user.get_role(1144720671558078485) is None:
+        if interaction.user.get_role(DEV_CONTRIBUTOR_ROLE) is None:
             await interaction.send(
                 "You do not have the Contributors role and cannot run this command.",
                 ephemeral=True,
