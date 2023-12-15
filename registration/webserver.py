@@ -65,14 +65,22 @@ class WebserverCog(nextcord.ext.commands.Cog):
             steam_id (str): The steam id/link of the user to register
         """
         await interaction.response.defer()
-        await self.register_new_user(
+        result = await self.register_new_user(
             int(discord_user.id), int(util.get_steam64(steam_id))
         )
-        add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
-        await interaction.send(
-            f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
-            ephemeral=True,
-        )
+        if not result:
+            # Registration succeeded
+            add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
+            await interaction.send(
+                f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
+                ephemeral=True,
+            )
+        else:
+            # Registration failed
+            await interaction.send(
+                f"Error occurred while manually registering user: {result}`",
+                ephemeral=True,
+            )
 
     async def register_new_user(self, discord_id: int, steam_id: int):
         """Goes through the checks and registers a new user in the database.
@@ -93,20 +101,14 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
         try:
             get_player_from_steam(steam_id)
-            await user.send(
-                content=f"Registration failed: Your Steam profile is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
-            )
-            return
+            return f"Steam profile is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
         except LookupError:
             # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
             pass
 
         try:
             get_player_from_discord(discord_id)
-            await user.send(
-                content=f"Registration failed: Your Discord is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
-            )
-            return
+            return f"Discord is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
         except LookupError:
             # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
             pass
@@ -115,12 +117,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         try:
             player_data = await RGL.get_player(steam_id)
         except LookupError:
-            await user.send(
-                content="Registration failed: Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
-            )
-            return
-
-
+            return "RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
 
         # Gather player data and
         player_divs = await RGL.get_div_data(steam_id)
@@ -280,9 +277,15 @@ async def register(registration: NewUser, request: Request):
             print(registration.steam)
             print(registration.discord)
             await asyncio.sleep(3)
-            await app.bot.register_new_user(  # pylint: disable=no-member
+            result = await app.bot.register_new_user(  # pylint: disable=no-member
                 int(registration.discord), int(registration.steam)
             )
+            if result:
+                user = app.bot.get_user(int(registration))
+                await user.send(
+                    content=f"Registration failed: Your {result}"
+                )
+
             return {"message": "Success"}
         return {"message": "Wrong password"}
     print("Incorrect password in headers")
