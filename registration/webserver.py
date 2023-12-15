@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
-from constants import API_PASSWORD, BOT_COLOR, PORT
+from constants import API_PASSWORD, BOT_COLOR, PORT, DEV_REGISTRATIONS
 from database import add_player, get_all_servers, update_divisons
 from registration.update_roles import load_guild_settings
 from rglapi import RglApi
@@ -105,6 +105,56 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
         await update_divisons(steam_id, player_divs)
         print(player_divs)
+
+        # Build the string for the checks field
+        checks_field = ""
+
+        # Log check
+        if log_num >= 50:
+            checks_field += "✅ Logs: " + str(log_num)
+        else:
+            checks_field += "❌ Logs: " + str(log_num)
+
+        checks_field += "\n✅ RGL Profile exists"
+
+        team_history = 0
+        for temp in player_divs.values():
+            for result in temp.values():
+                team_history += result
+        # Check if they have been on a team.
+        if team_history <= 0:
+            checks_field += "\n❌ No RGL team history"
+        else:
+            checks_field += "\n✅ RGL team history exists"
+
+        # Check if they are banned.
+        if current_ban:
+            checks_field += "\n❌ Currently banned from RGL"
+        else:
+            checks_field += "\n✅ Not banned from RGL"
+
+        # Set up an embed to send to this guild's registrations channel
+        registration_embed = nextcord.Embed(
+            title="New Registration",
+            description=player_data["name"],
+            url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
+            color=BOT_COLOR,
+        )
+        registration_embed.add_field(
+            name="Discord", value=f"<@{discord_id}>\n@{user.name}", inline=True
+        )
+        registration_embed.add_field(name="Steam", value=str(steam_id), inline=True)
+        registration_embed.set_thumbnail(url=player_data["avatar"])
+
+        # output the results to the dev guild
+        registration_embed.add_field(
+            name="Checks", value=checks_field, inline=False
+        )
+        await self.bot.get_channel(DEV_REGISTRATIONS).send(embed=registration_embed)
+
+        # Remove the last field in preparation the guild embeds
+        registration_embed.remove_field(-1)
+
         all_servers = get_all_servers()
         for server in all_servers:
             # If registration settings are not set up, skip
@@ -132,45 +182,13 @@ class WebserverCog(nextcord.ext.commands.Cog):
             mode = loaded["settings"]["mode"]
             division = player_divs[game_mode][mode]
 
-            # Set up an embed to send to this guild's registrations channel
-            registration_embed = nextcord.Embed(
-                title="New Registration",
-                url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
-                color=BOT_COLOR,
-            )
-            registration_embed.add_field(
-                name="Discord", value=f"<@{discord_id}>", inline=True
-            )
-            registration_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-
-            # Build the string for the checks field
-            checks_field = ""
-
-            # Log check
-            if log_num >= 50:
-                checks_field += "✅ Logs: " + str(log_num)
-            else:
-                checks_field += "❌ Logs: " + str(log_num)
-
-            registration_embed.set_thumbnail(url=player_data["avatar"])
-            checks_field += "\n✅ RGL Profile exists"
-
-            # Check if they have been on a team.
-            if division <= 0:
+            if division < 0:
                 division = 0
-                checks_field += "\n❌ No RGL team history"
-            else:
-                checks_field += "\n✅ RGL team history exists"
 
+            # Get the division role or, if banned and setting is to follow RGL bans, get the ban role
             role_to_give = loaded["roles"]["divisions"][division]
-
-            # Check if they are banned.
-            if current_ban:
-                checks_field += "\n❌ Currently banned from RGL"
-                if loaded["settings"]["ban"]:
-                    role_to_give = loaded["roles"]["rgl_ban"]
-            else:
-                checks_field += "\n✅ Not banned from RGL"
+            if current_ban and loaded["settings"]["ban"]:
+                role_to_give = loaded["roles"]["rgl_ban"]
 
             # Lastly, add the role and output the results to the guild
             await member.add_roles(role_to_give)
@@ -183,6 +201,10 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 name="Checks", value=checks_field, inline=False
             )
             await loaded["channels"]["registration"].send(embed=registration_embed)
+
+            # Remove the last 2 fields in preparation for the next guild
+            registration_embed.remove_field(-1)
+            registration_embed.remove_field(-1)
 
     async def send_connect_dm(self, discord_id: int, connect_command: str):
         """Sends a DM to the intended user with the connect commmand.
