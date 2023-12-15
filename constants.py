@@ -11,11 +11,14 @@ else:
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN") or config_file["discord_token"]
 NEW_COMMIT_NAME = os.getenv("RAILWAY_GIT_COMMIT_SHA") or "Local Test"
+
 TESTING_GUILDS = [1144719525728763915]
 DEV_SUCCESSFUL_LOGS = 1161825015587680256
 DEV_FAILED_LOGS = 1161824917021536256
 DEV_REGISTRATIONS = 1183881158254137394
 DEV_CONTRIBUTOR_ROLE = 1144720671558078485
+DEV_DISCORD_LINK = "https://discord.gg/qcQBD3CAAw"
+
 DB_URL = os.getenv("MONGO_URL") or config_file["db_connection_string"]
 VERSION = os.getenv("BOT_VERSION") or config_file["version"] or "dev"
 API_PASSWORD = os.getenv("BOT_API_PASSWORD") or None

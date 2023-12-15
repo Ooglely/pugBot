@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
-from constants import API_PASSWORD, BOT_COLOR, PORT, DEV_REGISTRATIONS
-from database import add_player, get_all_servers, update_divisons
+from constants import API_PASSWORD, BOT_COLOR, PORT, DEV_REGISTRATIONS, DEV_DISCORD_LINK
+from database import add_player, get_all_servers, update_divisons, get_player_from_steam, get_player_from_discord
 from registration.update_roles import load_guild_settings
 from rglapi import RglApi
 
@@ -88,8 +88,30 @@ class WebserverCog(nextcord.ext.commands.Cog):
             discord_id (int): Discord ID of the player
             steam_id (int): Steam ID of the player
         """
-        # If the user doesn't have an RGL profile, don't bother registering
+
         user = self.bot.get_user(discord_id)
+
+        try:
+            get_player_from_steam(steam_id)
+            await user.send(
+                content=f"Registration failed: Your Steam profile is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
+            )
+            return
+        except LookupError:
+            # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
+            pass
+
+        try:
+            get_player_from_discord(discord_id)
+            await user.send(
+                content=f"Registration failed: Your Discord is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
+            )
+            return
+        except LookupError:
+            # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
+            pass
+
+        # If the user doesn't have an RGL profile, don't bother registering
         try:
             player_data = await RGL.get_player(steam_id)
         except LookupError:
@@ -97,6 +119,8 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 content="Registration failed: Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
             )
             return
+
+
 
         # Gather player data and
         player_divs = await RGL.get_div_data(steam_id)
