@@ -7,7 +7,13 @@ from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
 from constants import API_PASSWORD, BOT_COLOR, PORT, DEV_REGISTRATIONS, DEV_DISCORD_LINK
-from database import add_player, get_all_servers, update_divisons, get_player_from_steam, get_player_from_discord
+from database import (
+    add_player,
+    get_all_servers,
+    update_divisons,
+    get_player_from_steam,
+    get_player_from_discord,
+)
 from registration.update_roles import load_guild_settings
 from rglapi import RglApi
 
