@@ -3,7 +3,12 @@ import nextcord
 from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands
 
-from constants import TESTING_GUILDS, GITHUB_API_KEY, RAILWAY_API_KEY, DEV_CONTRIBUTOR_ROLE
+from constants import (
+    TESTING_GUILDS,
+    GITHUB_API_KEY,
+    RAILWAY_API_KEY,
+    DEV_CONTRIBUTOR_ROLE,
+)
 
 
 class BranchSelect(nextcord.ui.View):

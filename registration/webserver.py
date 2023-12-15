@@ -147,9 +147,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         registration_embed.set_thumbnail(url=player_data["avatar"])
 
         # output the results to the dev guild
-        registration_embed.add_field(
-            name="Checks", value=checks_field, inline=False
-        )
+        registration_embed.add_field(name="Checks", value=checks_field, inline=False)
         await self.bot.get_channel(DEV_REGISTRATIONS).send(embed=registration_embed)
 
         # Remove the last field in preparation the guild embeds
