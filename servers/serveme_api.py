@@ -72,7 +72,6 @@ class ServemeAPI:
         """
         reserve_json = json.dumps(reservation_data)
 
-        server_id: int
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 self.base_url + "?api_key=" + serveme_key,
@@ -163,10 +162,8 @@ class ServemeAPI:
                 async with session.get("http://dl.serveme.tf/maps/") as resp:
                     maps_list = await resp.text()
 
-        # Get all maps that match the beginning of the input
-        # maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
-        # Use temporary fix for now
-        maps = re.findall(rf"(?<=\(fs\) ){map_name}.*", maps_list)
+        # Get all maps that match the name
+        maps = re.findall(rf"{map_name}.*", maps_list)
 
         # Deduplicate results
         maps_set = set(maps)
@@ -209,7 +206,6 @@ class ServemeAPI:
 
         async with aiohttp.ClientSession() as session:
             async with session.get("https://whitelist.tf") as resp:
-                print(type(resp.status))
                 if resp.status < 300:
                     return True
         return False
@@ -222,4 +218,5 @@ if __name__ == "__main__":
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
     print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product'))}")
+    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('cp_proces'))}")
     print(asyncio.run(ServemeAPI.fetch_all_maps()))
