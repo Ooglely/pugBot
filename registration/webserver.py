@@ -6,13 +6,19 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
-from constants import API_PASSWORD, BOT_COLOR, PORT
-from database import add_player, get_all_servers, update_divisons
-from registration import RegistrationSettings
-from rgl_api import RGL_API
+from constants import API_PASSWORD, BOT_COLOR, PORT, DEV_REGISTRATIONS, DEV_DISCORD_LINK
+from database import (
+    add_player,
+    get_all_servers,
+    update_divisons,
+    get_player_from_steam,
+    get_player_from_discord,
+)
+from registration.update_roles import load_guild_settings
+from rglapi import RglApi
 
 app: FastAPI = FastAPI()
-RGL: RGL_API = RGL_API()
+RGL: RglApi = RglApi()
 
 
 class NewUser(BaseModel):
@@ -40,7 +46,7 @@ class NewConnect(BaseModel):
 
 
 class WebserverCog(nextcord.ext.commands.Cog):
-    """Cog that stores all of the functions to register users."""
+    """Cog that stores all the functions to register users."""
 
     def __init__(self, bot):
         self.bot: nextcord.Client = bot
@@ -65,14 +71,22 @@ class WebserverCog(nextcord.ext.commands.Cog):
             steam_id (str): The steam id/link of the user to register
         """
         await interaction.response.defer()
-        await self.register_new_user(
+        result = await self.register_new_user(
             int(discord_user.id), int(util.get_steam64(steam_id))
         )
-        add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
-        await interaction.send(
-            f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
-            ephemeral=True,
-        )
+        if not result:
+            # Registration succeeded
+            add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
+            await interaction.send(
+                f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
+                ephemeral=True,
+            )
+        else:
+            # Registration failed
+            await interaction.send(
+                f"Error occurred while manually registering user: {result}`",
+                ephemeral=True,
+            )
 
     async def register_new_user(self, discord_id: int, steam_id: int):
         """Goes through the checks and registers a new user in the database.
@@ -82,26 +96,90 @@ class WebserverCog(nextcord.ext.commands.Cog):
         2. Registered in RGL
         3. Played on at least 1 RGL team
         4. Not RGL banned
-        5. Highest divison played
+        5. Highest division played
 
         Args:
             discord_id (int): Discord ID of the player
             steam_id (int): Steam ID of the player
         """
+
+        user = self.bot.get_user(discord_id)
+
+        try:
+            get_player_from_steam(steam_id)
+            return f"Steam profile is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
+        except LookupError:
+            # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
+            pass
+
+        try:
+            get_player_from_discord(discord_id)
+            return f"Discord is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
+        except LookupError:
+            # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
+            pass
+
         # If the user doesn't have an RGL profile, don't bother registering
-        member = self.bot.get_user(discord_id)
-        player_data = {}
         try:
             player_data = await RGL.get_player(steam_id)
         except LookupError:
-            await member.send(
-                content="Registration failed: Your RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
-            )
-            return
-        await asyncio.sleep(2)
+            return "RGL profile does not exist. Please create one at https://rgl.gg/?showFront=true and try again."
+
+        # Gather player data and
         player_divs = await RGL.get_div_data(steam_id)
+        current_ban = await RGL.check_banned(steam_id)
+        log_num = await util.get_total_logs(str(steam_id))
+
         await update_divisons(steam_id, player_divs)
         print(player_divs)
+
+        # Build the string for the checks field
+        checks_field = ""
+
+        # Log check
+        if log_num >= 50:
+            checks_field += "✅ Logs: " + str(log_num)
+        else:
+            checks_field += "❌ Logs: " + str(log_num)
+
+        checks_field += "\n✅ RGL Profile exists"
+
+        team_history = 0
+        for temp in player_divs.values():
+            for result in temp.values():
+                team_history += result
+        # Check if they have been on a team.
+        if team_history <= 0:
+            checks_field += "\n❌ No RGL team history"
+        else:
+            checks_field += "\n✅ RGL team history exists"
+
+        # Check if they are banned.
+        if current_ban:
+            checks_field += "\n❌ Currently banned from RGL"
+        else:
+            checks_field += "\n✅ Not banned from RGL"
+
+        # Set up an embed to send to this guild's registrations channel
+        registration_embed = nextcord.Embed(
+            title="New Registration",
+            description=player_data["name"],
+            url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
+            color=BOT_COLOR,
+        )
+        registration_embed.add_field(
+            name="Discord", value=f"<@{discord_id}>\n@{user.name}", inline=True
+        )
+        registration_embed.add_field(name="Steam", value=str(steam_id), inline=True)
+        registration_embed.set_thumbnail(url=player_data["avatar"])
+
+        # output the results to the dev guild
+        registration_embed.add_field(name="Checks", value=checks_field, inline=False)
+        await self.bot.get_channel(DEV_REGISTRATIONS).send(embed=registration_embed)
+
+        # Remove the last field in preparation the guild embeds
+        registration_embed.remove_field(-1)
+
         all_servers = get_all_servers()
         for server in all_servers:
             # If registration settings are not set up, skip
@@ -110,125 +188,49 @@ class WebserverCog(nextcord.ext.commands.Cog):
             # If registration is disabled, skip
             if not server["registration"]["enabled"]:
                 continue
-            guild = self.bot.get_guild(server["guild"])
-            # If guild is not found, skip
-            if guild is None:
+
+            # Load this guild's settings, roles, and channels from the DB
+            loaded = load_guild_settings(self.bot, server["guild"])
+            if loaded is None:
                 continue
+
             # If member is not in server, skip
-            if guild.get_member(discord_id) is None:
-                continue
-            reg_settings = RegistrationSettings()
-            reg_settings.import_from_db(server["guild"])
-
-            gamemode: str
-            if reg_settings.gamemode == "sixes":
-                gamemode = "sixes"
-            elif reg_settings.gamemode == "highlander":
-                gamemode = "hl"
-
-            division = player_divs[gamemode][reg_settings.mode]
-
-            no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
-            nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
-            am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
-            im_role: nextcord.Role = guild.get_role(reg_settings.roles["intermediate"])
-            main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
-            adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
-            inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
-            ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
-
-            registration_channel: nextcord.TextChannel = guild.get_channel(
-                reg_settings.channels["registration"]
-            )
-
-            player: nextcord.Member = guild.get_member(discord_id)
-
-            if reg_settings.bypass:
-                if reg_settings.roles["bypass"] is not None:
-                    if player.get_role(reg_settings.roles["bypass"]) is not None:
-                        continue
-
-            # Setup an embed to send to the registrations channel:
-            registration_embed = nextcord.Embed(
-                title="New Registration",
-                url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
-                color=BOT_COLOR,
-            )
-            registration_embed.add_field(
-                name="Discord", value=f"<@{discord_id}>", inline=True
-            )
-            registration_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-
-            # We will add a checks field later, but want to add data to it as we go along the process.
-            checks_field = ""
-
-            # Log check
-            log_num = await util.get_total_logs(str(steam_id))
-            if log_num >= 50:
-                checks_field += "✅ Logs: " + str(log_num)
-            else:
-                checks_field += "❌ Logs: " + str(log_num)
-
-            registration_embed.set_thumbnail(url=player_data["avatar"])
-            checks_field += "\n✅ RGL Profile exists"
-
-            # Check if they have been on a team.
-            if division <= 0:
-                checks_field += "\n❌ No RGL team history"
-                await player.add_roles(no_exp_role)
-                registration_embed.add_field(
-                    name="Roles Added", value=f"<@&{no_exp_role.id}>", inline=False
-                )
-                registration_embed.add_field(
-                    name="Checks", value=checks_field, inline=False
-                )
-                await registration_channel.send(embed=registration_embed)
+            member = loaded["guild"].get_member(discord_id)
+            if member is None:
                 continue
 
-            checks_field += "\n✅ RGL team history exists"
-
-            await asyncio.sleep(5)  # Sleep for 5 seconds to avoid rate limiting
-
-            # Check if they are banned.
-            if await RGL.check_banned(steam_id):
-                checks_field += "\n❌ Currently banned from RGL"
-                if reg_settings.ban:
-                    await player.add_roles(ban_role)
-                    registration_embed.add_field(
-                        name="Roles Added", value=f"<@&{ban_role.id}>", inline=False
-                    )
-                    registration_embed.add_field(
-                        name="Checks", value=checks_field, inline=False
-                    )
-                    await registration_channel.send(embed=registration_embed)
+            # If the bypass role exists and the user has it, skip
+            bypass_role = loaded["roles"]["bypass"]
+            if bypass_role:
+                if member.get_role(bypass_role) is not None:
                     continue
 
-            checks_field += "\n✅ Not banned from RGL"
+            game_mode = loaded["settings"]["gamemode"]
+            mode = loaded["settings"]["mode"]
+            division = player_divs[game_mode][mode]
 
-            # Lastly, add the division role.
-            # This implementation is so ugly man but I don't even know how else to do it
-            roles_to_add: list[nextcord.Role] = [
-                no_exp_role,
-                nc_role,
-                am_role,
-                im_role,
-                main_role,
-                adv_role,
-                adv_role,
-                inv_role,
-            ]
+            division = max(division, 0)
 
-            await player.add_roles(roles_to_add[division])
+            # Get the division role or, if banned and setting is to follow RGL bans, get the ban role
+            role_to_give = loaded["roles"]["divisions"][division]
+            if current_ban and loaded["settings"]["ban"]:
+                role_to_give = loaded["roles"]["rgl_ban"]
+
+            # Lastly, add the role and output the results to the guild
+            await member.add_roles(role_to_give)
             registration_embed.add_field(
                 name="Roles Added",
-                value=f"<@&{roles_to_add[division].id}>",
+                value=f"<@&{role_to_give.id}>",
                 inline=False,
             )
-
             registration_embed.add_field(
                 name="Checks", value=checks_field, inline=False
             )
-            await registration_channel.send(embed=registration_embed)
+            await loaded["channels"]["registration"].send(embed=registration_embed)
+
+            # Remove the last 2 fields in preparation for the next guild
+            registration_embed.remove_field(-1)
+            registration_embed.remove_field(-1)
 
     async def send_connect_dm(self, discord_id: int, connect_command: str):
         """Sends a DM to the intended user with the connect commmand.
@@ -255,7 +257,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             log_level="info",
         )
         server = uvicorn.Server(config)
-        app.bot = self
+        app.cog = self
         await server.serve()
 
 
@@ -282,9 +284,15 @@ async def register(registration: NewUser, request: Request):
             print(registration.steam)
             print(registration.discord)
             await asyncio.sleep(3)
-            await app.bot.register_new_user(  # pylint: disable=no-member
+            result = await app.cog.register_new_user(  # pylint: disable=no-member
                 int(registration.discord), int(registration.steam)
             )
+            if result:
+                user = app.cog.bot.get_user(  # pylint: disable=no-member
+                    int(registration)
+                )
+                await user.send(content=f"Registration failed: Your {result}")
+
             return {"message": "Success"}
         return {"message": "Wrong password"}
     print("Incorrect password in headers")
@@ -306,7 +314,7 @@ async def send_connect(connect: NewConnect, request: Request):
     if request.headers["user-agent"].startswith("sm-ripext"):
         print(connect.discordID)
         print(connect.connectCommand)
-        await app.bot.send_connect_dm(  # pylint: disable=no-member
+        await app.cog.send_connect_dm(  # pylint: disable=no-member
             int(connect.discordID), str(connect.connectCommand)
         )
         return {"message": "Success"}

@@ -5,21 +5,17 @@ from typing import Optional
 
 import logging
 import nextcord
-from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
 from nextcord.ext import commands, tasks
 
 import database
-from rgl_api import RGL_API, Player, Team
+from rglapi import RglApi, Player, Team
 from constants import (
     BOT_COLOR,
     NEW_COMMIT_NAME,
     VERSION,
     DISCORD_TOKEN,
-    TESTING_GUILDS,
-    GITHUB_API_KEY,
-    RAILWAY_API_KEY,
 )
+from test_cog import TestCog
 from util import get_steam64
 from servers.servers import ServerCog
 from logs.searcher import LogSearcher
@@ -41,6 +37,9 @@ intents.voice_states = True
 activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.watching)
 bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
 
+bot.add_cog(
+    TestCog(bot)
+)  # Keep this Cog at the top as the test command might need to be loaded first
 bot.add_cog(ServerCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
@@ -52,7 +51,7 @@ bot.add_cog(EloCog(bot))
 bot.add_cog(StatsCog(bot))
 bot.remove_command("help")
 
-RGL: RGL_API = RGL_API()
+RGL: RglApi = RglApi()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -249,12 +248,12 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
         embed (nextcord.Embed): The embed to represent the team.
     """
 
-    if team.currentplayers:
+    if team.current_players:
         embed_color = 0xCCCCDC
     else:
         embed_color = 0xFEF0C7
 
-    url = "https://rgl.gg/Public/Team?t=" + str(team.teamid)
+    url = "https://rgl.gg/Public/Team?t=" + str(team.team_id)
 
     embed = nextcord.Embed(title=team.name, url=url, color=embed_color)
 
@@ -262,10 +261,10 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
     if team.rank:
         embed.add_field(name="Team Rank", value=team.rank, inline=True)
 
-    embed.add_field(name=team.seasonname, value=team.division, inline=False)
+    embed.add_field(name=team.season_name, value=team.division, inline=False)
 
     player_text = ""
-    for player in team.currentplayers:
+    for player in team.current_players:
         player_text += "["
         if player["isLeader"]:
             player_text += ":star: "
@@ -277,7 +276,7 @@ async def create_team_embed(team: Team) -> nextcord.Embed:
         embed.add_field(name="Current Players", value=player_text, inline=False)
 
     player_text = ""
-    for player in team.formerplayers:
+    for player in team.former_players:
         player_text += "["
         if player["isLeader"]:
             player_text += ":star: "
@@ -339,6 +338,7 @@ async def search(
 
     Args:
         interaction (nextcord.Interaction): The interaction to respond to.
+        discord_user (User): The player to search for
         steamid (str): The player to search for.
     """
     await interaction.response.defer()
@@ -353,132 +353,6 @@ async def search(
         return
     embed = await create_player_embed(rgl)
     await interaction.send(embed=embed)
-
-
-@bot.slash_command(guild_ids=TESTING_GUILDS)
-async def test(_interaction: nextcord.Interaction):
-    """
-    This is the main slash command that will be the prefix of all commands below.
-    This will never get called since it has subcommands.
-    """
-
-
-class BranchSelect(nextcord.ui.View):
-    """Opens a string select dropdown to select the branch to switch the bot to."""
-
-    def __init__(self, branches: list[str]):
-        super().__init__()
-        self.branches: list[nextcord.SelectOption] = []
-        for branch in branches:
-            self.branches.append(nextcord.SelectOption(label=branch))
-        self.select = nextcord.ui.StringSelect(
-            placeholder="Select a branch", options=self.branches, row=1
-        )
-        self.add_item(self.select)
-
-    @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green, row=2)
-    async def finish(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Continues setup"""
-        self.stop()
-
-
-@test.subcommand(
-    name="branch", description="Switch the branch that the test bot is deployed under."
-)
-async def switch_branch(interaction: nextcord.Interaction):
-    """Switches the branch that the test bot account is currently deployed off of."""
-    await interaction.response.defer()
-    if interaction.user.get_role(1144720671558078485) is None:
-        await interaction.send(
-            "You do not have the Contributors role and cannot run this command.",
-            ephemeral=True,
-        )
-        return
-
-    github_api = AIOHTTPTransport(
-        url="https://api.github.com/graphql",
-        headers={"Authorization": f"bearer {GITHUB_API_KEY}"},
-    )
-
-    branch_names = []
-    async with Client(
-        transport=github_api,
-        fetch_schema_from_transport=False,
-    ) as session:
-        list_branches = gql(
-            """
-            query getBranches {
-                repository(name: "pugBot", owner: "Ooglely") {
-                    refs(first: 25, refPrefix: "refs/heads/") {
-                        edges {
-                            node {
-                                name
-                            }
-                        }
-                    }
-                }
-            }
-            """
-        )
-
-        result = await session.execute(list_branches)
-        for branch in result["repository"]["refs"]["edges"]:
-            branch_names.append(branch["node"]["name"])
-    branch_select = BranchSelect(branch_names)
-    await interaction.send(
-        "Select a branch to deploy.", view=branch_select, ephemeral=False
-    )
-    status = await branch_select.wait()
-    if not status:
-        selected_branch = branch_select.select.values[0]
-        railway_api = AIOHTTPTransport(
-            url="https://backboard.railway.app/graphql/v2",
-            headers={"Authorization": f"Bearer {RAILWAY_API_KEY}"},
-        )
-
-        async with Client(
-            transport=railway_api,
-            fetch_schema_from_transport=False,
-        ) as session:
-            set_deployment_trigger = gql(
-                f"""
-                mutation setDeploymentTrigger {{
-                    deploymentTriggerUpdate(
-                        id: "275e3203-4ac7-4ada-84de-1c11f8b9b124",
-                        input: {{
-                            branch: "{selected_branch}",
-                            checkSuites: true,
-                            repository: "Ooglely/pugBot",
-                        }}
-                    ) {{
-                        id
-                    }}
-                }}
-                """
-            )
-
-            redeploy_environment = gql(
-                """
-                mutation deployNewDeployment {
-                    environmentTriggersDeploy(
-                        input: {
-                            environmentId: "5c2a716b-7bac-4dae-9ee4-78725cb1ee1a",
-                            projectId: "8ffd3860-8187-406a-bf03-69d7356ec462",
-                            serviceId: "01b0b783-64b1-4727-b8c9-5df09701c8ac"
-                        }
-                    )
-                }
-                """
-            )
-
-            await session.execute(set_deployment_trigger)
-            await session.execute(redeploy_environment)
-        await interaction.edit_original_message(
-            content=f"Switching branch to `{selected_branch}`... Please check <#1144720434370203698> to see deployment progress.",
-            view=None,
-        )
 
 
 @bot.slash_command(

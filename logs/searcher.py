@@ -4,6 +4,7 @@ import time
 import nextcord
 from nextcord.ext import tasks
 
+from constants import DEV_SUCCESSFUL_LOGS, DEV_FAILED_LOGS
 from pug import PugCategory
 from logs import Player, LogData
 from logs.logstf_api import LogsAPI
@@ -257,7 +258,7 @@ class LogSearcher:
         )
         log_embed.add_field(name="Players", value=player_string)
         log_embed.add_field(name="Guild", value=log.guild)
-        await self.bot.get_channel(1161824917021536256).send(embed=log_embed)
+        await self.bot.get_channel(DEV_FAILED_LOGS).send(embed=log_embed)
 
     async def log_completed_log(self, log: FullLog):
         """Log a completed log to the database"""
@@ -290,7 +291,7 @@ class LogSearcher:
         await self.bot.get_channel(logs_channel).send(
             content=f"{category_string}{log_url}"
         )
-        await self.bot.get_channel(1161825015587680256).send(
+        await self.bot.get_channel(DEV_SUCCESSFUL_LOGS).send(
             content=f"{category_string}{log_url}\nGuild: {log.guild}"
         )
 

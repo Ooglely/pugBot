@@ -5,11 +5,12 @@ import re
 import string
 import random
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Optional, Set
 
 import aiohttp
 import nextcord
 import pytz
+from aiohttp import ContentTypeError
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
 from rcon.source import Client
@@ -41,9 +42,9 @@ class ServerCog(commands.Cog):
     """
 
     def __init__(self, bot: nextcord.Client):
-        self.servers: List[Reservation] = []
+        self.servers: Set[Reservation] = set()
         self.bot = bot
-        self.all_maps: str = ""
+        self.all_maps: list[str] = []
         self.map_updater.start()  # pylint: disable=no-member
         self.server_status.start()  # pylint: disable=no-member
 
@@ -84,8 +85,9 @@ class ServerCog(commands.Cog):
         # Can't use serveme for now
         # self.all_maps = await ServemeAPI.fetch_all_maps(False)
         with open("map_list.txt", "r", encoding="UTF-8") as map_file:
-            self.all_maps = map_file.read()
+            map_list = map_file.read()
 
+        self.all_maps = re.findall(r"(?<=\(fs\) ).*", map_list)
         # print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
@@ -222,9 +224,7 @@ class ServerCog(commands.Cog):
                 await interaction.send(f"Start time input error: {err}", ephemeral=True)
                 return
 
-        map_versions = await ServemeAPI.fetch_newest_version(
-            tf_map, self.all_maps
-        )  # pylint: disable=no-member
+        map_versions = await ServemeAPI.fetch_newest_version(tf_map, self.all_maps)
         print(map_versions)
         if map_versions is None:
             await interaction.send(
@@ -232,8 +232,8 @@ class ServerCog(commands.Cog):
                 ephemeral=True,
             )
             return
-        if isinstance(map_versions, str):
-            chosen_map = map_versions
+        if len(map_versions) == 1:
+            chosen_map = map_versions[0]
         else:
             map_selector_view = MapSelection(map_versions)
             await interaction.send(
@@ -247,28 +247,23 @@ class ServerCog(commands.Cog):
 
         guild_data = database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
-        servers, times = await ServemeAPI().get_new_reservation(
+        servers, times = await ServemeAPI().get_server_list(
             serveme_api_key, dt_start, duration
         )
 
         reserve: dict
-        server_found: bool = False
 
-        for server in servers["servers"]:
-            if "chi" in server["ip"]:
-                if 536 != server["id"]:
-                    print("New server reserved: " + str(server))
-                    reserve = server
-                    server_found = True
-                    break
-
-        if not server_found:
+        for location in ["chi", "ks"]:
             for server in servers["servers"]:
-                if "ks" in server["ip"]:
-                    print("New server reserved: " + str(server))
-                    reserve = server
-                    server_found = True
-                    break
+                if location in server["ip"]:
+                    if 536 != server["id"]:
+                        print("New server reserved: " + str(server))
+                        reserve = server
+                        break
+
+        if not reserve:
+            await interaction.send("No servers available at this time.")
+            return
 
         connect_password = "pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=8)
@@ -277,6 +272,8 @@ class ServerCog(commands.Cog):
             random.choices(string.ascii_letters + string.digits, k=20)
         )
 
+        whitelist_id = None
+        server_config_id = None
         if gamemode == "sixes":
             whitelist_id = 20  # 6s whitelist ID
             if tf_map not in maps["sixes"].values():
@@ -309,7 +306,13 @@ class ServerCog(commands.Cog):
         if whitelist in (13798, 13797):
             whitelist_id = None  # type: ignore
 
-        reserve_string = {
+        if whitelist and not await ServemeAPI.check_whitelist_status():
+            await interaction.send(
+                "whitelist.tf appears to be providing errors and a custom whitelist cannot be loaded. Try reserving with the whitelist field left empty"
+            )
+            return
+
+        reserve_dict = {
             "reservation": {
                 "starts_at": times["reservation"]["starts_at"],
                 "ends_at": times["reservation"]["ends_at"],
@@ -326,23 +329,23 @@ class ServerCog(commands.Cog):
             }
         }
 
-        print(reserve_string)
-        reserve_json = json.dumps(reserve_string)
-
+        print(reserve_dict)
+        server_data: dict
         try:
-            server_id: int
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    "https://na.serveme.tf/api/reservations?api_key=" + serveme_api_key,
-                    data=reserve_json,
-                    headers={"Content-type": "application/json"},
-                ) as resp:
-                    server_data = await resp.json()
-                    print(server_data)
-                    server_id = server_data["reservation"]["id"]
-                    print(await resp.text())
+            server_data = await ServemeAPI().reserve_server(
+                serveme_api_key, reserve_dict
+            )
+            server_id = server_data["reservation"]["id"]
         except ValueError:
+            if "errors" not in server_data:
+                server_data["errors"] = "Unable to decode error, please report issue."
             await interaction.send("Serveme error: " + str(server_data["errors"]))
+            return
+        except ContentTypeError:
+            await interaction.send(
+                "Reservation failed. If other attempts fail you may need to re-enter your Serveme API key."
+            )
+            return
 
         connect = (
             "connect "
@@ -384,19 +387,23 @@ class ServerCog(commands.Cog):
         )
         embed.add_field(name="Connect", value=connect, inline=False)
 
+        message_list = []
+
         # RCON message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
         if rcon_channel == interaction.channel:
             # Include RCON in this embed if we are already in the RCON channel
             embed.add_field(name="RCON", value=rcon, inline=False)
         else:
-            await rcon_channel.send(rcon)
+            rcon_msg = await rcon_channel.send(rcon)
+            message_list.append((rcon_channel.id, rcon_msg.id))
 
         embed.add_field(name="Map", value=chosen_map, inline=False)
         embed.set_footer(text=VERSION)
         reserve_msg = await interaction.edit_original_message(
             content=None, embed=embed, view=None
         )
+        message_list.append((interaction.channel_id, reserve_msg.id))
 
         # Connect Message
         connect_embed = nextcord.Embed(
@@ -408,6 +415,7 @@ class ServerCog(commands.Cog):
         connect_embed.add_field(name="Command", value=connect, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
 
+        connect_channel = self.bot.get_channel(guild_data["connect"])
         if interaction.guild_id == 727627956058325052:  # TF2CC
             if interaction.user.voice is not None:
                 category = interaction.user.voice.channel.category
@@ -418,14 +426,11 @@ class ServerCog(commands.Cog):
                         break
             else:
                 connect_channel = self.bot.get_channel(guild_data["connect"])
-        else:
-            connect_channel = self.bot.get_channel(guild_data["connect"])
 
         connect_msg = await connect_channel.send(embed=connect_embed)
+        message_list.append((connect_channel.id, connect_msg.id))
 
-        self.servers.append(
-            Reservation(server_id, serveme_api_key, [reserve_msg, connect_msg])
-        )
+        self.servers.add(Reservation(server_id, serveme_api_key, message_list))
 
     @util.is_setup()
     @util.is_runner()
@@ -480,8 +485,8 @@ class ServerCog(commands.Cog):
                 view=None,
             )
             return
-        if isinstance(map_versions, str):
-            chosen_map = map_versions
+        if len(map_versions) == 1:
+            chosen_map = map_versions[0]
         else:
             map_selector_view = MapSelection(map_versions)
             await interaction.edit_original_message(
@@ -499,7 +504,8 @@ class ServerCog(commands.Cog):
             )
         except Exception:
             await interaction.edit_original_message(
-                content="Unable to detect the current gamemode. The whitelist on the server is not associated with a gamemode."
+                content="Unable to detect the current gamemode. The whitelist on the server is not associated with a "
+                "gamemode."
             )
             return
 
@@ -610,8 +616,11 @@ class ServerCog(commands.Cog):
                 server_view.add_item(button)
 
             await interaction.send("Select a reservation to end.", view=server_view)
+
             status = await server_view.wait()
             if status:
+                # Interaction timed out, cleanup
+                await interaction.delete_original_message()
                 return
             server_id = server_view.server_chosen
 
@@ -619,20 +628,21 @@ class ServerCog(commands.Cog):
                 f"https://na.serveme.tf/api/reservations/{reservations[server_id]['id']}?api_key={serveme_api_key}",
             ) as resp:
                 if resp.status == 200:
-                    await interaction.edit_original_message(
-                        content=f"Ending reservation `#{reservations[server_id]['id']}`.",
-                        view=None,
-                    )
+                    content = f"Ending reservation `#{reservations[server_id]['id']}`."
                 elif resp.status == 204:
-                    await interaction.edit_original_message(
-                        content=f"Canceling future reservation `#{reservations[server_id]['id']}`.",
-                        view=None,
-                    )
+                    content = f"Canceling future reservation `#{reservations[server_id]['id']}`."
                 else:
-                    await interaction.edit_original_message(
-                        content=f"Failed to end reservation `#{reservations[server_id]['id']}`.\nStatus code: {resp.status}",
-                        view=None,
+                    content = (
+                        f"Failed to end reservation `#{reservations[server_id]['id']}`.\n"
+                        f"Status code: {resp.status}"
                     )
+
+            # Update the message and delete it after 30 seconds
+            await interaction.edit_original_message(
+                content=content,
+                view=None,
+            )
+            await interaction.delete_original_message(delay=30.0)
 
     @reserve.on_autocomplete("tf_map")
     @change_map.on_autocomplete("tf_map")
@@ -650,17 +660,12 @@ class ServerCog(commands.Cog):
             print(map_search)
             if map_search is None:
                 await interaction.response.send_autocomplete(["No results."])
-                return
-            if isinstance(map_search, str):
-                await interaction.response.send_autocomplete([map_search])
-                return
-            if len(map_search) > 25:
+            elif len(map_search) > 25:
                 await interaction.response.send_autocomplete(
                     ["Too many results. Please narrow your search."]
                 )
-                return
-            await interaction.response.send_autocomplete(map_search)
-            return
+            else:
+                await interaction.response.send_autocomplete(map_search)
 
         await interaction.response.send_autocomplete(
             ["Please type the beginning of the map name to get autocomplete results."]
@@ -668,43 +673,17 @@ class ServerCog(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def server_status(self):
-        """Update the status of the servers every minute."""
-        for server in self.servers:
-            try:
-                status: bool = await server.is_active()
-                if not status:
-                    for message in server.messages:
-                        try:
-                            await message.delete()
-                        except nextcord.HTTPException:
-                            try:
-                                self.servers.remove(server)
-                            except ValueError:
-                                print("Server not in list")
-                                print(self.servers)
-                                continue
-                            continue
-                    try:
-                        self.servers.remove(server)
-                    except ValueError:
-                        print("Server not in list")
-                        print(self.servers)
-                        continue
-            except AttributeError:
-                print("Attribute error")
-                print(server)
-                print(server.messages)
-                self.servers.remove(server)
-                continue
-        return
-
-    @server_status.error
-    async def error_handler(self, exception: Exception):
-        """Handles printing errors to console for the loop
-
-        Args:
-            exception (Exception): The exception that was raised
         """
-        print("Error in server_status loop:\n")
-        print(exception.__class__.__name__)
-        print(exception)
+        Attempt to clear ended Reservations
+        On a one-minute loop
+        """
+
+        for server in self.servers:
+            active: bool = await server.is_active()
+            if not active:
+                await server.stop_tracking(self.bot)
+                try:
+                    print("Attempting to remove a server from this loop")
+                    self.servers.remove(server)
+                except KeyError:
+                    print("Server already removed")

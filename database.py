@@ -3,9 +3,9 @@
 import pymongo
 
 import constants
-from rgl_api import RGL_API
+from rglapi import RglApi
 
-RGL: RGL_API = RGL_API()
+RGL: RglApi = RglApi()
 
 
 class BotDatabase(pymongo.MongoClient):
@@ -101,7 +101,7 @@ def add_new_guild(guild: int, role: int, connect: int, rcon: int):
     database = client.guilds.config
     database.update_one(
         {"guild": guild},
-        {"$set": {"role": role, "connect": connect, "rcon": rcon}},
+        {"$set": {"role": role, "connect": connect, "rcon": rcon, "immune": []}},
         upsert=True,
     )
 
