@@ -205,7 +205,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 if member.get_role(bypass_role.id) is not None:
                     continue
 
-            game_mode = loaded["settings"]["gamemode"]
+            game_mode = loaded["settings"]["game_mode"]
             mode = loaded["settings"]["mode"]
             division = player_divs[game_mode][mode]
 
