@@ -2,7 +2,7 @@
 import asyncio
 import nextcord
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
@@ -266,7 +266,7 @@ async def hello_world():
     return {"message": "Hello world"}
 
 
-@app.post("/api/register")
+@app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register(registration: NewUser, request: Request):
     """Starts the registration process for a new user.
 
@@ -282,18 +282,23 @@ async def register(registration: NewUser, request: Request):
         if request.headers["password"] == API_PASSWORD:
             print(registration.steam)
             print(registration.discord)
-            await asyncio.sleep(3)
             result = await app.bot.register_new_user(  # pylint: disable=no-member
                 int(registration.discord), int(registration.steam)
             )
+
+            # result will be None on success, string if an error occurred
             if result:
-                user = app.bot.get_user(int(registration))
+                user = app.bot.get_user(int(registration.discord))
                 await user.send(
                     content=f"Registration failed: Your {result}"
                 )
+                request.status_code = status.HTTP_409_CONFLICT
+                return {"message": f"Unable to register user: {result}"}
 
             return {"message": "Success"}
+        request.status_code = status.HTTP_401_UNAUTHORIZED
         return {"message": "Wrong password"}
+    request.status_code = status.HTTP_401_UNAUTHORIZED
     print("Incorrect password in headers")
     print(request.headers)
 
