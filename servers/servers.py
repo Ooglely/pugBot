@@ -678,7 +678,7 @@ class ServerCog(commands.Cog):
         Attempt to clear ended Reservations
         On a one-minute loop
         """
-
+        print("Searching for inactive servers")
         for server in self.servers:
             active: bool = await server.is_active()
             if not active:
