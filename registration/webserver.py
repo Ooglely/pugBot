@@ -195,14 +195,14 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 continue
 
             # If member is not in server, skip
-            member = loaded["guild"].get_member(discord_id)
+            member: nextcord.Member | None = loaded["guild"].get_member(discord_id)
             if member is None:
                 continue
 
             # If the bypass role exists and the user has it, skip
             bypass_role = loaded["roles"]["bypass"]
             if bypass_role:
-                if member.get_role(bypass_role) is not None:
+                if member.get_role(bypass_role.id) is not None:
                     continue
 
             game_mode = loaded["settings"]["gamemode"]
