@@ -2,6 +2,7 @@
 import datetime
 
 import asyncio
+import logging
 from typing import Optional
 
 import nextcord
@@ -220,7 +221,7 @@ async def update_guild_player(
             # Player has a new RGL ban
             await send_banned_embed(loaded, member, steam_id, roles, ban_role)
             return
-        elif old_ban and not banned:
+        if old_ban and not banned:
             # Player was recently unbanned from RGL
             await send_unbanned_embed(loaded, member, steam_id, ban_role, new_role)
             return
@@ -327,7 +328,7 @@ class UpdateRolesCog(commands.Cog):
             all_players.append(player)
 
         # Contains tuple pairs of guild objects and their registration settings
-        guilds = dict()
+        guilds: dict[str, dict | None] = {}
         for server in all_servers:
             # If registration settings are not set up, skip
             if "registration" not in server:
@@ -344,7 +345,7 @@ class UpdateRolesCog(commands.Cog):
             discord_id = int(player["discord"])
 
             # Get updated information from RGL
-            player_divs = dict()
+            player_divs: dict[str, dict[str, int]] = {}
             while not player_divs:
                 try:
                     player_divs = await RGL.get_div_data(steam_id)
@@ -363,9 +364,10 @@ class UpdateRolesCog(commands.Cog):
 
             # Attempt to update this player in every guild they are in
             for loaded in guilds.values():
-                await update_guild_player(
-                    loaded, player_divs, new_ban, steam_id, discord_id
-                )
+                if loaded is not None:
+                    await update_guild_player(
+                        loaded, player_divs, new_ban, steam_id, discord_id
+                    )
 
     @update_rgl.error
     async def error_handler(self, exception: Exception):
@@ -415,7 +417,7 @@ class UpdateRolesCog(commands.Cog):
                 discord_id = int(player["discord"])
             except KeyError:
                 continue
-            player_divs = dict()
+            player_divs: dict[str, dict[str, int]] = {}
             try:
                 player_divs = await RGL.get_div_data(steam_id)
             except RateLimitException as err:
@@ -432,9 +434,10 @@ class UpdateRolesCog(commands.Cog):
                 continue
 
             # Attempt to update this player
-            await update_guild_player(
-                loaded, player_divs, new_ban, steam_id, discord_id
-            )
+            if loaded is not None:
+                await update_guild_player(
+                    loaded, player_divs, new_ban, steam_id, discord_id
+                )
 
     @commands.Cog.listener("on_member_join")
     async def new_member(self, member: nextcord.Member, banned: Optional[bool] = None):
@@ -455,6 +458,9 @@ class UpdateRolesCog(commands.Cog):
             return
 
         loaded = load_guild_settings(self.bot, server["guild"])
+        if loaded is None:
+            logging.error("Could not load guild settings for guild %s", server["guild"])
+            return
 
         bypass_role: nextcord.Role | None = loaded["roles"]["bypass"]
         if bypass_role and member.get_role(bypass_role.id):
@@ -462,7 +468,7 @@ class UpdateRolesCog(commands.Cog):
             return
 
         # Get updated information from RGL
-        player_divs = dict()
+        player_divs: dict[str, dict[str, int]] = {}
         while not player_divs:
             try:
                 player_divs = await RGL.get_div_data(steam_id)
@@ -530,7 +536,7 @@ class UpdateRolesCog(commands.Cog):
         logs_channel = loaded["channels"]["logs"]
         await logs_channel.send(embed=log_embed)
 
-    @TestCog.test.subcommand(
+    @TestCog.test.subcommand(  # pylint: disable=no-member
         name="newjoin",
         description="For testing only. Simulates an existing member as a new guild join",
     )

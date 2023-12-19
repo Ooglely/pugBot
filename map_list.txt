@@ -1,5 +1,3 @@
--------------
-PENDING:   (fs)
 PENDING:   (fs) 123_okwtfisthis
 PENDING:   (fs) 123_okwtfisthis_v2
 PENDING:   (fs) 1529699336
@@ -251,7 +249,6 @@ PENDING:   (fs) car_parkv6
 PENDING:   (fs) car_test
 PENDING:   (fs) cavev2
 PENDING:   (fs) cdtf_robotmap_concept
-PENDING:   (fs) changelevel
 PENDING:   (fs) charge_pork
 PENDING:   (fs) chemo
 PENDING:   (fs) chemplant1
@@ -375,6 +372,7 @@ PENDING:   (fs) cp_bluff_a4
 PENDING:   (fs) cp_bluff_b1
 PENDING:   (fs) cp_boulder_v5
 PENDING:   (fs) cp_bravo_a7
+PENDING:   (fs) cp_brew
 PENDING:   (fs) cp_bridge
 PENDING:   (fs) cp_bunker_b_15fix
 PENDING:   (fs) cp_burghausen_rc1
@@ -393,6 +391,7 @@ PENDING:   (fs) cp_cardinal_b2
 PENDING:   (fs) cp_cardinal_b3
 PENDING:   (fs) cp_cardinal_rc1
 PENDING:   (fs) cp_cardinal_rc1a
+PENDING:   (fs) cp_carrier
 PENDING:   (fs) cp_castle3
 PENDING:   (fs) cp_catwalk_a5c
 PENDING:   (fs) cp_caves
@@ -414,6 +413,7 @@ PENDING:   (fs) cp_convoy
 PENDING:   (fs) cp_coulport_a5
 PENDING:   (fs) cp_coulport_flipped
 PENDING:   (fs) cp_courier
+PENDING:   (fs) cp_coverup
 PENDING:   (fs) cp_coverup_b4
 PENDING:   (fs) cp_cowerhouse_b1
 PENDING:   (fs) cp_craneway_b10b
@@ -800,6 +800,7 @@ PENDING:   (fs) cp_northwest_a9
 PENDING:   (fs) cp_nothingbuthell_d
 PENDING:   (fs) cp_obscure_final
 PENDING:   (fs) cp_ohho
+PENDING:   (fs) cp_orange
 PENDING:   (fs) cp_orange_2lines
 PENDING:   (fs) cp_orange_50f_tower_v6
 PENDING:   (fs) cp_orange_50f_tower_v7
@@ -820,6 +821,8 @@ PENDING:   (fs) cp_orange_x4
 PENDING:   (fs) cp_orange_x666
 PENDING:   (fs) cp_orange_x_7
 PENDING:   (fs) cp_orange_z3
+PENDING:   (fs) cp_orange_z7
+PENDING:   (fs) cp_orange_z7_sg7
 PENDING:   (fs) cp_orange_zsnight
 PENDING:   (fs) cp_oranges_rc1
 PENDING:   (fs) cp_osiris_a26
@@ -852,7 +855,6 @@ PENDING:   (fs) cp_priderock_b1
 PENDING:   (fs) cp_priderock_b2
 PENDING:   (fs) cp_pro_dustbowl
 PENDING:   (fs) cp_probowl_rc1
-PENDING:   (fs) cp_process
 PENDING:   (fs) cp_process_a1
 PENDING:   (fs) cp_process_a9
 PENDING:   (fs) cp_process_b4
@@ -983,7 +985,6 @@ PENDING:   (fs) cp_sluice_box_a5
 PENDING:   (fs) cp_small
 PENDING:   (fs) cp_smallbowl
 PENDING:   (fs) cp_snakewater
-PENDING:   (fs) cp_snakewater_final
 PENDING:   (fs) cp_snakewater_final1
 PENDING:   (fs) cp_snakewater_final1_d
 PENDING:   (fs) cp_snakewater_u10
@@ -1023,7 +1024,6 @@ PENDING:   (fs) cp_steel_f6
 PENDING:   (fs) cp_steel_f7
 PENDING:   (fs) cp_steel_f8
 PENDING:   (fs) cp_steel_f9
-PENDING:   (fs) cp_steel_final
 PENDING:   (fs) cp_steel_scrambled
 PENDING:   (fs) cp_steel_ugc
 PENDING:   (fs) cp_steiner_a10
@@ -1482,6 +1482,7 @@ PENDING:   (fs) ctf_turbine_pro_rc4
 PENDING:   (fs) ctf_turbine_pro_rc5_a
 PENDING:   (fs) ctf_turbine_upsidedown_02
 PENDING:   (fs) ctf_turbine_v3
+PENDING:   (fs) ctf_turbine_winter
 PENDING:   (fs) ctf_turbinecp_b4
 PENDING:   (fs) ctf_turbinetowers
 PENDING:   (fs) ctf_turbinewell
@@ -1670,8 +1671,8 @@ PENDING:   (fs) jump_ablation_b3
 PENDING:   (fs) jump_ablation_b4
 PENDING:   (fs) jump_above_rc1
 PENDING:   (fs) jump_abyss_rc1
-PENDING:   (fs) jump_academy2_r8__1_
 PENDING:   (fs) jump_academy2_rc7
+PENDING:   (fs) jump_academy2_rc8
 PENDING:   (fs) jump_academy2_rc9a
 PENDING:   (fs) jump_academy_beta3a_v1
 PENDING:   (fs) jump_academy_classic_a
@@ -2422,6 +2423,7 @@ PENDING:   (fs) koth_karnak_rc4
 PENDING:   (fs) koth_king
 PENDING:   (fs) koth_kingofthedesert
 PENDING:   (fs) koth_kool_01
+PENDING:   (fs) koth_krampus
 PENDING:   (fs) koth_lakeside_event
 PENDING:   (fs) koth_lakeside_final
 PENDING:   (fs) koth_lakeside_r
@@ -2663,6 +2665,7 @@ PENDING:   (fs) koth_repository_a5
 PENDING:   (fs) koth_repository_a6
 PENDING:   (fs) koth_repository_b1
 PENDING:   (fs) koth_repository_b2
+PENDING:   (fs) koth_repository_b3
 PENDING:   (fs) koth_reserv_b3
 PENDING:   (fs) koth_reserve_b3
 PENDING:   (fs) koth_reservoir_a1
@@ -2771,6 +2774,7 @@ PENDING:   (fs) koth_smallboxhell
 PENDING:   (fs) koth_smallshell_a4
 PENDING:   (fs) koth_sneed_pro
 PENDING:   (fs) koth_snowdome_a1
+PENDING:   (fs) koth_snowtower
 PENDING:   (fs) koth_solar_rc1a
 PENDING:   (fs) koth_sollytude
 PENDING:   (fs) koth_somerville_rc0
@@ -2883,6 +2887,7 @@ PENDING:   (fs) koth_waco_a3a
 PENDING:   (fs) koth_waco_a4
 PENDING:   (fs) koth_waco_a5
 PENDING:   (fs) koth_waco_a6
+PENDING:   (fs) koth_waco_b1a
 PENDING:   (fs) koth_warmfront_a5
 PENDING:   (fs) koth_warmtic_b6
 PENDING:   (fs) koth_warmtic_f10
@@ -2936,6 +2941,7 @@ PENDING:   (fs) mgae_mission_a2a
 PENDING:   (fs) mgae_mission_a3
 PENDING:   (fs) mgae_tournament_a1
 PENDING:   (fs) mge_bball_v2
+PENDING:   (fs) mge_chillypunch_Final4_fix2
 PENDING:   (fs) mge_chillypunch_a6
 PENDING:   (fs) mge_chillypunch_a8
 PENDING:   (fs) mge_chillypunch_b2
@@ -2945,8 +2951,6 @@ PENDING:   (fs) mge_chillypunch_b5
 PENDING:   (fs) mge_chillypunch_final2_fix
 PENDING:   (fs) mge_chillypunch_final3
 PENDING:   (fs) mge_chillypunch_final4
-PENDING:   (fs) mge_chillypunch_final4_fix
-PENDING:   (fs) mge_chillypunch_final4_fix2
 PENDING:   (fs) mge_dueling_v1_fix1
 PENDING:   (fs) mge_oihguv_sucks_a12
 PENDING:   (fs) mge_oihguv_sucks_b5
@@ -3051,12 +3055,14 @@ PENDING:   (fs) pass_orange_rc1
 PENDING:   (fs) pass_park_b23
 PENDING:   (fs) pass_park_b24
 PENDING:   (fs) pass_park_b25_b
+PENDING:   (fs) pass_park_b26_b
 PENDING:   (fs) pass_park_pug20
 PENDING:   (fs) pass_park_pug21
 PENDING:   (fs) pass_powerhouse_v1
 PENDING:   (fs) pass_proyard_b2
 PENDING:   (fs) pass_push_b5
 PENDING:   (fs) pass_skyline_b5
+PENDING:   (fs) pass_smallosseum_test8
 PENDING:   (fs) pass_smalltown_a3
 PENDING:   (fs) pass_snowylake_a4
 PENDING:   (fs) pass_snowylake_b2
@@ -3117,6 +3123,7 @@ PENDING:   (fs) pd_drowned_a1
 PENDING:   (fs) pd_drowned_a1a
 PENDING:   (fs) pd_elvvis2
 PENDING:   (fs) pd_farmageddon
+PENDING:   (fs) pd_galleria
 PENDING:   (fs) pd_gladius_a1r
 PENDING:   (fs) pd_hydroplant
 PENDING:   (fs) pd_infestation_b9
@@ -3196,6 +3203,7 @@ PENDING:   (fs) pl_cactuscanyon
 PENDING:   (fs) pl_cactuscanyon6
 PENDING:   (fs) pl_cactuscanyon_redux_rc2
 PENDING:   (fs) pl_calamity_final1a
+PENDING:   (fs) pl_camber
 PENDING:   (fs) pl_camber_rc2
 PENDING:   (fs) pl_cashworks
 PENDING:   (fs) pl_cashworks_final1
@@ -3249,6 +3257,7 @@ PENDING:   (fs) pl_dustbowl_b4
 PENDING:   (fs) pl_eclipse_rc2
 PENDING:   (fs) pl_effigy_rc2
 PENDING:   (fs) pl_elevation_a1
+PENDING:   (fs) pl_emerge
 PENDING:   (fs) pl_emerge_b3
 PENDING:   (fs) pl_enclosure_final
 PENDING:   (fs) pl_enclosure_rc9b
@@ -3505,6 +3514,7 @@ PENDING:   (fs) plr_desertbus_event_rc2
 PENDING:   (fs) plr_desertbus_rc2
 PENDING:   (fs) plr_dogbread_b3
 PENDING:   (fs) plr_fishladder3
+PENDING:   (fs) plr_hacksaw
 PENDING:   (fs) plr_hacksaw_event
 PENDING:   (fs) plr_harvest_tower_b1
 PENDING:   (fs) plr_highertower
@@ -3531,7 +3541,6 @@ PENDING:   (fs) pointbuilding
 PENDING:   (fs) pool_parties_are_dumb
 PENDING:   (fs) preload_room
 PENDING:   (fs) present
-PENDING:   (fs) prisonyard
 PENDING:   (fs) propermgemapbyme
 PENDING:   (fs) proud_map
 PENDING:   (fs) quiz_millionaire
@@ -3612,7 +3621,6 @@ PENDING:   (fs) strange_weapons_upgrade_v2
 PENDING:   (fs) surf_air_arena_v5
 PENDING:   (fs) surf_bluetowers_v5f
 PENDING:   (fs) surf_classics
-PENDING:   (fs) surf_dick
 PENDING:   (fs) surf_dicks_v4
 PENDING:   (fs) surf_forbidden_ways_njv
 PENDING:   (fs) surf_forbidden_ways_reloaded
@@ -3800,7 +3808,6 @@ PENDING:   (fs) ulti_hotgaysex_a5
 PENDING:   (fs) ulti_jonathanraymegacock
 PENDING:   (fs) ulti_venu
 PENDING:   (fs) ultidickl_a6_b_fix
-PENDING:   (fs) ultidou_baloo_v2
 PENDING:   (fs) ultiduo3_a12
 PENDING:   (fs) ultiduo_3cp_a1
 PENDING:   (fs) ultiduo_acropolis_b1
@@ -3809,7 +3816,6 @@ PENDING:   (fs) ultiduo_acropolis_b2a
 PENDING:   (fs) ultiduo_amperage_a4
 PENDING:   (fs) ultiduo_assembly_a7
 PENDING:   (fs) ultiduo_badlands_b1
-PENDING:   (fs) ultiduo_balloo
 PENDING:   (fs) ultiduo_baloo
 PENDING:   (fs) ultiduo_baloo_v2
 PENDING:   (fs) ultiduo_baloo_windowfix
@@ -3859,6 +3865,7 @@ PENDING:   (fs) ultiduo_furnace_a5
 PENDING:   (fs) ultiduo_furnace_b1
 PENDING:   (fs) ultiduo_furnace_b1__1_
 PENDING:   (fs) ultiduo_furnace_b2
+PENDING:   (fs) ultiduo_gaaba_final
 PENDING:   (fs) ultiduo_gator_rc2
 PENDING:   (fs) ultiduo_gator_rc3
 PENDING:   (fs) ultiduo_gator_rc5
@@ -3959,7 +3966,6 @@ PENDING:   (fs) ultitrio_aesthetic_b6
 PENDING:   (fs) ultitrio_aesthetic_b7
 PENDING:   (fs) ultitrio_aesthetic_b8
 PENDING:   (fs) ultitrio_aesthetic_b9
-PENDING:   (fs) ultitrio_aetheitc_b8
 PENDING:   (fs) ultitrio_altar_a3
 PENDING:   (fs) ultitrio_altar_a4
 PENDING:   (fs) ultitrio_bound_rc1
@@ -3980,6 +3986,7 @@ PENDING:   (fs) ultitrio_caffa_final9teset1
 PENDING:   (fs) ultitrio_caffapro_a1
 PENDING:   (fs) ultitrio_caffapro_b1
 PENDING:   (fs) ultitrio_caffapro_b2
+PENDING:   (fs) ultitrio_caffapro_b4
 PENDING:   (fs) ultitrio_dockport_b3
 PENDING:   (fs) ultitrio_dockport_final2
 PENDING:   (fs) ultitrio_dockport_final3

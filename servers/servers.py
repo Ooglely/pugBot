@@ -44,7 +44,7 @@ class ServerCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.servers: Set[Reservation] = set()
         self.bot = bot
-        self.all_maps = list()
+        self.all_maps: list[str] = []
         self.map_updater.start()  # pylint: disable=no-member
         self.server_status.start()  # pylint: disable=no-member
 
@@ -85,8 +85,9 @@ class ServerCog(commands.Cog):
         # Can't use serveme for now
         # self.all_maps = await ServemeAPI.fetch_all_maps(False)
         with open("map_list.txt", "r", encoding="UTF-8") as map_file:
-            self.all_maps = map_file.read()
+            map_list = map_file.read()
 
+        self.all_maps = re.findall(r"(?<=\(fs\) ).*", map_list)
         # print(self.all_maps)
 
         await self.bot.sync_all_application_commands(update_known=True)
@@ -250,8 +251,7 @@ class ServerCog(commands.Cog):
             serveme_api_key, dt_start, duration
         )
 
-        reserve = dict()
-        server_found: bool = False
+        reserve: dict
 
         for location in ["chi", "ks"]:
             for server in servers["servers"]:
@@ -260,6 +260,10 @@ class ServerCog(commands.Cog):
                         print("New server reserved: " + str(server))
                         reserve = server
                         break
+
+        if not reserve:
+            await interaction.send("No servers available at this time.")
+            return
 
         connect_password = "pug." + "".join(
             random.choices(string.ascii_letters + string.digits, k=8)
@@ -326,13 +330,15 @@ class ServerCog(commands.Cog):
         }
 
         print(reserve_dict)
-        server_data = {"errors": "Unable to decode error, please report issue."}
+        server_data: dict
         try:
             server_data = await ServemeAPI().reserve_server(
                 serveme_api_key, reserve_dict
             )
             server_id = server_data["reservation"]["id"]
         except ValueError:
+            if "errors" not in server_data:
+                server_data["errors"] = "Unable to decode error, please report issue."
             await interaction.send("Serveme error: " + str(server_data["errors"]))
             return
         except ContentTypeError:
@@ -381,7 +387,7 @@ class ServerCog(commands.Cog):
         )
         embed.add_field(name="Connect", value=connect, inline=False)
 
-        message_list = list()
+        message_list = []
 
         # RCON message
         rcon_channel = self.bot.get_channel(guild_data["rcon"])

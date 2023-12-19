@@ -191,6 +191,8 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
             # Load this guild's settings, roles, and channels from the DB
             loaded = load_guild_settings(self.bot, server["guild"])
+            if loaded is None:
+                continue
 
             # If member is not in server, skip
             member = loaded["guild"].get_member(discord_id)
@@ -207,8 +209,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             mode = loaded["settings"]["mode"]
             division = player_divs[game_mode][mode]
 
-            if division < 0:
-                division = 0
+            division = max(division, 0)
 
             # Get the division role or, if banned and setting is to follow RGL bans, get the ban role
             role_to_give = loaded["roles"]["divisions"][division]
@@ -256,7 +257,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             log_level="info",
         )
         server = uvicorn.Server(config)
-        app.bot = self
+        app.cog = self
         await server.serve()
 
 
@@ -282,15 +283,14 @@ async def register(registration: NewUser, request: Request):
         if request.headers["password"] == API_PASSWORD:
             print(registration.steam)
             print(registration.discord)
-            result = await app.bot.register_new_user(  # pylint: disable=no-member
+            result = await app.cog.register_new_user(  # pylint: disable=no-member
                 int(registration.discord), int(registration.steam)
             )
 
             # result will be None on success, string if an error occurred
             if result:
-                user = app.bot.get_user(int(registration.discord))
-                await user.send(
-                    content=f"Registration failed: Your {result}"
+                user = app.cog.bot.get_user(  # pylint: disable=no-member
+                    int(registration.discord)
                 )
                 request.status_code = status.HTTP_409_CONFLICT
                 return {"message": f"Unable to register user: {result}"}
@@ -318,7 +318,7 @@ async def send_connect(connect: NewConnect, request: Request):
     if request.headers["user-agent"].startswith("sm-ripext"):
         print(connect.discordID)
         print(connect.connectCommand)
-        await app.bot.send_connect_dm(  # pylint: disable=no-member
+        await app.cog.send_connect_dm(  # pylint: disable=no-member
             int(connect.discordID), str(connect.connectCommand)
         )
         return {"message": "Success"}

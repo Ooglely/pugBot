@@ -72,7 +72,6 @@ class ServemeAPI:
         """
         reserve_json = json.dumps(reservation_data)
 
-        server_id: int
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 self.base_url + "?api_key=" + serveme_key,
@@ -163,22 +162,19 @@ class ServemeAPI:
                 async with session.get("http://dl.serveme.tf/maps/") as resp:
                     maps_list = await resp.text()
 
-        # Get all maps that match the beginning of the input
-        # maps = re.findall(rf"(?<=>)({map_name}.*)(?=.bsp)", maps_list)
-        # Use temporary fix for now
-        maps = re.findall(rf"(?<=\(fs\) ){map_name}.*", maps_list)
+        # Get all maps that match the name
+        # maps = re.findall(rf"{map_name}.*", maps_list)
+        match_regex = re.compile(rf"{map_name}.*")
+        maps = set(filter(match_regex.match, maps_list))
 
-        # Deduplicate results
-        maps_set = set(maps)
-        print(maps_set)
         # If there's only one map, return it
-        if len(maps_set) == 0:
+        if len(maps) == 0:
             return None
-        if len(maps_set) == 1:
-            return list(maps_set)
+        if len(maps) == 1:
+            return list(maps)
         # For each different type, get the newest version
         versions: Dict[str, str] = {}
-        for map_version in maps_set:
+        for map_version in maps:
             version_name = re.search(rf"(?<={map_name})(.*)", map_version).group(0)
             version_number = re.search(r"\d*(?=$)", version_name)
             version_type = re.search(r"^.*(?<!(\d))", version_name)
@@ -209,7 +205,6 @@ class ServemeAPI:
 
         async with aiohttp.ClientSession() as session:
             async with session.get("https://whitelist.tf") as resp:
-                print(type(resp.status))
                 if resp.status < 300:
                     return True
         return False
@@ -218,8 +213,22 @@ class ServemeAPI:
 if __name__ == "__main__":
     import asyncio
 
+    with open("map_list.txt", "r", encoding="UTF-8") as map_file:
+        map_list = map_file.read()
+
+    all_maps = re.findall(r"(?<=\(fs\) ).*", map_list)
+
     print(asyncio.run(ServemeAPI.check_whitelist_status()))
-    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena'))}")
-    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg'))}")
-    print(f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product'))}")
+    print(
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena', all_maps))}"
+    )
+    print(
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg', all_maps))}"
+    )
+    print(
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product', all_maps))}"
+    )
+    print(
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('cp_proces', all_maps))}"
+    )
     print(asyncio.run(ServemeAPI.fetch_all_maps()))
