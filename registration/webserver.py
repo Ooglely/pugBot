@@ -76,7 +76,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
         )
         if not result:
             # Registration succeeded
-            add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
             await interaction.send(
                 f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
                 ephemeral=True,
@@ -130,6 +129,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         current_ban = await RGL.check_banned(steam_id)
         log_num = await util.get_total_logs(str(steam_id))
 
+        await add_player(str(steam_id), str(user.id))
         await update_divisons(steam_id, player_divs)
         print(player_divs)
 

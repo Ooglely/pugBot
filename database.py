@@ -157,7 +157,7 @@ def set_guild_serveme(guild: int, serveme: str):
     )
 
 
-def add_player(steam: str, discord: str):
+async def add_player(steam: str, discord: str):
     """Add a new player to the database.
 
     Args:
