@@ -251,11 +251,12 @@ class ServerCog(commands.Cog):
             serveme_api_key, dt_start, duration
         )
 
-        reserve: dict
+        reserve: dict = {}
 
         for location in ["chi", "ks"]:
+            print("Searching for server in " + location)
             for server in servers["servers"]:
-                if location in server["ip"]:
+                if location in server["ip"] and not reserve:
                     if 536 != server["id"]:
                         print("New server reserved: " + str(server))
                         reserve = server
