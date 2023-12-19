@@ -76,7 +76,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
         )
         if not result:
             # Registration succeeded
-            add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
             await interaction.send(
                 f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
                 ephemeral=True,
@@ -130,6 +129,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         current_ban = await RGL.check_banned(steam_id)
         log_num = await util.get_total_logs(str(steam_id))
 
+        await add_player(str(steam_id), str(user.id))
         await update_divisons(steam_id, player_divs)
         print(player_divs)
 
@@ -195,14 +195,14 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 continue
 
             # If member is not in server, skip
-            member = loaded["guild"].get_member(discord_id)
+            member: nextcord.Member | None = loaded["guild"].get_member(discord_id)
             if member is None:
                 continue
 
             # If the bypass role exists and the user has it, skip
             bypass_role = loaded["roles"]["bypass"]
             if bypass_role:
-                if member.get_role(bypass_role) is not None:
+                if member.get_role(bypass_role.id) is not None:
                     continue
 
             game_mode = loaded["settings"]["gamemode"]
