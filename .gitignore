@@ -11,3 +11,4 @@ chat_from_logs.py
 test_bot.py
 code_test.py
 sample_reservation.json
+elo_vis.py

@@ -22,6 +22,7 @@ from logs.searcher import LogSearcher
 from logs.logs import LogsCog
 from logs.elo_cog import EloCog
 from logs.stats import StatsCog
+from pug.manual import ManualPugCog
 from pug.med_immunity import PugMedicCog
 from pug.setup import PugSetupCog
 from pug.pug import PugRunningCog
@@ -49,6 +50,7 @@ bot.add_cog(PugMedicCog(bot))
 bot.add_cog(LogsCog(bot))
 bot.add_cog(EloCog(bot))
 bot.add_cog(StatsCog(bot))
+bot.add_cog(ManualPugCog(bot))
 bot.remove_command("help")
 
 RGL: RglApi = RglApi()
@@ -358,7 +360,7 @@ async def search(
 @bot.slash_command(
     name="help", description="Displays all the bots commands and their purpose."
 )
-async def help(interaction: nextcord.Interaction):  # pylint: disable=redefined-builtin
+async def help_command(interaction: nextcord.Interaction):
     """The /help command, explains all the commands the bot has.
 
     Args:

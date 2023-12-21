@@ -4,7 +4,7 @@ from nextcord.ext import commands
 
 from constants import BOT_COLOR
 from registration import (
-    RegistrationIntroduction,
+    SetupIntroduction,
     RegistrationSettings,
     RegistrationRoles,
     GamemodeSelect,
@@ -48,7 +48,7 @@ class RegistrationSetupCog(commands.Cog):
             name="Channels",
             value=f"Registration: <#{settings.channels['registration']}>\nLogs: <#{settings.channels['logs']}>",
         )
-        introduction = RegistrationIntroduction()
+        introduction = SetupIntroduction()
         await interaction.send(embed=setup_embed, view=introduction, ephemeral=True)
         await introduction.wait()
         action = introduction.action

@@ -235,6 +235,15 @@ class FirstToSelect(nextcord.ui.View):
         self.num = 6
         self.stop()
 
+    @nextcord.ui.button(label="Passtime (8)", style=nextcord.ButtonStyle.grey)
+    async def passtime(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Selects ultitrio as the gamemode"""
+        self.selection = True
+        self.num = 8
+        self.stop()
+
     @nextcord.ui.button(label="6s (12)", style=nextcord.ButtonStyle.grey)
     async def sixes(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
@@ -413,3 +422,41 @@ class BooleanView(nextcord.ui.View):
         """No button that sets action to false"""
         self.action = False
         self.stop()
+
+
+class ChannelSelect(nextcord.ui.View):
+    """View to select pug channels."""
+
+    def __init__(self):
+        super().__init__()
+        self.action = None
+        self.channel_id = None
+
+    @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green)
+    async def finish(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Continues setup"""
+        self.action = "continue"
+        self.stop()
+
+    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red)
+    async def cancel(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Cancels setup"""
+        self.action = "cancel"
+        self.stop()
+
+    @nextcord.ui.channel_select(placeholder="Add up/selecting channel")
+    async def channel(
+        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
+    ):
+        """Select the channel that users will add up in.
+
+        Args:
+            channel (nextcord.ui.ChannelSelect): The selected channel.
+            interaction (nextcord.Interaction): The interaction to respond to.
+        """
+        await interaction.response.defer()
+        self.channel_id = channel.values[0].id

@@ -52,7 +52,7 @@ class RegistrationSettings:
         set_registration_settings(guild, self.__dict__)
 
 
-class RegistrationIntroduction(nextcord.ui.View):
+class SetupIntroduction(nextcord.ui.View):
     """View to introduce the registration setup process."""
 
     def __init__(self):
