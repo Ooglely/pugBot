@@ -365,7 +365,7 @@ class UpdateRolesCog(commands.Cog):
                 except LookupError as err:
                     print(err)
                     continue
-
+            await db.update_divisons(steam_id, player_divs)
             try:
                 new_ban = await RGL.check_banned(steam_id)
             except LookupError as err:
@@ -436,7 +436,7 @@ class UpdateRolesCog(commands.Cog):
             except LookupError as err:
                 print(err)
                 continue
-
+            await db.update_divisons(steam_id, player_divs)
             try:
                 new_ban = await RGL.check_banned(steam_id)
             except LookupError as err:
@@ -488,7 +488,7 @@ class UpdateRolesCog(commands.Cog):
             except LookupError as err:
                 print(err)
                 continue
-
+        await db.update_divisons(steam_id, player_divs)
         # Normal behavior is to always check RGL API, banned will not be None only in testing
         new_ban = banned
         if banned is None:
