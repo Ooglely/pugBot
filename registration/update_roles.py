@@ -511,15 +511,17 @@ class UpdateRolesCog(commands.Cog):
         removed_value = ""
         ban_role = loaded["roles"]["rgl_ban"]
         if loaded["settings"]["ban"]:
+            old_ban = member.get_role(ban_role.id)
             if new_ban:
                 # Player has a new RGL ban
                 for role in roles:
                     await member.remove_roles(role)
-                    removed_value += f"<@{role.id}> "
+                    removed_value += f"<@&{role.id}> "
                 new_role = ban_role
-            else:
+            elif old_ban:
+                # Player has an unnecessary ban role
                 await member.remove_roles(ban_role)
-                removed_value += f"<@{ban_role.id}> "
+                removed_value += f"<@&{ban_role.id}> "
 
         await member.add_roles(new_role)
         log_embed = nextcord.Embed(
