@@ -101,7 +101,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             discord_id (int): Discord ID of the player
             steam_id (int): Steam ID of the player
         """
-
+        print(f"Registering {discord_id} with steam {steam_id}")
         user = self.bot.get_user(discord_id)
 
         try:
@@ -205,7 +205,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 if member.get_role(bypass_role.id) is not None:
                     continue
 
-            game_mode = loaded["settings"]["gamemode"]
+            game_mode = loaded["settings"]["game_mode"]
             mode = loaded["settings"]["mode"]
             division = player_divs[game_mode][mode]
 
@@ -289,15 +289,12 @@ async def register(registration: NewUser, request: Request):
 
             # result will be None on success, string if an error occurred
             if result:
-                user = app.cog.bot.get_user(  # pylint: disable=no-member
-                    int(registration.discord)
-                )
                 request.status_code = status.HTTP_409_CONFLICT
-                return {"message": f"Unable to register user: {result}"}
+                return {"error": f"Unable to register user: {result}"}
 
             return {"message": "Success"}
         request.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"message": "Wrong password"}
+        return {"error": "Wrong password"}
     request.status_code = status.HTTP_401_UNAUTHORIZED
     print("Incorrect password in headers")
     print(request.headers)
