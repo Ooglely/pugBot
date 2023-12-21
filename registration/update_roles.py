@@ -53,6 +53,10 @@ async def send_update_embed(
     """
 
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        print(loaded)
+        return
     removed_value = ""
 
     try:
@@ -111,6 +115,9 @@ async def send_banned_embed(
     :return: None
     """
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        return
     removed_value = ""
 
     for role in old_roles:
@@ -158,6 +165,9 @@ async def send_unbanned_embed(
     :return: None
     """
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        return
 
     await member.remove_roles(ban_role)
     await member.add_roles(new_role)
