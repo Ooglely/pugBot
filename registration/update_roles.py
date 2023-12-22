@@ -10,7 +10,7 @@ from nextcord.ext import tasks, commands
 
 import database as db
 from test_cog import TestCog
-from constants import BOT_COLOR
+from constants import BOT_COLOR, DEV_REGISTRATIONS
 from registration import RegistrationSettings
 from rglapi import RglApi, RateLimitException
 
@@ -351,8 +351,14 @@ class UpdateRolesCog(commands.Cog):
 
         for player in all_players:
             print(player)
-            steam_id = int(player["steam"])
-            discord_id = int(player["discord"])
+            try:
+                steam_id = int(player["steam"])
+                discord_id = int(player["discord"])
+            except KeyError:
+                await self.bot.get_channel(DEV_REGISTRATIONS).send(
+                    embed=f"A player in the database is missing a steam or discord id.\nPlayer: {player}"
+                )
+                continue
 
             # Get updated information from RGL
             player_divs: dict[str, dict[str, int]] = {}
