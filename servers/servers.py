@@ -690,12 +690,30 @@ class ServerCog(commands.Cog):
         On a one-minute loop
         """
         print("Searching for inactive servers")
+        inactive = []
         for server in self.servers:
             active: bool = await server.is_active()
             if not active:
                 await server.stop_tracking(self.bot)
-                try:
-                    print("Attempting to remove a server from this loop")
-                    self.servers.remove(server)
-                except KeyError:
-                    print("Server already removed")
+                inactive.append(server)
+
+        for server in inactive:
+            try:
+                print("Attempting to remove a server from being track")
+                self.servers.remove(server)
+            except KeyError:
+                print("Server already removed")
+            else:
+                print("Successful removed the server")
+
+    @server_status.error
+    async def server_status_error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in server_status loop:\n")
+        print(exception.__class__.__name__)
+        print(exception.__cause__)
+        print(exception)
