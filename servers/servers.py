@@ -242,6 +242,8 @@ class ServerCog(commands.Cog):
             )
             status = await map_selector_view.wait()
             if status:
+                # View timed out, cleanup
+                await interaction.delete_original_message()
                 return
             chosen_map = map_selector_view.map_chosen
 
@@ -472,7 +474,11 @@ class ServerCog(commands.Cog):
             view=server_view,
             ephemeral=True,
         )
-        await server_view.wait()
+        if await server_view.wait():
+            # View timed out, cleanup
+            await interaction.delete_original_message()
+            return
+
         server_id = server_view.server_chosen
         print(reservations[server_id])
 
@@ -496,6 +502,8 @@ class ServerCog(commands.Cog):
             )
             status = await map_selector_view.wait()
             if status:
+                # View timed out, cleanup
+                await interaction.delete_original_message()
                 return
             chosen_map = map_selector_view.map_chosen
 
@@ -565,7 +573,10 @@ class ServerCog(commands.Cog):
         await interaction.send(
             "Select a reservation to run the command on.", view=server_view
         )
-        await server_view.wait()
+        if await server_view.wait():
+            # View timed out, cleanup
+            await interaction.delete_original_message()
+            return
         server_id = server_view.server_chosen
 
         with Client(
@@ -620,7 +631,7 @@ class ServerCog(commands.Cog):
 
             status = await server_view.wait()
             if status:
-                # Interaction timed out, cleanup
+                # View timed out, cleanup
                 await interaction.delete_original_message()
                 return
             server_id = server_view.server_chosen
