@@ -110,6 +110,8 @@ class ServerCog(commands.Cog):
             await interaction.send(
                 "This server has not been set up with a serveme.tf API key yet; please run the /serveme command.\n"
             )
+        elif error.__class__ == nextcord.errors.ApplicationCheckFailure:
+            pass
         else:
             await interaction.send("An error has occurred.\n" + str(error))
 
