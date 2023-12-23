@@ -2,7 +2,7 @@
 import asyncio
 import nextcord
 import uvicorn
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
@@ -268,7 +268,7 @@ async def hello_world():
 
 
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
-async def register(registration: NewUser, request: Request):
+async def register(registration: NewUser, request: Request, response: Response):
     """Starts the registration process for a new user.
 
     Args:
@@ -289,15 +289,16 @@ async def register(registration: NewUser, request: Request):
 
             # result will be None on success, string if an error occurred
             if result:
-                request.status_code = status.HTTP_409_CONFLICT
+                response.status_code = status.HTTP_409_CONFLICT
                 return {"error": f"Unable to register user: {result}"}
 
             return {"message": "Success"}
-        request.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"error": "Wrong password"}
-    request.status_code = status.HTTP_401_UNAUTHORIZED
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"error": "Wrong API password. Contact pugBot devs."}
+    response.status_code = status.HTTP_401_UNAUTHORIZED
     print("Incorrect password in headers")
     print(request.headers)
+    return {"error": "Wrong API password. Contact pugBot devs."}
 
 
 @app.post("/api/send_connect")
