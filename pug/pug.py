@@ -1,4 +1,5 @@
 """Commands for generating teams in pugs."""
+from itertools import combinations
 import random
 from typing import Optional, Dict, List
 
@@ -24,6 +25,7 @@ from registration import RegistrationSettings
 from util import is_setup, is_runner
 
 category_db = BotCollection("guilds", "categories")
+config_db = BotCollection("guilds", "config")
 
 
 async def get_player_dict(
@@ -191,6 +193,60 @@ async def generate_elo_teams(
     return teams
 
 
+async def generate_role_teams(
+    players: Dict[str, List[PugPlayer]],
+    team_size: int,
+    guild: nextcord.Guild,
+    roles: Dict[str, int],
+) -> Dict[str, List[PugPlayer]]:
+    """Generate balanced teams for a pug.
+
+    Args:
+        players (dict): A dictionary of all players in the VCs
+        team_size (int): The amount of players per team.
+        reg_settings (RegistrationSettings): The registration settings for the server.
+
+    Returns:
+        teams: The generated teams.
+    """
+    random.shuffle(players["next_pug"])
+    random.shuffle(players["add_up"])
+    all_players = players["next_pug"] + players["add_up"]
+
+    red_team: List[PugPlayer] = []
+    blu_team: List[PugPlayer] = []
+    total_value: int = 0
+    processed_players: List[PugPlayer] = []
+
+    sorted_roles = sorted(roles.items(), key=lambda x: x[1], reverse=True)
+
+    for player in all_players[0 : team_size * 2]:
+        # Check for first role player has
+        member = await guild.fetch_member(player.discord)
+        for role in sorted_roles:
+            if int(role[0]) in [role.id for role in member.roles]:
+                player.elo = role[1]
+                total_value += role[1]
+                break
+        if not player.elo:
+            player.elo = 0
+        processed_players.append(player)
+
+    # Find balanced teams
+    red_team = find_subset(all_players, team_size, int(total_value / 2))
+    blu_team = processed_players.copy()
+
+    # Remove players from blu team
+    for item in red_team:
+        for i, item_blu in enumerate(blu_team):
+            if item_blu.discord == item.discord:
+                blu_team.pop(i)
+                break
+
+    teams = {"red": red_team, "blu": blu_team}
+    return teams
+
+
 def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
     """Find a subset of players of size num that gets as close to total as possible.
 
@@ -203,30 +259,28 @@ def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
         ValueError: Subset not found
 
     Returns:
-        List[EloPlayer]: One subset of players that adds up to the total elo
+        List[EloPlayer]: One subset of players that is closest to the total elo
     """
-    # Use dynamic programming to find a subset of players that gets as close to total as possible
-    subset = [[False for i in range(goal + 1)] for j in range(num + 1)]
-    for i in range(num + 1):
-        subset[i][0] = True
-    for i in range(1, goal + 1):
-        subset[0][i] = False
-    for i in range(1, num + 1):
-        for j in range(1, goal + 1):
-            if j < arr[i - 1].elo:
-                subset[i][j] = subset[i - 1][j]
-            if j >= arr[i - 1].elo:
-                subset[i][j] = subset[i - 1][j] or subset[i - 1][j - arr[i - 1].elo]
+    # Find every UNIQUE subset of arr of size num
+    # Get initial lowest diff
+    lowest_diff = 0
+    for player in arr[0:num]:
+        lowest_diff += player.elo
+    if lowest_diff == 0:
+        lowest_diff = 9999  # lol weird workaround but its needed
 
-    i = num
-    j = goal
-    subset_list = []
-    while i > 0 and j > 0:
-        if not subset[i - 1][j]:
-            subset_list.append(arr[i - 1])
-            j -= arr[i - 1].elo
-        i -= 1
-    return subset_list
+    best_team: List[PugPlayer]
+    result = combinations(arr, num)
+    for combination in result:
+        team_total = 0
+        for player in combination:
+            team_total += player.elo
+        if abs(goal - team_total) < lowest_diff:
+            lowest_diff = abs(goal - team_total)
+            best_team = list(combination)
+        if lowest_diff == 0:
+            break
+    return best_team
 
 
 class PugRunningCog(commands.Cog):
@@ -350,9 +404,10 @@ class PugRunningCog(commands.Cog):
         )
 
         pug_embed.description = None
-        balancing_disabled = False
-        elo_disabled = True
-        elo_used = False
+        balancing_disabled: bool = False
+        role_disabled: bool = False
+        elo_disabled: bool = True
+        mode: str = ""
 
         reg_settings = RegistrationSettings()
         reg_settings.import_from_db(interaction.guild.id)
@@ -368,6 +423,12 @@ class PugRunningCog(commands.Cog):
                 text="Elo is disabled for this server, enable using /elo setup!"
             )
 
+        try:
+            guild_config = await config_db.find_item({"guild": interaction.guild.id})
+            roles = guild_config["roles"]
+        except (LookupError, KeyError):
+            role_disabled = True
+
         gamemode: str
         if reg_settings.gamemode == "sixes":
             gamemode = "sixes"
@@ -382,19 +443,54 @@ class PugRunningCog(commands.Cog):
                 elo_settings,
                 chosen_category,
             )
-            elo_used = True
+            mode = "elo"
         elif not balancing_disabled:
             teams = await generate_balanced_teams(
                 await get_player_dict(next_pug, add_up), team_size, reg_settings
             )
+            mode = "balanced"
+        elif not role_disabled:
+            guild = await self.bot.fetch_guild(interaction.guild.id)
+            teams = await generate_role_teams(
+                await get_player_dict(next_pug, add_up), team_size, guild, roles
+            )
+            mode = "role"
         else:
             teams = await generate_random_teams(
                 await get_player_dict(next_pug, add_up), team_size
             )
+            mode = "random"
 
         while True:
-            team_generation_view = TeamGenerationView(elo_disabled, balancing_disabled)
-            if not elo_used:
+            team_generation_view = TeamGenerationView(
+                elo_disabled, balancing_disabled, role_disabled
+            )
+
+            if mode in ("elo", "role"):
+                red_team_elo = 0
+                red_team_string = ""
+                for elo_player in teams["red"]:
+                    red_team_elo += elo_player.elo
+                    red_team_string += (
+                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
+                    )
+                blu_team_elo = 0
+                blu_team_string = ""
+                for elo_player in teams["blu"]:
+                    blu_team_elo += elo_player.elo
+                    blu_team_string += (
+                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
+                    )
+                pug_embed.clear_fields()
+                pug_embed.add_field(
+                    name=f"🔴 Red Team\nRating: {round(red_team_elo/team_size)}",
+                    value=red_team_string,
+                )
+                pug_embed.add_field(
+                    name=f"🔵 Blu Team\nRating: {round(blu_team_elo/team_size)}",
+                    value=blu_team_string,
+                )
+            elif mode in ("random", "balanced"):
                 if not balancing_disabled:
                     teams["red"].sort(
                         key=lambda x: x.division[gamemode][reg_settings.mode],
@@ -448,30 +544,6 @@ class PugRunningCog(commands.Cog):
                 else:
                     pug_embed.add_field(name="🔴 Red Team", value=red_team_string)
                     pug_embed.add_field(name="🔵 Blu Team", value=blu_team_string)
-            else:
-                red_team_elo = 0
-                red_team_string = ""
-                for elo_player in teams["red"]:
-                    red_team_elo += elo_player.elo
-                    red_team_string += (
-                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                    )
-                blu_team_elo = 0
-                blu_team_string = ""
-                for elo_player in teams["blu"]:
-                    blu_team_elo += elo_player.elo
-                    blu_team_string += (
-                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                    )
-                pug_embed.clear_fields()
-                pug_embed.add_field(
-                    name=f"🔴 Red Team\nElo: {round(red_team_elo/team_size)}",
-                    value=red_team_string,
-                )
-                pug_embed.add_field(
-                    name=f"🔵 Blu Team\nElo: {round(blu_team_elo/team_size)}",
-                    value=blu_team_string,
-                )
 
             await interaction.edit_original_message(
                 embed=pug_embed, view=team_generation_view
@@ -519,14 +591,14 @@ class PugRunningCog(commands.Cog):
                 break
 
             if team_generation_view.action == "random":
-                elo_used = False
+                mode = "random"
                 pug_embed.clear_fields()
                 teams = await generate_random_teams(
                     await get_player_dict(next_pug, add_up), team_size
                 )
 
             if team_generation_view.action == "elo":
-                elo_used = True
+                mode = "elo"
                 pug_embed.clear_fields()
                 teams = await generate_elo_teams(
                     await get_player_dict(next_pug, add_up),
@@ -535,13 +607,24 @@ class PugRunningCog(commands.Cog):
                     chosen_category,
                 )
 
-            if team_generation_view.action == "balanced":
-                elo_used = False
+            if team_generation_view.action == "balance":
+                mode = "balanced"
                 pug_embed.clear_fields()
                 teams = await generate_balanced_teams(
                     await get_player_dict(next_pug, add_up),
                     team_size,
                     reg_settings,
+                )
+
+            if team_generation_view.action == "roles":
+                mode = "role"
+                pug_embed.clear_fields()
+                guild = await self.bot.fetch_guild(interaction.guild.id)
+                teams = await generate_role_teams(
+                    await get_player_dict(next_pug, add_up),
+                    team_size,
+                    guild,
+                    roles,
                 )
 
     async def get_player_list(

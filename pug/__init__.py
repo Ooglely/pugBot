@@ -330,12 +330,14 @@ class CategoryButton(nextcord.ui.Button):
 class TeamGenerationView(nextcord.ui.View):
     """View to show generated teams."""
 
-    def __init__(self, elo_disabled, balancing_disabled):
+    def __init__(self, elo_disabled, balancing_disabled, role_disabled):
         super().__init__()
         if elo_disabled is True:
             self.children[1].disabled = True
         if balancing_disabled is True:
             self.children[2].disabled = True
+        if role_disabled is True:
+            self.children[3].disabled = True
         self.action = None
 
     @nextcord.ui.button(label="Move", style=nextcord.ButtonStyle.green)
@@ -363,6 +365,15 @@ class TeamGenerationView(nextcord.ui.View):
         """Rerolls new balanced teams"""
         await _interaction.response.defer()
         self.action = "balance"
+        self.stop()
+
+    @nextcord.ui.button(label="🔁 Roles", style=nextcord.ButtonStyle.gray)
+    async def roles(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Rerolls new balanced teams"""
+        await _interaction.response.defer()
+        self.action = "roles"
         self.stop()
 
     @nextcord.ui.button(label="🔁 Random", style=nextcord.ButtonStyle.gray)
