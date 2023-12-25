@@ -13,9 +13,10 @@ from pug import (
     CategoryButton,
 )
 from pug.pug import PugRunningCog
-from util import is_setup, is_runner
+from util import is_setup, is_runner, guild_config_check
 
 category_db = BotCollection("guilds", "categories")
+config_db = BotCollection("guilds", "config")
 
 
 class PugSetupCog(commands.Cog):
@@ -26,6 +27,10 @@ class PugSetupCog(commands.Cog):
 
     @PugRunningCog.pug.subcommand()  # pylint: disable=no-member
     async def category(self, interaction: nextcord.Interaction):
+        """Never gets called, just a placeholder for the subcommand."""
+
+    @nextcord.slash_command()
+    async def roles(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
     @category.subcommand(name="add", description="Add a pug category to the server.")
@@ -152,3 +157,115 @@ class PugSetupCog(commands.Cog):
         setup_embed.description = f"Removed pug category {category_to_remove}."
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)
+
+    @roles.subcommand(
+        name="add", description="Add a role to the role balancing system."
+    )
+    @guild_config_check()
+    @is_runner()
+    async def role_add(
+        self,
+        interaction: nextcord.Interaction,
+        role: nextcord.Role = nextcord.SlashOption(
+            name="role", description="The role to add.", required=True
+        ),
+        value: int = nextcord.SlashOption(
+            name="value", description="The point value to give the role.", required=True
+        ),
+    ):
+        """Add a role to the role balancing system.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction that triggered the command.
+            role (nextcord.Role): The role to add to the system.
+            value (int): The point value to give the role.
+        """
+        guild_config = await config_db.find_item({"guild": interaction.guild.id})
+        if "roles" not in guild_config:
+            guild_roles = {}
+        else:
+            guild_roles = guild_config["roles"]
+
+        guild_roles[str(role.id)] = value
+        await self.update_role_settings(interaction.guild.id, guild_roles)
+        await interaction.send(
+            f"Added role {role.name} to the role balancing system with a value of {value}."
+        )
+
+    @roles.subcommand(
+        name="remove", description="Remove a role from the role balancing system."
+    )
+    @guild_config_check()
+    @is_runner()
+    async def role_remove(
+        self,
+        interaction: nextcord.Interaction,
+        role: nextcord.Role = nextcord.SlashOption(
+            name="role", description="The role to add.", required=True
+        ),
+    ):
+        """Remove a role from the role balancing system.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction that triggered the command.
+            role (nextcord.Role): The role to remove from the system.
+        """
+        guild_config = await config_db.find_item({"guild": interaction.guild.id})
+        if "roles" not in guild_config:
+            guild_roles = {}
+        else:
+            guild_roles = guild_config["roles"]
+
+        if str(role.id) not in guild_roles:
+            await interaction.send(
+                f"Role {role.name} is not in the role balancing system."
+            )
+            return
+
+        del guild_roles[str(role.id)]
+        await self.update_role_settings(interaction.guild.id, guild_roles)
+        await interaction.send(
+            f"Removed role {role.name} from the role balancing system."
+        )
+
+    @roles.subcommand(
+        name="list", description="List the roles in the role balancing system."
+    )
+    @guild_config_check()
+    @is_runner()
+    async def role_list(
+        self,
+        interaction: nextcord.Interaction,
+    ):
+        """List the roles in the role balancing system.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction that triggered the command.
+        """
+        guild_config = await config_db.find_item({"guild": interaction.guild.id})
+        if "roles" not in guild_config:
+            guild_roles = {}
+        else:
+            guild_roles = guild_config["roles"]
+
+        if len(guild_roles) == 0:
+            await interaction.send("There are no roles in the role balancing system.")
+            return
+
+        roles_embed = nextcord.Embed(title="Role Balancing System", color=BOT_COLOR)
+
+        role_list = ""
+        for role_id, value in guild_roles.items():
+            role_list += f"<@&{role_id}>: {value}\n"
+        roles_embed.add_field(name="Roles", value=role_list)
+
+        await interaction.send(embed=roles_embed)
+
+    async def update_role_settings(self, guild: int, settings: dict):
+        """Update the guild settings in the database.
+
+        Args:
+            guild (int): The guild ID to update.
+            settings (dict): The settings to update.
+        """
+        await config_db.update_item({"guild": guild}, {"$set": {"roles": settings}})
