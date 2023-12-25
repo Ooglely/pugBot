@@ -244,6 +244,8 @@ class ServerCog(commands.Cog):
             )
             status = await map_selector_view.wait()
             if status:
+                # View timed out, cleanup
+                await interaction.delete_original_message()
                 return
             chosen_map = map_selector_view.map_chosen
 
@@ -474,7 +476,11 @@ class ServerCog(commands.Cog):
             view=server_view,
             ephemeral=True,
         )
-        await server_view.wait()
+        if await server_view.wait():
+            # View timed out, cleanup
+            await interaction.delete_original_message()
+            return
+
         server_id = server_view.server_chosen
         print(reservations[server_id])
 
@@ -498,6 +504,8 @@ class ServerCog(commands.Cog):
             )
             status = await map_selector_view.wait()
             if status:
+                # View timed out, cleanup
+                await interaction.delete_original_message()
                 return
             chosen_map = map_selector_view.map_chosen
 
@@ -567,7 +575,10 @@ class ServerCog(commands.Cog):
         await interaction.send(
             "Select a reservation to run the command on.", view=server_view
         )
-        await server_view.wait()
+        if await server_view.wait():
+            # View timed out, cleanup
+            await interaction.delete_original_message()
+            return
         server_id = server_view.server_chosen
 
         with Client(
@@ -622,7 +633,7 @@ class ServerCog(commands.Cog):
 
             status = await server_view.wait()
             if status:
-                # Interaction timed out, cleanup
+                # View timed out, cleanup
                 await interaction.delete_original_message()
                 return
             server_id = server_view.server_chosen
@@ -681,12 +692,30 @@ class ServerCog(commands.Cog):
         On a one-minute loop
         """
         print("Searching for inactive servers")
+        inactive = []
         for server in self.servers:
             active: bool = await server.is_active()
             if not active:
                 await server.stop_tracking(self.bot)
-                try:
-                    print("Attempting to remove a server from this loop")
-                    self.servers.remove(server)
-                except KeyError:
-                    print("Server already removed")
+                inactive.append(server)
+
+        for server in inactive:
+            try:
+                print("Attempting to remove a server from being track")
+                self.servers.remove(server)
+            except KeyError:
+                print("Server already removed")
+            else:
+                print("Successful removed the server")
+
+    @server_status.error
+    async def server_status_error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in server_status loop:\n")
+        print(exception.__class__.__name__)
+        print(exception.__cause__)
+        print(exception)

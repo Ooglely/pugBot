@@ -2,7 +2,7 @@
 import asyncio
 import nextcord
 import uvicorn
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 import util
@@ -76,7 +76,6 @@ class WebserverCog(nextcord.ext.commands.Cog):
         )
         if not result:
             # Registration succeeded
-            add_player(str(util.get_steam64(steam_id)), str(discord_user.id))
             await interaction.send(
                 f"User registered.\nSteam: `{util.get_steam64(steam_id)}`\nDiscord: `{discord_user.id}`",
                 ephemeral=True,
@@ -102,7 +101,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
             discord_id (int): Discord ID of the player
             steam_id (int): Steam ID of the player
         """
-
+        print(f"Registering {discord_id} with steam {steam_id}")
         user = self.bot.get_user(discord_id)
 
         try:
@@ -130,6 +129,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         current_ban = await RGL.check_banned(steam_id)
         log_num = await util.get_total_logs(str(steam_id))
 
+        await add_player(str(steam_id), str(user.id))
         await update_divisons(steam_id, player_divs)
         print(player_divs)
 
@@ -195,17 +195,17 @@ class WebserverCog(nextcord.ext.commands.Cog):
                 continue
 
             # If member is not in server, skip
-            member = loaded["guild"].get_member(discord_id)
+            member: nextcord.Member | None = loaded["guild"].get_member(discord_id)
             if member is None:
                 continue
 
             # If the bypass role exists and the user has it, skip
             bypass_role = loaded["roles"]["bypass"]
             if bypass_role:
-                if member.get_role(bypass_role) is not None:
+                if member.get_role(bypass_role.id) is not None:
                     continue
 
-            game_mode = loaded["settings"]["gamemode"]
+            game_mode = loaded["settings"]["game_mode"]
             mode = loaded["settings"]["mode"]
             division = player_divs[game_mode][mode]
 
@@ -268,7 +268,7 @@ async def hello_world():
 
 
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
-async def register(registration: NewUser, request: Request):
+async def register(registration: NewUser, request: Request, response: Response):
     """Starts the registration process for a new user.
 
     Args:
@@ -289,18 +289,16 @@ async def register(registration: NewUser, request: Request):
 
             # result will be None on success, string if an error occurred
             if result:
-                user = app.cog.bot.get_user(  # pylint: disable=no-member
-                    int(registration.discord)
-                )
-                request.status_code = status.HTTP_409_CONFLICT
-                return {"message": f"Unable to register user: {result}"}
+                response.status_code = status.HTTP_409_CONFLICT
+                return {"error": f"Unable to register user: {result}"}
 
             return {"message": "Success"}
-        request.status_code = status.HTTP_401_UNAUTHORIZED
-        return {"message": "Wrong password"}
-    request.status_code = status.HTTP_401_UNAUTHORIZED
+        response.status_code = status.HTTP_401_UNAUTHORIZED
+        return {"error": "Wrong API password. Contact pugBot devs."}
+    response.status_code = status.HTTP_401_UNAUTHORIZED
     print("Incorrect password in headers")
     print(request.headers)
+    return {"error": "Wrong API password. Contact pugBot devs."}
 
 
 @app.post("/api/send_connect")

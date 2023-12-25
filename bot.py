@@ -347,6 +347,12 @@ async def search(
     if discord_user is not None:
         steam_id = database.get_steam_from_discord(discord_user.id)
         print(steam_id)
+        if steam_id is None:
+            await interaction.send(
+                "User is not registered in the bot's database.",
+                ephemeral=True,
+            )
+            return
         rgl = await RGL.create_player(int(get_steam64(steam_id)))
     elif steamid is not None:
         rgl = await RGL.create_player(int(get_steam64(steamid)))

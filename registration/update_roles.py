@@ -10,7 +10,7 @@ from nextcord.ext import tasks, commands
 
 import database as db
 from test_cog import TestCog
-from constants import BOT_COLOR
+from constants import BOT_COLOR, DEV_REGISTRATIONS
 from registration import RegistrationSettings
 from rglapi import RglApi, RateLimitException
 
@@ -53,6 +53,10 @@ async def send_update_embed(
     """
 
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        print(loaded)
+        return
     removed_value = ""
 
     try:
@@ -111,6 +115,9 @@ async def send_banned_embed(
     :return: None
     """
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        return
     removed_value = ""
 
     for role in old_roles:
@@ -158,6 +165,9 @@ async def send_unbanned_embed(
     :return: None
     """
     logs_channel = loaded["channels"]["logs"]
+    if logs_channel is None:
+        print("Error, logs channel not set up.")
+        return
 
     await member.remove_roles(ban_role)
     await member.add_roles(new_role)
@@ -341,8 +351,14 @@ class UpdateRolesCog(commands.Cog):
 
         for player in all_players:
             print(player)
-            steam_id = int(player["steam"])
-            discord_id = int(player["discord"])
+            try:
+                steam_id = int(player["steam"])
+                discord_id = int(player["discord"])
+            except KeyError:
+                await self.bot.get_channel(DEV_REGISTRATIONS).send(
+                    embed=f"A player in the database is missing a steam or discord id.\nPlayer: {player}"
+                )
+                continue
 
             # Get updated information from RGL
             player_divs: dict[str, dict[str, int]] = {}
@@ -355,7 +371,7 @@ class UpdateRolesCog(commands.Cog):
                 except LookupError as err:
                     print(err)
                     continue
-
+            await db.update_divisons(steam_id, player_divs)
             try:
                 new_ban = await RGL.check_banned(steam_id)
             except LookupError as err:
@@ -426,7 +442,7 @@ class UpdateRolesCog(commands.Cog):
             except LookupError as err:
                 print(err)
                 continue
-
+            await db.update_divisons(steam_id, player_divs)
             try:
                 new_ban = await RGL.check_banned(steam_id)
             except LookupError as err:
@@ -478,7 +494,7 @@ class UpdateRolesCog(commands.Cog):
             except LookupError as err:
                 print(err)
                 continue
-
+        await db.update_divisons(steam_id, player_divs)
         # Normal behavior is to always check RGL API, banned will not be None only in testing
         new_ban = banned
         if banned is None:
@@ -501,15 +517,17 @@ class UpdateRolesCog(commands.Cog):
         removed_value = ""
         ban_role = loaded["roles"]["rgl_ban"]
         if loaded["settings"]["ban"]:
+            old_ban = member.get_role(ban_role.id)
             if new_ban:
                 # Player has a new RGL ban
                 for role in roles:
                     await member.remove_roles(role)
-                    removed_value += f"<@{role.id}> "
+                    removed_value += f"<@&{role.id}> "
                 new_role = ban_role
-            else:
+            elif old_ban:
+                # Player has an unnecessary ban role
                 await member.remove_roles(ban_role)
-                removed_value += f"<@{ban_role.id}> "
+                removed_value += f"<@&{ban_role.id}> "
 
         await member.add_roles(new_role)
         log_embed = nextcord.Embed(
