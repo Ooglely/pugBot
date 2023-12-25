@@ -235,6 +235,15 @@ class FirstToSelect(nextcord.ui.View):
         self.num = 6
         self.stop()
 
+    @nextcord.ui.button(label="Passtime (8)", style=nextcord.ButtonStyle.grey)
+    async def passtime(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Selects ultitrio as the gamemode"""
+        self.selection = True
+        self.num = 8
+        self.stop()
+
     @nextcord.ui.button(label="6s (12)", style=nextcord.ButtonStyle.grey)
     async def sixes(
         self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
@@ -321,12 +330,14 @@ class CategoryButton(nextcord.ui.Button):
 class TeamGenerationView(nextcord.ui.View):
     """View to show generated teams."""
 
-    def __init__(self, elo_disabled, balancing_disabled):
+    def __init__(self, elo_disabled, balancing_disabled, role_disabled):
         super().__init__()
         if elo_disabled is True:
             self.children[1].disabled = True
         if balancing_disabled is True:
             self.children[2].disabled = True
+        if role_disabled is True:
+            self.children[3].disabled = True
         self.action = None
 
     @nextcord.ui.button(label="Move", style=nextcord.ButtonStyle.green)
@@ -354,6 +365,15 @@ class TeamGenerationView(nextcord.ui.View):
         """Rerolls new balanced teams"""
         await _interaction.response.defer()
         self.action = "balance"
+        self.stop()
+
+    @nextcord.ui.button(label="🔁 Roles", style=nextcord.ButtonStyle.gray)
+    async def roles(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Rerolls new balanced teams"""
+        await _interaction.response.defer()
+        self.action = "roles"
         self.stop()
 
     @nextcord.ui.button(label="🔁 Random", style=nextcord.ButtonStyle.gray)
@@ -413,3 +433,41 @@ class BooleanView(nextcord.ui.View):
         """No button that sets action to false"""
         self.action = False
         self.stop()
+
+
+class ChannelSelect(nextcord.ui.View):
+    """View to select pug channels."""
+
+    def __init__(self):
+        super().__init__()
+        self.action = None
+        self.channel_id = None
+
+    @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green)
+    async def finish(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Continues setup"""
+        self.action = "continue"
+        self.stop()
+
+    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red)
+    async def cancel(
+        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
+    ):
+        """Cancels setup"""
+        self.action = "cancel"
+        self.stop()
+
+    @nextcord.ui.channel_select(placeholder="Add up/selecting channel")
+    async def channel(
+        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
+    ):
+        """Select the channel that users will add up in.
+
+        Args:
+            channel (nextcord.ui.ChannelSelect): The selected channel.
+            interaction (nextcord.Interaction): The interaction to respond to.
+        """
+        await interaction.response.defer()
+        self.channel_id = channel.values[0].id

@@ -5,7 +5,9 @@ from steam import steamid
 from steam.steamid import SteamID
 from nextcord.ext import application_checks
 
-from database import get_server, is_server_setup
+from database import get_server, is_server_setup, BotCollection
+
+config_db = BotCollection("guilds", "config")
 
 
 class ServerNotSetupError(Exception):
@@ -15,7 +17,9 @@ class ServerNotSetupError(Exception):
         message -- explanation of the error
     """
 
-    def __init__(self, message="Server is not setup. Please run /setup."):
+    def __init__(
+        self, message="Server is not setup. Please run /setup."
+    ):  # pylint: disable=super-init-not-called
         self.message = message
 
 
@@ -26,7 +30,7 @@ class NoServemeKey(Exception):
         message -- explanation of the error
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=super-init-not-called
         self, message="No serveme key setup for the server. Please run /serveme."
     ):
         self.message = message
@@ -90,6 +94,23 @@ def is_setup():
             raise NoServemeKey(
                 f"Guild id: {str(interaction.guild.id)}  does not have a serveme key setup."
             )
+
+        return True
+
+    return nextcord.ext.application_checks.check(predicate)
+
+
+def guild_config_check():
+    """A decorator to check if the server has guild configs setup."""
+
+    async def predicate(interaction: nextcord.Interaction):
+        try:
+            await config_db.find_item({"guild": interaction.guild.id})
+        except LookupError:
+            await interaction.send(
+                "This server has not been setup yet. Please run /setup first."
+            )
+            return False
 
         return True
 
