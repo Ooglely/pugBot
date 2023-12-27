@@ -14,7 +14,7 @@ from util import is_runner
 guild_configs: BotCollection = BotCollection("guilds", "config")
 
 
-async def update_guild_settings(guild: int, entry: str, settings: dict):
+async def update_guild_settings(guild: int, entry: str, settings: dict | int):
     """Update the guild settings in the database.
 
     Args:
@@ -186,6 +186,40 @@ class ManualPugCog(commands.Cog):
         await interaction.delete_original_message(delay=60)
         await update_guild_settings(interaction.guild.id, "manual", settings)
 
+    @is_runner()
+    @manual_check()
+    @manual_group.subcommand(
+        name="default", description="Setup default add time for manual pugs."
+    )
+    async def default_add_time(
+        self,
+        interaction: nextcord.Interaction,
+        hours: int = nextcord.SlashOption(
+            name="hours",
+            description="The default hours to add up for.",
+            required=True,
+        ),
+    ):
+        """Setup default add time for manual pugs.
+
+        Args:
+            interaction (nextcord.Interaction): The interaction that triggered the command.
+            hours (int): The default hours to add up for.
+        """
+        try:
+            guild_settings = await guild_configs.find_item(
+                {"guild": interaction.guild.id}
+            )
+            print(guild_settings)
+        except LookupError:
+            await interaction.send(
+                "This server has not been setup yet. Please run /setup first."
+            )
+            return
+
+        await update_guild_settings(interaction.guild.id, "manual.default", hours)
+        await interaction.send(f"Default add time has been set to {hours} hours.")
+
     @manual_check()
     @nextcord.slash_command(
         name="add", description="Add yourself from the add up list."
@@ -193,11 +227,12 @@ class ManualPugCog(commands.Cog):
     async def manual_add(
         self,
         interaction: nextcord.Interaction,
-        add_time: int = nextcord.SlashOption(
+        add_time: int
+        | None = nextcord.SlashOption(
             name="time",
             description="The hours to add up for.",
             required=False,
-            default=2,
+            default=None,
         ),
     ):
         """Manually add up to a pug.
@@ -206,8 +241,14 @@ class ManualPugCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
             time (int, optional): The hours to add up for. Defaults to 2.
         """
-        removal_time: int = round(time.time()) + (add_time * 3600)
         guild_settings = await guild_configs.find_item({"guild": interaction.guild.id})
+        if add_time is None:
+            if "default" not in guild_settings["manual"]:
+                add_time = 4
+            else:
+                add_time = guild_settings["manual"]["default"]
+
+        removal_time: int = round(time.time()) + (add_time * 3600)
 
         if interaction.user.id in [
             player[0] for player in guild_settings["manual"]["players"]
