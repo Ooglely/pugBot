@@ -22,7 +22,7 @@ from pug import (
 )
 
 from registration import RegistrationSettings
-from util import is_setup, is_runner
+from util import is_runner, guild_config_check
 
 category_db = BotCollection("guilds", "categories")
 config_db = BotCollection("guilds", "config")
@@ -299,12 +299,12 @@ class PugRunningCog(commands.Cog):
     @pug.subcommand(  # pylint: disable=no-member
         name="genteams", description="Generate teams for a pug."
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def genteams(
         self,
         interaction: nextcord.Interaction,
-        team_size: Optional[int] = nextcord.SlashOption(
+        team_size: Optional[int | None] = nextcord.SlashOption(
             name="team_size",
             description="The amount of players per team.",
             required=False,
@@ -312,6 +312,17 @@ class PugRunningCog(commands.Cog):
     ):
         """Generate teams for a pug."""
         await interaction.response.defer()
+
+        balancing_disabled: bool = False
+        role_disabled: bool = False
+        elo_disabled: bool = True
+        mode: str = ""
+
+        try:
+            guild_config = await config_db.find_item({"guild": interaction.guild.id})
+            roles = guild_config["roles"]
+        except (LookupError, KeyError):
+            role_disabled = True
 
         # Get a list of pug categories
         try:
@@ -326,7 +337,10 @@ class PugRunningCog(commands.Cog):
             return
 
         if team_size is None:
-            team_size = 6
+            if "manual" in guild_config:
+                team_size = int((guild_config["manual"]["num_players"]) / 2)
+            else:
+                team_size = 6
 
         select_view = CategorySelect()
 
@@ -404,10 +418,6 @@ class PugRunningCog(commands.Cog):
         )
 
         pug_embed.description = None
-        balancing_disabled: bool = False
-        role_disabled: bool = False
-        elo_disabled: bool = True
-        mode: str = ""
 
         reg_settings = RegistrationSettings()
         reg_settings.import_from_db(interaction.guild.id)
@@ -422,12 +432,6 @@ class PugRunningCog(commands.Cog):
             pug_embed.set_footer(
                 text="Elo is disabled for this server, enable using /elo setup!"
             )
-
-        try:
-            guild_config = await config_db.find_item({"guild": interaction.guild.id})
-            roles = guild_config["roles"]
-        except (LookupError, KeyError):
-            role_disabled = True
 
         gamemode: str
         if reg_settings.gamemode == "sixes":
@@ -650,7 +654,7 @@ class PugRunningCog(commands.Cog):
     @pug.subcommand(  # pylint: disable=no-member
         name="move", description="Moves players after a pug is done."
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def move(
         self, interaction: nextcord.Interaction

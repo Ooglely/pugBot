@@ -68,12 +68,18 @@ def get_steam64(arg: str) -> str:
 def is_runner():
     """A decorator to check if the user has the runner role for the guild."""
 
-    def predicate(interaction: nextcord.Interaction):
+    async def predicate(interaction: nextcord.Interaction):
         if not is_server_setup(interaction.guild.id):
             raise ServerNotSetupError(
                 "Guild id: " + str(interaction.guild.id) + " is not setup."
             )
-        required_role = get_server(interaction.guild.id)["role"]
+        try:
+            required_role = get_server(interaction.guild.id)["role"]
+        except KeyError:
+            await interaction.send(
+                "A runner role could not be found for this server. Please run /setup."
+            )
+            return False
         if required_role not in [role.id for role in interaction.user.roles]:
             raise application_checks.ApplicationMissingRole(required_role)
 
