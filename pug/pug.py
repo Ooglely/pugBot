@@ -104,6 +104,7 @@ async def generate_balanced_teams(
 
     random.shuffle(players["next_pug"])
     random.shuffle(players["add_up"])
+    # Deprioritize players that are not registered, as their skill is unknown
     players["next_pug"].sort(
         key=lambda x: 10
         if x.division[gamemode][reg_settings.mode] == -1
@@ -118,20 +119,17 @@ async def generate_balanced_teams(
     )
     all_players = players["next_pug"] + players["add_up"]
 
-    red_team: list[PugPlayer] = []
-    blu_team: list[PugPlayer] = []
-    count = 0
-
-    while len(red_team) < team_size and len(blu_team) < team_size:
-        if count % 2 == 0:
-            red_team.append(all_players.pop(0))
-            blu_team.append(all_players.pop(0))
+    total_level: int = 0
+    team_players: List[PugPlayer] = []
+    for player in all_players[0 : team_size * 2]:
+        if player.division[gamemode][reg_settings.mode] == -1:
+            player.elo = 0
         else:
-            blu_team.append(all_players.pop(0))
-            red_team.append(all_players.pop(0))
-        count += 1
+            player.elo = player.division[gamemode][reg_settings.mode]
+        team_players.append(player)
+        total_level += player.elo
 
-    teams = {"red": red_team, "blu": blu_team}
+    teams = await process_players(team_players, team_size, int(total_level / 2))
     return teams
 
 
@@ -155,9 +153,6 @@ async def generate_elo_teams(
     random.shuffle(players["add_up"])
     all_players = players["next_pug"] + players["add_up"]
 
-    red_team: List[PugPlayer] = []
-    blu_team: List[PugPlayer] = []
-
     total_elo: int = 0
     elo_players: List[PugPlayer] = []
 
@@ -173,23 +168,7 @@ async def generate_elo_teams(
         total_elo += player.elo
         elo_players.append(player)
 
-    # Find balanced teams
-    try:
-        red_team = find_subset(elo_players, team_size, int(total_elo / 2))
-        blu_team = elo_players.copy()
-    except ValueError:
-        print("No subset found, generating random teams...")
-        red_team = elo_players[0:team_size]
-        blu_team = elo_players[team_size : team_size * 2]
-
-    # Remove players from blu team
-    for item in red_team:
-        for i, item_blu in enumerate(blu_team):
-            if item_blu.discord == item.discord:
-                blu_team.pop(i)
-                break
-
-    teams = {"red": red_team, "blu": blu_team}
+    teams = await process_players(elo_players, team_size, int(total_elo / 2))
     return teams
 
 
@@ -212,9 +191,6 @@ async def generate_role_teams(
     random.shuffle(players["next_pug"])
     random.shuffle(players["add_up"])
     all_players = players["next_pug"] + players["add_up"]
-
-    red_team: List[PugPlayer] = []
-    blu_team: List[PugPlayer] = []
     total_value: int = 0
     processed_players: List[PugPlayer] = []
 
@@ -232,9 +208,25 @@ async def generate_role_teams(
             player.elo = 0
         processed_players.append(player)
 
-    # Find balanced teams
-    red_team = find_subset(all_players, team_size, int(total_value / 2))
-    blu_team = processed_players.copy()
+    teams = await process_players(processed_players, team_size, int(total_value / 2))
+    return teams
+
+
+async def process_players(
+    players: List[PugPlayer], team_size: int, target_elo: int
+) -> Dict[str, List[PugPlayer]]:
+    """Turn a list of players into two balanced teams.
+
+    Args:
+        players (List[PugPlayer]): A list of the players to process
+        team_size (int): The size of the teams
+        target_elo (int): The target elo for each team
+
+    Returns:
+        Dict[str, List[PugPlayer]]: The two teams
+    """
+    red_team = find_subset(players, team_size, target_elo)
+    blu_team = players.copy()
 
     # Remove players from blu team
     for item in red_team:
@@ -243,8 +235,7 @@ async def generate_role_teams(
                 blu_team.pop(i)
                 break
 
-    teams = {"red": red_team, "blu": blu_team}
-    return teams
+    return {"red": red_team, "blu": blu_team}
 
 
 def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
@@ -513,7 +504,7 @@ class PugRunningCog(commands.Cog):
                             division = str(player.division[gamemode][reg_settings.mode])
                             red_level += player.division[gamemode][reg_settings.mode]
                             red_count += 1
-                    red_team_string += f"[{division}] <@{player.discord}>\n"
+                    red_team_string += f"[**{division}**] <@{player.discord}>\n"
 
                 if not balancing_disabled:
                     teams["blu"].sort(
@@ -533,7 +524,7 @@ class PugRunningCog(commands.Cog):
                             divison = str(player.division[gamemode][reg_settings.mode])
                             blu_level += player.division[gamemode][reg_settings.mode]
                             blu_count += 1
-                    blu_team_string += f"[{divison}] <@{player.discord}>\n"
+                    blu_team_string += f"[**{divison}**] <@{player.discord}>\n"
 
                 pug_embed.clear_fields()
                 if red_count != 0 and blu_count != 0:
