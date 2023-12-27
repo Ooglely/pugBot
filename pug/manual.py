@@ -358,10 +358,10 @@ class ManualPugCog(commands.Cog):
 
         current_players = len(guild_settings["manual"]["players"])
         max_players: int = guild_settings["manual"]["num_players"]
-        player_ids: list[int] = [
-            player[0] for player in guild_settings["manual"]["players"]
-        ]
-        player_string: str = "\n".join([f"<@{player}>" for player in player_ids])
+        player_ids: list[list[int]] = list(guild_settings["manual"]["players"])
+
+        player_string: str = "\n".join([f"<@{player[0]}>" for player in player_ids])
+        time_string: str = "\n".join([f"<t:{player[1]}:R>" for player in player_ids])
 
         queue_embed = nextcord.Embed(
             title="Pug Queue",
@@ -370,6 +370,7 @@ class ManualPugCog(commands.Cog):
         queue_embed.add_field(
             name=f"Players | {current_players}/{max_players}", value=player_string
         )
+        queue_embed.add_field(name="Time", value=time_string)
         await interaction.send(embed=queue_embed)
 
     @manual_check()
@@ -495,7 +496,7 @@ class ManualPugCog(commands.Cog):
         )
 
         await channel.edit(
-            topic=f"Pug queue: {current_players}/{max_players} | {player_string}"
+            topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"
         )
 
     @commands.Cog.listener("on_voice_state_update")
