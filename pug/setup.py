@@ -192,7 +192,10 @@ class PugSetupCog(commands.Cog):
             guild_roles = guild_config["roles"]
 
         if emote is not None:
-            emote_obj = nextcord.utils.get(interaction.guild.emojis, name=emote)
+            if emote.startswith("<") and emote.endswith(">"):
+                emote_obj = emote
+            else:
+                emote_obj = nextcord.utils.get(interaction.guild.emojis, name=emote)
             if emote_obj is None:
                 await interaction.send("The emote you provided is not in this server.")
                 return
