@@ -176,7 +176,7 @@ async def generate_role_teams(
     players: Dict[str, List[PugPlayer]],
     team_size: int,
     guild: nextcord.Guild,
-    roles: Dict[str, int],
+    roles: Dict[str, Dict],
 ) -> Dict[str, List[PugPlayer]]:
     """Generate balanced teams for a pug.
 
@@ -194,15 +194,16 @@ async def generate_role_teams(
     total_value: int = 0
     processed_players: List[PugPlayer] = []
 
-    sorted_roles = sorted(roles.items(), key=lambda x: x[1], reverse=True)
+    sorted_roles = sorted(roles.items(), key=lambda x: x[1]["value"], reverse=True)
 
     for player in all_players[0 : team_size * 2]:
         # Check for first role player has
         member = await guild.fetch_member(player.discord)
         for role in sorted_roles:
             if int(role[0]) in [role.id for role in member.roles]:
-                player.elo = role[1]
-                total_value += role[1]
+                player.elo = role[1]["value"]
+                player.icon = role[1]["icon"]
+                total_value += role[1]["value"]
                 break
         if not player.elo:
             player.elo = 0
@@ -466,16 +467,22 @@ class PugRunningCog(commands.Cog):
                 red_team_string = ""
                 for elo_player in teams["red"]:
                     red_team_elo += elo_player.elo
-                    red_team_string += (
-                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                    )
+                    if elo_player.icon is None:
+                        red_team_string += (
+                            f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
+                        )
+                    else:
+                        red_team_string += f"[**{elo_player.elo}**] {elo_player.icon} <@{elo_player.discord}>\n"
                 blu_team_elo = 0
                 blu_team_string = ""
                 for elo_player in teams["blu"]:
                     blu_team_elo += elo_player.elo
-                    blu_team_string += (
-                        f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                    )
+                    if elo_player.icon is None:
+                        blu_team_string += (
+                            f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
+                        )
+                    else:
+                        blu_team_string += f"[**{elo_player.elo}**] {elo_player.icon} <@{elo_player.discord}>\n"
                 pug_embed.clear_fields()
                 pug_embed.add_field(
                     name=f"🔴 Red Team\nRating: {round(red_team_elo/team_size)}",

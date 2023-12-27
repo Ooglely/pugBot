@@ -479,6 +479,14 @@ class ManualPugCog(commands.Cog):
         except LookupError:
             return
 
+        if "roles" in guild_settings:
+            guild_roles = guild_settings["roles"]
+            sorted_roles = sorted(
+                guild_roles.items(), key=lambda x: x[1]["value"], reverse=True
+            )
+        else:
+            sorted_roles = []
+
         # Check if there are already enough players added up
         if (
             len(guild_settings["manual"]["players"])
@@ -491,9 +499,24 @@ class ManualPugCog(commands.Cog):
         current_players = len(guild_settings["manual"]["players"])
         max_players: int = guild_settings["manual"]["num_players"]
 
-        player_string: str = " ".join(
-            [f"<@{player[0]}>" for player in guild_settings["manual"]["players"]]
-        )
+        player_string: str = ""
+        for player in guild_settings["manual"]["players"]:
+            player_id = player[0]
+            player_icon: str | None = None
+            # Check for first role player has
+            member = await guild.fetch_member(player_id)
+            if sorted_roles != []:
+                for role in sorted_roles:
+                    if int(role[0]) in [role.id for role in member.roles]:
+                        player_icon = role[1]["icon"]
+                        break
+            if player_icon is None:
+                player_string += f"<@{player_id}>, "
+            else:
+                player_string += f"{player_icon} <@{player_id}>, "
+
+        if player_string != "":
+            player_string = player_string[:-2]
 
         await channel.edit(
             topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"

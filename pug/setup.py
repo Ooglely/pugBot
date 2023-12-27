@@ -172,6 +172,10 @@ class PugSetupCog(commands.Cog):
         value: int = nextcord.SlashOption(
             name="value", description="The point value to give the role.", required=True
         ),
+        emote: str
+        | None = nextcord.SlashOption(
+            name="emote", description="The emote to use for the role.", required=False
+        ),
     ):
         """Add a role to the role balancing system.
 
@@ -179,6 +183,7 @@ class PugSetupCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
             role (nextcord.Role): The role to add to the system.
             value (int): The point value to give the role.
+            emote (str | None): The emote to use for the role.
         """
         guild_config = await config_db.find_item({"guild": interaction.guild.id})
         if "roles" not in guild_config:
@@ -186,7 +191,18 @@ class PugSetupCog(commands.Cog):
         else:
             guild_roles = guild_config["roles"]
 
-        guild_roles[str(role.id)] = value
+        if emote is not None:
+            emote_obj = nextcord.utils.get(interaction.guild.emojis, name=emote)
+            if emote_obj is None:
+                await interaction.send("The emote you provided is not in this server.")
+                return
+        emote_string = emote if emote is None else str(emote_obj)
+
+        guild_roles[str(role.id)] = {
+            "value": value,
+            "icon": emote_string,
+        }
+
         await self.update_role_settings(interaction.guild.id, guild_roles)
         await interaction.send(
             f"Added role {role.name} to the role balancing system with a value of {value}."
@@ -256,7 +272,10 @@ class PugSetupCog(commands.Cog):
 
         role_list = ""
         for role_id, value in guild_roles.items():
-            role_list += f"<@&{role_id}>: {value}\n"
+            if value["icon"] is None:
+                role_list += f"<@&{role_id}>: {value['value']}\n"
+            else:
+                role_list += f"{value['icon']} <@&{role_id}>: {value['value']}\n"
         roles_embed.add_field(name="Roles", value=role_list)
 
         await interaction.send(embed=roles_embed)

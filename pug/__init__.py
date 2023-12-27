@@ -60,6 +60,7 @@ class PugPlayer:
         self.division: Dict[str, Dict[str, int]] = player_data["divison"]
         self.registered: bool = registered
         self.elo: int = 0
+        self.icon: str | None = None
 
 
 class PugCategory:
