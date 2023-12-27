@@ -233,6 +233,8 @@ class ManualPugCog(commands.Cog):
             description="The hours to add up for.",
             required=False,
             default=None,
+            max_value=12,
+            min_value=1,
         ),
     ):
         """Manually add up to a pug.
@@ -288,9 +290,6 @@ class ManualPugCog(commands.Cog):
         await interaction.send(
             f"{interaction.user.mention} has added up for {add_time} hours.\nNow at {current_players}/{max_players} players."
         )
-        await self.update_channel_status(
-            interaction.guild, self.bot.get_channel(guild_settings["manual"]["channel"])
-        )
 
         if current_players == max_players:
             player_ids: list[int] = [
@@ -306,6 +305,10 @@ class ManualPugCog(commands.Cog):
             await self.bot.get_channel(guild_settings["manual"]["channel"]).send(
                 player_mentions, embed=pug_embed
             )
+
+        await self.update_channel_status(
+            interaction.guild, self.bot.get_channel(guild_settings["manual"]["channel"])
+        )
 
     @manual_check()
     @nextcord.slash_command(
