@@ -93,6 +93,18 @@ class ManualPugCog(commands.Cog):
                     self.bot.get_channel(guild["manual"]["channel"]),
                 )
 
+    @status_check.error
+    async def server_check_error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in manual status check loop:\n")
+        print(exception.__class__.__name__)
+        print(exception.__cause__)
+        print(exception)
+
     @PugRunningCog.pug.subcommand(name="manual")  # pylint: disable=no-member
     async def manual_group(self, interaction: nextcord.Interaction):
         """
