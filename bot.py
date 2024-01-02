@@ -3,6 +3,7 @@ import random
 import re
 from typing import Optional
 
+import datetime
 import logging
 import nextcord
 from nextcord.ext import commands, tasks
@@ -385,6 +386,44 @@ async def help_command(interaction: nextcord.Interaction):
     )
     help_embed.set_footer(text=VERSION)
     await interaction.send(embed=help_embed)
+
+
+@bot.listen("on_message")
+async def respond_to_mentions(message: nextcord.Message):
+    """just playing around
+
+    Args:
+        message (nextcord.Message): The message to check.
+    """
+    if bot.user.mentioned_in(message):
+        seed = random.random()
+        if message.author.voice is not None:
+            if seed < 0.2:
+                await message.channel.send(
+                    "dude aren't you literally pugging right now stop annoying me"
+                )
+                return
+        if seed < 0.1:
+            await message.channel.send(
+                "Dude I'm serious. Stop pinging me or there will be consequences."
+            )
+            if message.guild.id == 1144719525728763915:
+                # Get member and timeout
+                member = message.guild.get_member(message.author.id)
+                timeout_time = datetime.datetime.now() + datetime.timedelta(seconds=30)
+                await member.timeout(timeout_time, reason="hahahahahaha")
+        elif seed < 0.2:
+            await message.channel.send(
+                "lol what do u want dude i bet u don't even hit 200 dpm stop pinging me"
+            )
+        elif seed < 0.3:
+            await message.channel.send("what!!!! what do u want!!!!!")
+        elif seed < 0.4:
+            await message.channel.send("cu@lan buddy")
+        elif seed < 0.6:
+            await message.channel.send("i'm literally just an otter what do u want")
+        else:
+            await message.channel.send("what do u want dude lol")
 
 
 @tasks.loop(minutes=1)
