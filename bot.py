@@ -395,7 +395,7 @@ async def respond_to_mentions(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
-    if bot.user.mentioned_in(message):
+    if "<@989250144895655966>" in message.content:
         seed = random.random()
         if message.author.voice is not None:
             if seed < 0.2:
