@@ -356,7 +356,7 @@ class UpdateRolesCog(commands.Cog):
                 discord_id = int(player["discord"])
             except KeyError:
                 await self.bot.get_channel(DEV_REGISTRATIONS).send(
-                    embed=f"A player in the database is missing a steam or discord id.\nPlayer: {player}"
+                    content=f"A player in the database is missing a steam or discord id.\nPlayer: {player}"
                 )
                 continue
 
