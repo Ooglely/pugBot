@@ -65,6 +65,7 @@ class ManualPugCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
         self.status_check.start()  # pylint: disable=no-member
+        self.update_channel_status.start()  # pylint: disable=no-member
 
     @tasks.loop(minutes=1)
     async def status_check(self):
@@ -72,7 +73,6 @@ class ManualPugCog(commands.Cog):
         print("Checking status")
         guilds = await guild_configs.find_all_items()
         for guild in guilds:
-            changed: bool = False
             if "manual" not in guild:
                 continue
             if not guild["manual"]["enabled"]:
@@ -82,18 +82,69 @@ class ManualPugCog(commands.Cog):
             current_time = round(time.time())
             for player in guild["manual"]["players"]:
                 if current_time > player[1]:
-                    changed = True
                     await guild_configs.update_item(
                         {"guild": guild["guild"]},
                         {"$pull": {"manual.players": player}},
                     )
-            if changed:
-                await self.update_channel_status(
-                    self.bot.get_guild(guild["guild"]),
-                    self.bot.get_channel(guild["manual"]["channel"]),
+
+    @tasks.loop(minutes=15)
+    async def update_channel_status(self):
+        """Update the channel status for the guild."""
+        print("Updating channel statuses")
+        guilds = await guild_configs.find_all_items()
+        for guild in guilds:
+            if "manual" not in guild:
+                continue
+            if not guild["manual"]["enabled"]:
+                continue
+
+            if "roles" in guild:
+                guild_roles = guild["roles"]
+                sorted_roles = sorted(
+                    guild_roles.items(), key=lambda x: x[1]["value"], reverse=True
                 )
+            else:
+                sorted_roles = []
+
+            # Check if there are already enough players added up
+            if len(guild["manual"]["players"]) > guild["manual"]["num_players"]:
+                return
+
+            current_players = len(guild["manual"]["players"])
+            max_players: int = guild["manual"]["num_players"]
+            print(guild)
+            guild_obj: nextcord.Guild = self.bot.get_guild(int(guild["guild"]))
+            if guild_obj is None:
+                continue
+            channel: nextcord.TextChannel = guild_obj.get_channel(
+                guild["manual"]["channel"]
+            )
+
+            player_string: str = ""
+            for player in guild["manual"]["players"]:
+                player_id = player[0]
+                player_icon: str | None = None
+                # Check for first role player has
+                member = await guild_obj.fetch_member(player_id)
+                if sorted_roles != []:
+                    for role in sorted_roles:
+                        if int(role[0]) in [role.id for role in member.roles]:
+                            player_icon = role[1]["icon"]
+                            break
+                if player_icon is None:
+                    player_string += f"<@{player_id}>, "
+                else:
+                    player_string += f"{player_icon} <@{player_id}>, "
+
+            if player_string != "":
+                player_string = player_string[:-2]
+
+            await channel.edit(
+                topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"
+            )
 
     @status_check.error
+    @update_channel_status.error
     async def server_check_error_handler(self, exception: Exception):
         """Handles printing errors to console for the loop
 
@@ -318,10 +369,6 @@ class ManualPugCog(commands.Cog):
                 player_mentions, embed=pug_embed
             )
 
-        await self.update_channel_status(
-            interaction.guild, self.bot.get_channel(guild_settings["manual"]["channel"])
-        )
-
     @manual_check()
     @nextcord.slash_command(
         name="remove", description="Remove yourself from the pug queue."
@@ -347,9 +394,6 @@ class ManualPugCog(commands.Cog):
             {"$pull": {"manual.players": [interaction.user.id, old_time]}},
         )
         await interaction.send("You have been removed from the pug queue.")
-        await self.update_channel_status(
-            interaction.guild, self.bot.get_channel(guild_settings["manual"]["channel"])
-        )
 
     @manual_check()
     @nextcord.slash_command(name="status", description="Check the status of the pug.")
@@ -452,10 +496,6 @@ class ManualPugCog(commands.Cog):
                 await interaction.edit_original_message(
                     content="The pug queue has been cleared.", view=None
                 )
-                await self.update_channel_status(
-                    interaction.guild,
-                    self.bot.get_channel(guild_settings["manual"]["channel"]),
-                )
             else:
                 await interaction.edit_original_message(
                     content="The pug queue has not been cleared.", view=None
@@ -475,107 +515,3 @@ class ManualPugCog(commands.Cog):
                 {"$pull": {"manual.players": [interaction.user.id, old_time]}},
             )
             await interaction.send("The user has been removed from the pug queue.")
-            await self.update_channel_status(
-                interaction.guild,
-                self.bot.get_channel(guild_settings["manual"]["channel"]),
-            )
-
-    async def update_channel_status(
-        self, guild: nextcord.Guild, channel: nextcord.TextChannel
-    ):
-        """Update the channel status for the guild."""
-        try:
-            guild_settings = await guild_configs.find_item({"guild": guild.id})
-            if "manual" not in guild_settings:
-                return
-        except LookupError:
-            return
-
-        if "roles" in guild_settings:
-            guild_roles = guild_settings["roles"]
-            sorted_roles = sorted(
-                guild_roles.items(), key=lambda x: x[1]["value"], reverse=True
-            )
-        else:
-            sorted_roles = []
-
-        # Check if there are already enough players added up
-        if (
-            len(guild_settings["manual"]["players"])
-            > guild_settings["manual"]["num_players"]
-        ):
-            return
-
-        # Later add a check for the balance role the user has to add it to the string
-
-        current_players = len(guild_settings["manual"]["players"])
-        max_players: int = guild_settings["manual"]["num_players"]
-
-        player_string: str = ""
-        for player in guild_settings["manual"]["players"]:
-            player_id = player[0]
-            player_icon: str | None = None
-            # Check for first role player has
-            member = await guild.fetch_member(player_id)
-            if sorted_roles != []:
-                for role in sorted_roles:
-                    if int(role[0]) in [role.id for role in member.roles]:
-                        player_icon = role[1]["icon"]
-                        break
-            if player_icon is None:
-                player_string += f"<@{player_id}>, "
-            else:
-                player_string += f"{player_icon} <@{player_id}>, "
-
-        if player_string != "":
-            player_string = player_string[:-2]
-
-        await channel.edit(
-            topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"
-        )
-
-    @commands.Cog.listener("on_voice_state_update")
-    async def voice_state_update(
-        self,
-        member: nextcord.Member,
-        before: nextcord.VoiceState,
-        after: nextcord.VoiceState,
-    ):
-        """Update the channel status for the guild.
-
-        Args:
-            member (nextcord.Member): The member who's voice state changed.
-            before (nextcord.VoiceState): The voice state before the change.
-            after (nextcord.VoiceState): The voice state after the change.
-        """
-        if before.channel == after.channel:
-            return
-        try:
-            guild_settings = await guild_configs.find_item({"guild": member.guild.id})
-            if "manual" not in guild_settings:
-                return
-        except LookupError:
-            return
-
-        # Check if there are enough players added up
-        if (
-            len(guild_settings["manual"]["players"])
-            < guild_settings["manual"]["num_players"]
-        ):
-            return
-
-        all_vc_members: list[int] = []
-        for channel in member.guild.voice_channels:
-            all_vc_members.extend([member.id for member in channel.members])
-        players_added = list(
-            set(all_vc_members)
-            & set([player[0] for player in guild_settings["manual"]["players"]])
-        )
-
-        if len(players_added) == guild_settings["manual"]["num_players"]:
-            await guild_configs.update_item(
-                {"guild": member.guild.id}, {"$set": {"manual.players": []}}
-            )
-            await self.update_channel_status(
-                member.guild, self.bot.get_channel(guild_settings["manual"]["channel"])
-            )

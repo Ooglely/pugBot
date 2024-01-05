@@ -787,9 +787,13 @@ class PugRunningCog(commands.Cog):
         genned: bool = True
         last_players: list[PugPlayer]
         timestamp: int
-        last_players, timestamp = await chosen_category.get_last_players(
-            interaction.guild.id
-        )
+        try:
+            last_players, timestamp = await chosen_category.get_last_players(
+                interaction.guild.id
+            )
+        except LookupError:
+            last_players = []
+            timestamp = 0
         print(last_players)
         for player in last_players:
             if player.discord not in [

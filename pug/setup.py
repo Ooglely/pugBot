@@ -95,7 +95,7 @@ class PugSetupCog(commands.Cog):
         setup_embed.description = "Pug category setup complete! You can now use team generation and move commands in these channels."
         setup_embed.add_field(
             name="Channels",
-            value=f"Add Up: <#{pug_category.add_up}>\nRED: <#{pug_category.red_team}>\nRED: <#{pug_category.blu_team}>",
+            value=f"Add Up: <#{pug_category.add_up}>\nRED: <#{pug_category.red_team}>\nBLU: <#{pug_category.blu_team}>",
         )
         setup_embed.add_field(
             name="First To",
