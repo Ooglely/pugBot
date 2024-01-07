@@ -112,7 +112,6 @@ class ManualPugCog(commands.Cog):
 
             current_players = len(guild["manual"]["players"])
             max_players: int = guild["manual"]["num_players"]
-            print(guild)
             guild_obj: nextcord.Guild = self.bot.get_guild(int(guild["guild"]))
             if guild_obj is None:
                 continue
@@ -138,10 +137,12 @@ class ManualPugCog(commands.Cog):
 
             if player_string != "":
                 player_string = player_string[:-2]
-
-            await channel.edit(
-                topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"
-            )
+            try:
+                await channel.edit(
+                    topic=f"Add up using /add! | Pug queue: {current_players}/{max_players} | {player_string}"
+                )
+            except nextcord.errors.Forbidden:
+                print("Missing permissions to edit channel topic.\nGuild: ", guild)
 
     @status_check.error
     @update_channel_status.error
@@ -508,10 +509,10 @@ class ManualPugCog(commands.Cog):
                 await interaction.send("The user is not in the pug queue.")
                 return
             for added_player in guild_settings["manual"]["players"]:
-                if added_player[0] == interaction.user.id:
+                if added_player[0] == player.id:
                     old_time: int = added_player[1]
             await guild_configs.update_item(
                 {"guild": interaction.guild.id},
-                {"$pull": {"manual.players": [interaction.user.id, old_time]}},
+                {"$pull": {"manual.players": [player.id, old_time]}},
             )
             await interaction.send("The user has been removed from the pug queue.")
