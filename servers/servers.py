@@ -4,6 +4,7 @@ import json
 import re
 import string
 import random
+import traceback
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Set
 
@@ -696,12 +697,13 @@ class ServerCog(commands.Cog):
         for server in self.servers:
             active: bool = await server.is_active()
             if not active:
-                await server.stop_tracking(self.bot)
+                if not None:
+                    await server.stop_tracking(self.bot)
                 inactive.append(server)
 
         for server in inactive:
             try:
-                print("Attempting to remove a server from being track")
+                print("Attempting to remove a server from being tracked")
                 self.servers.remove(server)
             except KeyError:
                 print("Server already removed")
@@ -716,6 +718,4 @@ class ServerCog(commands.Cog):
             exception (Exception): The exception that was raised
         """
         print("Error in server_status loop:\n")
-        print(exception.__class__.__name__)
-        print(exception.__cause__)
-        print(exception)
+        print(traceback.format_exc())
