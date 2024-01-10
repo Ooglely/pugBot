@@ -73,6 +73,8 @@ class Reservation:
                 f"https://na.serveme.tf/api/reservations/{self.reservation_id}?api_key={self.api_key}",
             ) as resp:
                 server = await resp.json()
+                if server is None:
+                    return None
                 print("Reservation info:", server)
                 if server["reservation"]["status"] == "Ended":
                     return False
