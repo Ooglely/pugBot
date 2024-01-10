@@ -695,7 +695,7 @@ class ServerCog(commands.Cog):
         print("Searching for inactive servers")
         inactive = []
         for server in self.servers:
-            active: bool = await server.is_active()
+            active: bool | None = await server.is_active()
             if not active:
                 if not None:
                     await server.stop_tracking(self.bot)
