@@ -62,18 +62,20 @@ class Reservation:
     def __eq__(self, other):
         return type(other) is type(self) and self.reservation_id == other.reservation_id
 
-    async def is_active(self) -> bool:
+    async def is_active(self) -> bool | None:
         """Checks if the reservation is still active
 
         Returns:
-            bool: True if the reservation is still active, False otherwise
+            bool: True if active, False ended, None if no response or other error
         """
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"https://na.serveme.tf/api/reservations/{self.reservation_id}?api_key={self.api_key}",
             ) as resp:
                 server = await resp.json()
-                print(server)
+                if server is None:
+                    return None
+                print("Reservation info:", server)
                 if server["reservation"]["status"] == "Ended":
                     return False
                 return True
