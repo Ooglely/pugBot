@@ -1,4 +1,5 @@
 """Functions for interacting with the database throughout the bot."""
+from typing import Iterable
 
 import pymongo
 
@@ -360,3 +361,18 @@ async def update_rgl_ban_status(steam: int) -> bool:
         upsert=True,
     )
     return ban_status
+
+
+async def add_checked_logs(doc_id: str, logs: Iterable[int]):
+    """
+    Adds log IDs that have already been checked to a Searcher
+    :param doc_id: The searcher log's document ID
+    :param logs: The log IDs
+    :return:
+    """
+
+    database = client.searcher.data
+    database.update_one(
+        {"_id": doc_id},
+        {"$push": {"checked": {"$each": logs}}}
+    )

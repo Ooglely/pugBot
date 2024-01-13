@@ -9,7 +9,7 @@ from pug import PugCategory
 from logs import Player, LogData
 from logs.logstf_api import LogsAPI
 from logs.elo import process_elo
-from database import BotCollection
+from database import BotCollection, add_checked_logs
 from util import get_steam64
 
 queue_db = BotCollection("logs", "queue")
@@ -27,6 +27,7 @@ class PartialLog:
         category (PugCategory): The category the game was played in.
         players (list[Player]): The players in the game.
         timestamp (int, optional): The timestamp of when the game was played. Defaults to time.time().__round__().
+        checked (list, set, optional): The log IDs for this partial log that have already been determined as a non-match
     """
 
     def __init__(
@@ -35,12 +36,16 @@ class PartialLog:
         category: PugCategory,
         players: list[Player],
         timestamp=None,
+        checked=None
     ) -> None:
+        if checked is None:
+            checked = []
         self.guild: int = guild
         self.timestamp: int = timestamp or time.time().__round__()
         print(f"Timestamp is {self.timestamp}")
         self.category: PugCategory = category
         self.players: list[Player] = players
+        self.checked_logs: set[int] = set(checked) if checked else set()
 
     def export(self) -> dict:
         """Export the partial log to a dictionary.
@@ -53,6 +58,7 @@ class PartialLog:
             "timestamp": self.timestamp,
             "category": self.category.__dict__(),
             "players": [player.__dict__ for player in self.players],
+            "checked": [log.__dict__ for log in self.checked_logs],
         }
 
 
@@ -112,7 +118,9 @@ class LogSearcher:
                 PugCategory(searcher_log["category"]["name"], searcher_log["category"]),
                 players,
                 searcher_log["timestamp"],
+                searcher_log["checked"],
             )
+
             print(f"Timestamp: {partial_log.timestamp}")
             print(f"Current time: {round(time.time())}")
 
@@ -129,16 +137,23 @@ class LogSearcher:
                     steam_ids.append(player.steam_64)
             print(steam_ids)
 
+            log_found = False
+            new_checked_logs = set()
+
             query = await LogsAPI.search_for_log(players=steam_ids, limit=3)
             print(f"Result: {query}")
             try:
                 if query["success"] and query["results"] > 0:
                     for log in query["logs"]:
+                        if log["id"] in partial_log.checked_logs:
+                            # Already checked this log
+                            continue
                         log_data = await LogsAPI.get_single_log(log["id"])
                         if (
                             log["date"] < partial_log.timestamp - 240
                         ):  # Reduced by 4 minutes to account for machine differences
                             print("Log is too old.")
+                            new_checked_logs.add(log["id"])
                             continue
                         if not log_data["success"]:
                             print("Log query was not successful.")
@@ -147,23 +162,30 @@ class LogSearcher:
                             print(
                                 "Log is either already in the database or is being processed."
                             )
+                            new_checked_logs.add(log["id"])
                             continue
                         print(f"Log: {log}")
                         full_log = FullLog(partial_log, log["id"], log_data)
                         await LogSearcher._add_queue_game(full_log)
                         await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                        log_found = True
                         break
             except KeyError:
                 continue
 
             # Incase not all players are in the game, check for logs with only some of the players
             for steam_id in steam_ids:
+                if log_found:
+                    break
                 print(f"Steam ID: {steam_id}")
                 query = await LogsAPI.search_for_log(players=[steam_id], limit=3)
                 print(f"Result: {query}")
                 try:
                     if query["success"] and query["results"] > 0:
                         for log in query["logs"]:
+                            if log["id"] in partial_log.checked_logs or log["id"] in new_checked_logs:
+                                # Already checked this log
+                                continue
                             log_data = await LogsAPI.get_single_log(log["id"])
                             # Check if at least half the players are in the log
                             player_count = 0
@@ -172,9 +194,11 @@ class LogSearcher:
                                     player_count += 1
                             if player_count < (len(steam_ids) / 2):
                                 print("Not enough players in log.")
+                                new_checked_logs.add(log["id"])
                                 continue
                             if log["date"] < partial_log.timestamp - 240:
                                 print("Log is too old.")
+                                new_checked_logs.add(log["id"])
                                 continue
                             if not log_data["success"]:
                                 print("Log query was not successful.")
@@ -183,6 +207,7 @@ class LogSearcher:
                                 print(
                                     "Log is either already in the database or is being processed."
                                 )
+                                new_checked_logs.add(log["id"])
                                 continue
 
                             # If passes...
@@ -190,9 +215,13 @@ class LogSearcher:
                             full_log = FullLog(partial_log, log["id"], log_data)
                             await LogSearcher._add_queue_game(full_log)
                             await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                            log_found = True
                             break
                 except KeyError:
                     continue
+
+            if not log_found and new_checked_logs:
+                await add_checked_logs(searcher_log['_id'], new_checked_logs)
 
     @tasks.loop(minutes=1)
     async def queue(self):
