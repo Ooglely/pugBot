@@ -1,5 +1,6 @@
 """Contains the webserver cog, which is responsible for the webserver and registering users."""
 import asyncio
+import aiohttp
 import nextcord
 import uvicorn
 from fastapi import FastAPI, Request, Response, status
@@ -127,7 +128,10 @@ class WebserverCog(nextcord.ext.commands.Cog):
         # Gather player data and
         player_divs = await RGL.get_div_data(steam_id)
         current_ban = await RGL.check_banned(steam_id)
-        log_num = await util.get_total_logs(str(steam_id))
+        try:
+            log_num = await util.get_total_logs(str(steam_id))
+        except aiohttp.ClientResponseError:
+            return "Unable to get logs from logs.tf. Please try again."
 
         await add_player(str(steam_id), str(user.id))
         await update_divisons(steam_id, player_divs)
