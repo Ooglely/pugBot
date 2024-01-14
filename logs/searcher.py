@@ -106,6 +106,29 @@ class LogSearcher:
         If 6 hours has passed and no log has been found, the game is deleted from the searcher.
         If a log ID matches a log ID already registered in the bot, the game is deleted from the searcher.
         """
+
+        async def invalid_log() -> bool:
+            """
+            Ensures current log isn't disqualified
+            :return:
+            """
+            if (
+                    log["date"] < partial_log.timestamp - 240
+            ):  # Reduced by 4 minutes to account for machine differences
+                print("Log is too old.")
+                new_checked_logs.add(log["id"])
+                return True
+            if not log_data["success"]:
+                print("Log query was not successful.")
+                return True
+            if log["id"] in await list_all_logs():
+                print(
+                    "Log is either already in the database or is being processed."
+                )
+                new_checked_logs.add(log["id"])
+                return True
+            return False
+
         print("Running searcher...")
         searcher_logs = await searcher_db.find_all_items()
         for searcher_log in searcher_logs:  # pylint: disable=too-many-nested-blocks
@@ -149,21 +172,9 @@ class LogSearcher:
                             # Already checked this log
                             continue
                         log_data = await LogsAPI.get_single_log(log["id"])
-                        if (
-                            log["date"] < partial_log.timestamp - 240
-                        ):  # Reduced by 4 minutes to account for machine differences
-                            print("Log is too old.")
-                            new_checked_logs.add(log["id"])
+                        if invalid_log():
                             continue
-                        if not log_data["success"]:
-                            print("Log query was not successful.")
-                            continue
-                        if log["id"] in await list_all_logs():
-                            print(
-                                "Log is either already in the database or is being processed."
-                            )
-                            new_checked_logs.add(log["id"])
-                            continue
+
                         print(f"Log: {log}")
                         full_log = FullLog(partial_log, log["id"], log_data)
                         await LogSearcher._add_queue_game(full_log)
@@ -196,18 +207,7 @@ class LogSearcher:
                                 print("Not enough players in log.")
                                 new_checked_logs.add(log["id"])
                                 continue
-                            if log["date"] < partial_log.timestamp - 240:
-                                print("Log is too old.")
-                                new_checked_logs.add(log["id"])
-                                continue
-                            if not log_data["success"]:
-                                print("Log query was not successful.")
-                                continue
-                            if log["id"] in await list_all_logs():
-                                print(
-                                    "Log is either already in the database or is being processed."
-                                )
-                                new_checked_logs.add(log["id"])
+                            if invalid_log():
                                 continue
 
                             # If passes...
