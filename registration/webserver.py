@@ -222,6 +222,11 @@ class WebserverCog(nextcord.ext.commands.Cog):
 
             # Lastly, add the role and output the results to the guild
             await member.add_roles(role_to_give)
+            # Also add registered role if it exists
+            registered_role = loaded["roles"]["registered"]
+            if registered_role:
+                await member.add_roles(registered_role)
+
             registration_embed.add_field(
                 name="Roles Added",
                 value=f"<@&{role_to_give.id}>",

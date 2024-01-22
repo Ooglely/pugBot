@@ -240,6 +240,13 @@ async def update_guild_player(
         # Player doesn't have the desired role, or has extra roles
         await send_update_embed(loaded, member, steam_id, roles, new_role)
 
+    if (
+        loaded["roles"]["registered"] is not None
+        and loaded["roles"]["registered"] not in member.roles
+    ):
+        # Player is registered but doesn't have the registered role
+        await member.add_roles(loaded["roles"]["registered"])
+
 
 def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
     """
@@ -264,6 +271,12 @@ def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
     adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
     inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
     ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
+    try:
+        registered_role: nextcord.Role | None = guild.get_role(
+            reg_settings.roles["registered"]
+        )
+    except KeyError:
+        registered_role = None
 
     bypass_role = None
     if reg_settings.bypass:
@@ -295,6 +308,7 @@ def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
             "divisions": division_roles,
             "rgl_ban": ban_role,
             "bypass": bypass_role,
+            "registered": registered_role,
         },
         "channels": {"logs": logs_channel, "registration": registration_channel},
         "settings": {
@@ -433,6 +447,11 @@ class UpdateRolesCog(commands.Cog):
                 discord_id = int(player["discord"])
             except KeyError:
                 continue
+            # First check if the user is in the server
+            member: nextcord.Member = interaction.guild.get_member(discord_id)
+            if member is None:
+                print("Member not in guild")
+                continue
             player_divs: dict[str, dict[str, int]] = {}
             try:
                 player_divs = await RGL.get_div_data(steam_id)
@@ -512,7 +531,6 @@ class UpdateRolesCog(commands.Cog):
         new_role = loaded["roles"]["divisions"][division]
 
         roles = get_guild_old_div(loaded, member)
-        print(roles)
 
         removed_value = ""
         ban_role = loaded["roles"]["rgl_ban"]
@@ -530,6 +548,10 @@ class UpdateRolesCog(commands.Cog):
                 removed_value += f"<@&{ban_role.id}> "
 
         await member.add_roles(new_role)
+        # Also add registered role if it exists
+        registered_role = loaded["roles"]["registered"]
+        await member.add_roles(registered_role)
+
         log_embed = nextcord.Embed(
             title="New Member",
             url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(player["steam"]),

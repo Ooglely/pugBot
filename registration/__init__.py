@@ -14,6 +14,7 @@ class RegistrationSettings:
         self.gamemode: str = ""
         self.mode: str = ""
         self.roles: dict[str, int | None] = {
+            "registered": None,
             "noexp": None,
             "newcomer": None,
             "amateur": None,

@@ -40,10 +40,16 @@ class RegistrationSetupCog(commands.Cog):
             name="Current Settings",
             value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
         )
-        setup_embed.add_field(
-            name="Roles",
-            value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>",
-        )
+        try:
+            setup_embed.add_field(
+                name="Roles",
+                value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>\nRegistered: <@&{settings.roles['registered']}>",
+            )
+        except KeyError:
+            setup_embed.add_field(
+                name="Roles",
+                value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>\nRegistered: None",
+            )
         setup_embed.add_field(
             name="Channels",
             value=f"Registration: <#{settings.channels['registration']}>\nLogs: <#{settings.channels['logs']}>",
@@ -89,7 +95,19 @@ class RegistrationSetupCog(commands.Cog):
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
-        settings.roles = roles_view_two.roles
+
+        # Sole role select for registered role
+        roles_view_three = RegistrationRoles(["registered"], roles_view_two.roles)
+        setup_embed.description = "Please select the role you would like to be assigned to registered players.\nThis will be given to everyone who is registered, regardless of division."
+        await interaction.edit_original_message(
+            embed=setup_embed, view=roles_view_three
+        )
+        await roles_view_three.wait()
+        if roles_view_three.action == "cancel":
+            await interaction.edit_original_message(view=None)
+            await interaction.delete_original_message(delay=1)
+            return
+        settings.roles = roles_view_three.roles
 
         # Gamemode select
         gamemode_view = GamemodeSelect()
@@ -141,13 +159,13 @@ class RegistrationSetupCog(commands.Cog):
 
         # Channel select
         channel_view = ChannelSelect()
-        setup_embed.description = "Lastly, please select the channels you would like to be used for new registrations and logging.\n\nJust like for selecting roles, you may need to search for it."
+        setup_embed.description = "Lastly, please select the channels you would like to be used for new registrations and logging.\nYou can use the same channel for both, if desired.\n\nJust like for selecting roles, you may need to search for it."
         await interaction.edit_original_message(embed=setup_embed, view=channel_view)
         await channel_view.wait()
         settings.channels["registration"] = channel_view.registration
         settings.channels["logs"] = channel_view.logs
 
-        setup_embed.description = "Registration setup complete! You can now link new members of the server to https://pugBot.tf/register, and roles will be assigned from the bot.\n\nUse /updateall to update all current members of the server, or wait for the bots daily update."
+        setup_embed.description = "Registration setup complete! You can now link new members of the server to https://pugbot.tf/register, and roles will be assigned from the bot.\n\nUse /updateall to update all current members of the server, or wait for the bots daily update."
         setup_embed.add_field(
             name="Current Settings",
             value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
