@@ -12,7 +12,7 @@ from registration import (
     TrueFalseSelect,
     ChannelSelect,
 )
-from util import is_setup
+from util import guild_config_check
 
 
 class RegistrationSetupCog(commands.Cog):
@@ -21,7 +21,7 @@ class RegistrationSetupCog(commands.Cog):
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
 
-    @is_setup()
+    @guild_config_check()
     @nextcord.slash_command(
         name="registration",
         description="Setup pugBot.tf registration for this server.",

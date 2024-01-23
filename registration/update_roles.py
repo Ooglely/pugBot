@@ -52,6 +52,10 @@ async def send_update_embed(
     :return: None
     """
 
+    # If the role it is trying to add doesn't exist it's going to cause issues
+    if new_role is None:
+        return
+    
     logs_channel = loaded["channels"]["logs"]
     if logs_channel is None:
         print("Error, logs channel not set up.")
