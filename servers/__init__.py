@@ -81,6 +81,11 @@ class Reservation:
                 return True
 
     async def stop_tracking(self, bot: nextcord.Client):
+        """Deletes the reservation messages and stops tracking the reservation.
+
+        Args:
+            bot (nextcord.Client): The bot instance.
+        """
         for message in self.messages:
             try:
                 await (

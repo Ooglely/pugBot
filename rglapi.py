@@ -23,8 +23,6 @@ divs = {
 class RateLimitException(Exception):
     """Rate Limited by an API"""
 
-    pass
-
 
 class Player:
     """Class representing an RGL player."""
@@ -106,7 +104,7 @@ class RglApi:
             ) as player_data:
                 if player_data.status == 429:
                     raise RateLimitException("Rate limited by the RGL API")
-                elif player_data.status != 200:
+                if player_data.status != 200:
                     raise LookupError("Player does not exist in RGL")
                 return await player_data.json()
 
@@ -125,7 +123,7 @@ class RglApi:
             ) as team_data:
                 if team_data.status == 429:
                     raise RateLimitException("Rate limited by the RGL API")
-                elif team_data.status != 200:
+                if team_data.status != 200:
                     raise LookupError("Player does not exist in RGL")
                 teams = await team_data.json()
                 return teams

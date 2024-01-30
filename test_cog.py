@@ -1,3 +1,4 @@
+"""Contains all of the commands for the test bot."""
 import gql
 import nextcord
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -33,6 +34,8 @@ class BranchSelect(nextcord.ui.View):
 
 
 class TestCog(commands.Cog):
+    """Contains all of the commands for the test bot."""
+
     def __init__(self, bot: nextcord.Client):
         self.bot: nextcord.Client = bot
 
