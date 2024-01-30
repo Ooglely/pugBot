@@ -14,7 +14,7 @@ import pytz
 from aiohttp import ContentTypeError
 from bs4 import BeautifulSoup
 from nextcord.ext import tasks, commands, application_checks
-from rcon.source import Client
+from rcon.source import rcon
 
 import database
 import util
@@ -353,14 +353,14 @@ class ServerCog(commands.Cog):
             )
             return
 
-        connect = (
+        connect_command = (
             "connect "
             + reserve["ip_and_port"]
             + '; password "'
             + connect_password
             + '"'
         )
-        rcon = (
+        rcon_command = (
             "rcon_address "
             + reserve["ip_and_port"]
             + '; rcon_password "'
@@ -391,7 +391,7 @@ class ServerCog(commands.Cog):
             value=f"<t:{int(end.timestamp())}:t>",
             inline=True,
         )
-        embed.add_field(name="Connect", value=connect, inline=False)
+        embed.add_field(name="Connect", value=connect_command, inline=False)
 
         message_list = []
 
@@ -399,9 +399,9 @@ class ServerCog(commands.Cog):
         rcon_channel = self.bot.get_channel(guild_data["rcon"])
         if rcon_channel == interaction.channel:
             # Include RCON in this embed if we are already in the RCON channel
-            embed.add_field(name="RCON", value=rcon, inline=False)
+            embed.add_field(name="RCON", value=rcon_command, inline=False)
         else:
-            rcon_msg = await rcon_channel.send(rcon)
+            rcon_msg = await rcon_channel.send(rcon_command)
             message_list.append((rcon_channel.id, rcon_msg.id))
 
         embed.add_field(name="Map", value=chosen_map, inline=False)
@@ -418,7 +418,7 @@ class ServerCog(commands.Cog):
         connect_embed.add_field(
             name="Server", value=f"{reserve['name']} - #{server_id}", inline=False
         )
-        connect_embed.add_field(name="Command", value=connect, inline=False)
+        connect_embed.add_field(name="Command", value=connect_command, inline=False)
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
 
         connect_channel = self.bot.get_channel(guild_data["connect"])
@@ -521,12 +521,12 @@ class ServerCog(commands.Cog):
             )
             return
 
-        with Client(
-            reservations[server_id]["server"]["ip"],
-            int(reservations[server_id]["server"]["port"]),
+        await rcon(
+            exec_command,
+            host=reservations[server_id]["server"]["ip"],
+            port=int(reservations[server_id]["server"]["port"]),
             passwd=reservations[server_id]["rcon"],
-        ) as client:
-            client.run(exec_command)
+        )
 
         await interaction.edit_original_message(
             content="Changing map to `" + chosen_map + "`.", view=None
@@ -535,14 +535,12 @@ class ServerCog(commands.Cog):
         # Try to reexec the whitelist after a map change
         if reservations[server_id]["whitelist_id"] is None:
             await asyncio.sleep(15)
-            with Client(
-                reservations[server_id]["server"]["ip"],
-                int(reservations[server_id]["server"]["port"]),
+            await rcon(
+                f"tftrue_whitelist_id {reservations[server_id]['custom_whitelist_id']}",
+                host=reservations[server_id]["server"]["ip"],
+                port=int(reservations[server_id]["server"]["port"]),
                 passwd=reservations[server_id]["rcon"],
-            ) as client:
-                client.run(
-                    f"tftrue_whitelist_id {reservations[server_id]['custom_whitelist_id']}"
-                )
+            )
 
     @util.is_setup()
     @util.is_runner()
@@ -582,16 +580,17 @@ class ServerCog(commands.Cog):
             return
         server_id = server_view.server_chosen
 
-        with Client(
-            reservations[server_id]["server"]["ip"],
-            int(reservations[server_id]["server"]["port"]),
+        response = await rcon(
+            command=command,
+            host=reservations[server_id]["server"]["ip"],
+            port=int(reservations[server_id]["server"]["port"]),
             passwd=reservations[server_id]["rcon"],
-        ) as client:
-            client.run(command)
-
-        await interaction.edit_original_message(
-            content="Ran command `" + command + "`", view=None
         )
+
+        status_text = "Ran command `" + command + "`.\n"
+        if response != "" and len(response) < 1900:
+            status_text += "Response: ```" + response + "```"
+        await interaction.edit_original_message(content=status_text, view=None)
 
     @util.is_setup()
     @util.is_runner()
@@ -711,7 +710,7 @@ class ServerCog(commands.Cog):
                 print("Successful removed the server")
 
     @server_status.error
-    async def server_status_error_handler(self, exception: Exception):
+    async def server_status_error_handler(self, _exception: Exception):
         """Handles printing errors to console for the loop
 
         Args:
