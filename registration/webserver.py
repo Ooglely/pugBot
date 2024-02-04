@@ -14,6 +14,8 @@ from database import (
     update_divisons,
     get_player_from_steam,
     get_player_from_discord,
+    player_count,
+    log_count,
 )
 from registration.update_roles import load_guild_settings
 from rglapi import RglApi
@@ -333,3 +335,11 @@ async def send_connect(connect: NewConnect, request: Request):
     print("Request not from TF2 plugin")
     print(request.headers)
     return {"message": "Wrong password"}
+
+
+@app.get("/api/stats")
+async def get_bot_stats(response: Response):
+    """Returns the number of players in the database."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    stats = {"players": player_count(), "logs": log_count()}
+    return stats
