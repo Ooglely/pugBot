@@ -108,7 +108,12 @@ class WebserverCog(nextcord.ext.commands.Cog):
         user = self.bot.get_user(discord_id)
 
         try:
-            get_player_from_steam(steam_id)
+            player = get_player_from_steam(steam_id)
+            if player["discord"] == str(discord_id):
+                return (
+                    f"Your Steam and Discord accounts are already linked to each other. If this is an error, "
+                    f"please contact PugBot devs {DEV_DISCORD_LINK}"
+                )
             return f"Steam profile is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
         except LookupError:
             # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
