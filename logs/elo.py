@@ -1,5 +1,6 @@
 """Elo calculations, storage and utilities."""
 from difflib import SequenceMatcher
+import math
 from typing import Any
 
 from bson import Int64 as NumberLong
@@ -290,22 +291,90 @@ async def calculate_elo_changes(log, mode: str) -> None:
     print(f"blu_team_elo_change: {blu_team_elo_change}")
 
     for red_player_elo in red_team_players:
+        mode_elo = await red_player_elo.get_elo_from_mode(
+            mode, log.guild, log.category.name, len(log.log.players)
+        )
+        red_current_elo_effect: float = (mode_elo - blu_team_elo) / 400
+        red_elo_change: int
+        if red_current_elo_effect != 0.0:
+            if red_team_elo_change > 0:
+                # If the team won...
+                if red_current_elo_effect > 0:
+                    # If the player's elo is higher than the team's average elo
+                    red_elo_change = round(
+                        red_team_elo_change * (1 - math.log(red_current_elo_effect, 4))
+                    )
+                else:
+                    # If the player's elo is lower than the team's average elo
+                    red_elo_change = round(
+                        red_team_elo_change
+                        * (1 + math.log(abs(red_current_elo_effect), 4))
+                    )
+            else:
+                # If the team lost...
+                if red_current_elo_effect > 0:
+                    # If the player's elo is higher than the team's average elo
+                    red_elo_change = round(
+                        red_team_elo_change * (1 + math.log(red_current_elo_effect, 4))
+                    )
+                else:
+                    # If the player's elo is lower than the team's average elo
+                    red_elo_change = round(
+                        red_team_elo_change
+                        * (1 - math.log(abs(red_current_elo_effect), 4))
+                    )
+        else:
+            red_elo_change = red_team_elo_change
         await red_player_elo.update_elo_from_mode(
             mode,
             log.guild,
             log.category.name,
             len(log.log.players),
-            red_team_elo_change,
+            red_elo_change,
         )
         await red_player_elo.upload()
 
     for blu_player_elo in blu_team_players:
+        mode_elo = await blu_player_elo.get_elo_from_mode(
+            mode, log.guild, log.category.name, len(log.log.players)
+        )
+        blu_current_elo_effect: float = (mode_elo - red_team_elo) / 400
+        blu_elo_change: int
+        if blu_current_elo_effect != 0.0:
+            if blu_team_elo_change > 0:
+                # If the team won...
+                if blu_current_elo_effect > 0:
+                    # If the player's elo is higher than the team's average elo
+                    blu_elo_change = round(
+                        blu_team_elo_change * (1 - math.log(blu_current_elo_effect, 4))
+                    )
+                else:
+                    # If the player's elo is lower than the team's average elo
+                    blu_elo_change = round(
+                        blu_team_elo_change
+                        * (1 + math.log(abs(blu_current_elo_effect), 4))
+                    )
+            else:
+                # If the team lost...
+                if blu_current_elo_effect > 0:
+                    # If the player's elo is higher than the team's average elo
+                    blu_elo_change = round(
+                        blu_team_elo_change * (1 + math.log(blu_current_elo_effect, 4))
+                    )
+                else:
+                    # If the player's elo is lower than the team's average elo
+                    blu_elo_change = round(
+                        blu_team_elo_change
+                        * (1 - math.log(abs(blu_current_elo_effect), 4))
+                    )
+        else:
+            blu_elo_change = blu_team_elo_change
         await blu_player_elo.update_elo_from_mode(
             mode,
             log.guild,
             log.category.name,
             len(log.log.players),
-            blu_team_elo_change,
+            blu_elo_change,
         )
         await blu_player_elo.upload()
 
