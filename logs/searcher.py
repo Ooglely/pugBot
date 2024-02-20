@@ -1,5 +1,6 @@
 """Implements the log searcher file, which takes the players from a team generation or moved back and searches for the log associated with the game that was played/being played."""
 import time
+import traceback
 
 import nextcord
 from nextcord.ext import tasks
@@ -248,6 +249,7 @@ class LogSearcher:
         print(exception.__class__.__name__)
         print(exception.__cause__)
         print(exception)
+        print(traceback.format_exc())
 
     async def log_failed_log(self, log: PartialLog, reason: str):
         """Log a failed log to the database"""

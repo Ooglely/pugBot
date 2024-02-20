@@ -103,7 +103,10 @@ class ClassData:
         self.deaths = data["deaths"]
         self.dmg = data["dmg"]
         self.time = data["total_time"]
-        self.dpm = self.dmg / (self.time / 60)
+        try:
+            self.dpm = self.dmg / (self.time / 60)
+        except ZeroDivisionError:
+            self.dpm = 0
 
 
 class LogData:
