@@ -236,6 +236,19 @@ class LogSearcher:
                 await self.log_completed_log(full_log)
                 await LogSearcher._delete_queue_game(queue_log["_id"])
 
+    @searcher.error
+    @queue.error
+    async def loop_error_handler(self, exception: Exception):
+        """Handles printing errors to console for the loop
+
+        Args:
+            exception (Exception): The exception that was raised
+        """
+        print("Error in loop:\n")
+        print(exception.__class__.__name__)
+        print(exception.__cause__)
+        print(exception)
+
     async def log_failed_log(self, log: PartialLog, reason: str):
         """Log a failed log to the database"""
         print(f"Logging failed log... {reason}")
