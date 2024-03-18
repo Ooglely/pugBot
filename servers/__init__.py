@@ -1,4 +1,5 @@
 """Classes for use in the servers cog."""
+
 from datetime import datetime, tzinfo
 
 import nextcord
