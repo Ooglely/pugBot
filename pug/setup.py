@@ -33,9 +33,13 @@ class PugSetupCog(commands.Cog):
     async def roles(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
-    @category.subcommand(name="add", description="Add a pug category to the server.")
     @is_setup()
     @is_runner()
+    @category.subcommand(
+        name="add",
+        description="Add a pug category to the server.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
     async def pug_category_add(
         self,
         interaction: nextcord.Interaction,
@@ -105,11 +109,13 @@ class PugSetupCog(commands.Cog):
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)
 
-    @category.subcommand(
-        name="remove", description="Remove a pug category from the server."
-    )
     @is_setup()
     @is_runner()
+    @category.subcommand(
+        name="remove",
+        description="Remove a pug category from the server.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
     async def pug_category_remove(self, interaction: nextcord.Interaction):
         """Remove a pug category from the server.
 
@@ -158,11 +164,13 @@ class PugSetupCog(commands.Cog):
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)
 
-    @roles.subcommand(
-        name="add", description="Add a role to the role balancing system."
-    )
     @guild_config_check()
     @is_runner()
+    @roles.subcommand(
+        name="add",
+        description="Add a role to the role balancing system.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
     async def role_add(
         self,
         interaction: nextcord.Interaction,
@@ -211,11 +219,13 @@ class PugSetupCog(commands.Cog):
             f"Added role {role.name} to the role balancing system with a value of {value}."
         )
 
-    @roles.subcommand(
-        name="remove", description="Remove a role from the role balancing system."
-    )
     @guild_config_check()
     @is_runner()
+    @roles.subcommand(
+        name="remove",
+        description="Remove a role from the role balancing system.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
     async def role_remove(
         self,
         interaction: nextcord.Interaction,
@@ -247,11 +257,11 @@ class PugSetupCog(commands.Cog):
             f"Removed role {role.name} from the role balancing system."
         )
 
+    @guild_config_check()
+    @is_runner()
     @roles.subcommand(
         name="list", description="List the roles in the role balancing system."
     )
-    @guild_config_check()
-    @is_runner()
     async def role_list(
         self,
         interaction: nextcord.Interaction,
