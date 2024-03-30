@@ -165,9 +165,7 @@ class ManualPugCog(commands.Cog):
 
     @is_runner()
     @manual_group.subcommand(
-        name="setup",
-        description="Setup guild settings for manual pugs.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
+        name="setup", description="Setup guild settings for manual pugs."
     )
     async def manual_setup(
         self,
@@ -178,6 +176,13 @@ class ManualPugCog(commands.Cog):
         Args:
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
+
         setup_embed = nextcord.Embed(
             title="Manual Pugs Setup",
             color=BOT_COLOR,
@@ -255,9 +260,7 @@ class ManualPugCog(commands.Cog):
     @is_runner()
     @manual_check()
     @manual_group.subcommand(
-        name="default",
-        description="Setup default add time for manual pugs.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
+        name="default", description="Setup default add time for manual pugs."
     )
     async def default_add_time(
         self,
@@ -274,6 +277,13 @@ class ManualPugCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
             hours (int): The default hours to add up for.
         """
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
+
         try:
             guild_settings = await guild_configs.find_item(
                 {"guild": interaction.guild.id}

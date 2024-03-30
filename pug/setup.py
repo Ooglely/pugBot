@@ -35,11 +35,7 @@ class PugSetupCog(commands.Cog):
 
     @is_setup()
     @is_runner()
-    @category.subcommand(
-        name="add",
-        description="Add a pug category to the server.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
-    )
+    @category.subcommand(name="add", description="Add a pug category to the server.")
     async def pug_category_add(
         self,
         interaction: nextcord.Interaction,
@@ -52,6 +48,13 @@ class PugSetupCog(commands.Cog):
         Args:
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
+
         setup_embed = nextcord.Embed(
             title="Pug Category Setup",
             color=BOT_COLOR,
@@ -112,9 +115,7 @@ class PugSetupCog(commands.Cog):
     @is_setup()
     @is_runner()
     @category.subcommand(
-        name="remove",
-        description="Remove a pug category from the server.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
+        name="remove", description="Remove a pug category from the server."
     )
     async def pug_category_remove(self, interaction: nextcord.Interaction):
         """Remove a pug category from the server.
@@ -123,6 +124,13 @@ class PugSetupCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
         await interaction.response.defer()
+
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
 
         # Get a list of pug categories
         try:
@@ -167,9 +175,7 @@ class PugSetupCog(commands.Cog):
     @guild_config_check()
     @is_runner()
     @roles.subcommand(
-        name="add",
-        description="Add a role to the role balancing system.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
+        name="add", description="Add a role to the role balancing system."
     )
     async def role_add(
         self,
@@ -193,6 +199,13 @@ class PugSetupCog(commands.Cog):
             value (int): The point value to give the role.
             emote (str | None): The emote to use for the role.
         """
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
+
         guild_config = await config_db.find_item({"guild": interaction.guild.id})
         if "roles" not in guild_config:
             guild_roles = {}
@@ -222,9 +235,7 @@ class PugSetupCog(commands.Cog):
     @guild_config_check()
     @is_runner()
     @roles.subcommand(
-        name="remove",
-        description="Remove a role from the role balancing system.",
-        default_member_permissions=nextcord.Permissions(manage_guild=True),
+        name="remove", description="Remove a role from the role balancing system."
     )
     async def role_remove(
         self,
@@ -239,6 +250,13 @@ class PugSetupCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
             role (nextcord.Role): The role to remove from the system.
         """
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member.guild_permissions.manage_guild:
+            await interaction.send(
+                "You need Manage Guild permissions to run this command."
+            )
+            return
+
         guild_config = await config_db.find_item({"guild": interaction.guild.id})
         if "roles" not in guild_config:
             guild_roles = {}
