@@ -165,7 +165,9 @@ class ManualPugCog(commands.Cog):
 
     @is_runner()
     @manual_group.subcommand(
-        name="setup", description="Setup guild settings for manual pugs."
+        name="setup",
+        description="Setup guild settings for manual pugs.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
     )
     async def manual_setup(
         self,
@@ -253,7 +255,9 @@ class ManualPugCog(commands.Cog):
     @is_runner()
     @manual_check()
     @manual_group.subcommand(
-        name="default", description="Setup default add time for manual pugs."
+        name="default",
+        description="Setup default add time for manual pugs.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
     )
     async def default_add_time(
         self,
