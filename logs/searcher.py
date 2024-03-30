@@ -107,7 +107,6 @@ class LogSearcher:
             print(f"Searcher Log: {searcher_log['_id']}")
 
             players = [Player(data=player) for player in searcher_log["players"]]
-            print(players)
             partial_log = PartialLog(
                 searcher_log["guild"],
                 PugCategory(searcher_log["category"]["name"], searcher_log["category"]),
@@ -128,7 +127,13 @@ class LogSearcher:
             for player in partial_log.players:
                 if player.steam_64 is not None:
                     steam_ids.append(player.steam_64)
-            print(steam_ids)
+            print(f"Searcher Steam IDs: {steam_ids}")
+            if len(steam_ids) == 0:
+                await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                await self.log_failed_log(
+                    partial_log, "Invalid Searcher: No valid steam IDs"
+                )
+                continue
 
             query = await LogsAPI.search_for_log(players=steam_ids, limit=3)
             print(f"Result: {query}")
