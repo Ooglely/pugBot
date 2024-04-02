@@ -390,11 +390,17 @@ class UpdateRolesCog(commands.Cog):
                     print(err)
                     continue
             await db.update_divisons(steam_id, player_divs)
-            try:
-                new_ban = await RGL.check_banned(steam_id)
-            except LookupError as err:
-                print(err, "Somehow this player is registered though??")
-                continue
+            ban_check: bool = False
+            while not ban_check:
+                try:
+                    new_ban = await RGL.check_banned(steam_id)
+                    ban_check = True
+                except RateLimitException as err:
+                    print(err, ", waiting and trying again...")
+                    await asyncio.sleep(30)
+                except LookupError as err:
+                    print(err, "Somehow this player is registered though??")
+                    continue
 
             # Attempt to update this player in every guild they are in
             for loaded in guilds.values():
