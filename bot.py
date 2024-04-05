@@ -22,7 +22,7 @@ from servers.servers import ServerCog
 from logs.searcher import LogSearcher
 from logs.logs import LogsCog
 from logs.elo_cog import EloCog
-from logs.stats import StatsCog
+from logs.stats_cog import StatsCog
 from pug.manual import ManualPugCog
 from pug.med_immunity import PugMedicCog
 from pug.setup import PugSetupCog

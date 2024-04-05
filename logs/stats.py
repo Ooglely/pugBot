@@ -1,171 +1,64 @@
-"""Cog that handles stats and showing stats to players."""
-from typing import Optional
-import nextcord
-from nextcord.ext import commands
-
-from constants import BOT_COLOR
+import asyncio
+from logs.searcher import PartialLog, FullLog
 from database import BotCollection
-from logs.elo import get_elo, Elo
-from logs.elo_cog import EloSettings, EloCog
-from util import is_runner, get_steam64
+from logs import Player
+from logs.logstf_api import LogsAPI
+from pug import PugCategory, CategoryButton, CategorySelect
+from util import get_steam64
 
-player_db = BotCollection("players", "data")
 
+log_data_db = BotCollection("logs", "data")
+log_list_db = BotCollection("logs", "list")
+guild_settings_db = BotCollection("guilds", "config")
+guild_categories_db = BotCollection("guilds", "categories")
 
-class StatsCog(commands.Cog):
-    """This cog contains the stats commands."""
+async def parse_log(log: FullLog):
+    print(log.log.__dict__)
+    print(log.log.red_team.__dict__)
+    print(log.log.players[0].__dict__)
+    
+    
+async def _get_log():
+    logs = await log_list_db.find_all_items()
+    for log in logs:
+        print(log)
+        break
+    
+    logstf_id = logs[0]["log_id"]
+    guild_id = logs[0]["guild"]
+    category_name = logs[0]["category"]["name"]
+    category_data = logs[0]["category"]
+    timestamp = logs[0]["timestamp"]
+    
+    players: list[Player] = []
+    log = await LogsAPI.get_single_log(logstf_id)
+    for player in log["players"]:
+        print(player)
+        log_player = Player(steam=get_steam64(player))
+        await log_player.link_player()
+        players.append(log_player)
 
-    def __init__(self, bot):
-        self.bot = bot
+    # Need the category that the log was played in
+    result = await guild_categories_db.find_item({"_id": guild_id})
 
-    @nextcord.slash_command(
-        name="stats",
-        description="Show your own stats and ELO rating.",
+    chosen_category: PugCategory = PugCategory(
+        category_name, category_data
     )
-    async def stats(self, interaction: nextcord.Interaction):
-        """Show your own stats."""
-        stats_embed = nextcord.Embed(
-            title=f"{interaction.user.name}'s stats",
-            description="Fetching stats...",
-            color=BOT_COLOR,
-        )
-        stats_embed.set_thumbnail(url=interaction.user.avatar.url)
-        await interaction.send(embed=stats_embed)
-        try:
-            player = await player_db.find_item({"discord": str(interaction.user.id)})
-        except LookupError:
-            stats_embed.description = "Unable to find your stats."
-            await interaction.edit_original_message(embed=stats_embed)
-            return
 
-        elo_ratings: Elo = await get_elo(int(player["steam"]))
-        stats_embed.description = None
-        stats_embed.add_field(
-            name="Sixes ELO",
-            value=f"{elo_ratings.global_elo.sixes}",
-            inline=True,
-        )
-        stats_embed.add_field(
-            name="Highlander ELO",
-            value=f"{elo_ratings.global_elo.highlander}",
-            inline=True,
-        )
-        stats_embed.add_field(
-            name="Passtime ELO",
-            value=f"{elo_ratings.global_elo.passtime}",
-            inline=True,
-        )
-
-        elo_settings: EloSettings = EloSettings(interaction.guild.id)
-        await elo_settings.load()
-        server_elo: str | int
-        if elo_settings.visible is True:
-            server_elo = await elo_ratings.get_elo_from_mode(
-                "server", interaction.guild.id
-            )
-        else:
-            server_elo = "*hidden*"
-
-        stats_embed.add_field(
-            name="Server ELO",
-            value=server_elo,
-            inline=False,
-        )
-
-        stats_embed.set_footer(text="See more detailed stats at pugbot.tf (soon)")
-        await interaction.edit_original_message(embed=stats_embed)
-
-    @is_runner()
-    @EloCog.elo.subcommand(name="search")  # pylint: disable=no-member
-    async def stats_search(
-        self,
-        interaction: nextcord.Interaction,
-        discord: Optional[nextcord.User] = nextcord.SlashOption(
-            name="discord", description="The user to look up.", required=False
+    full_log = FullLog(
+        PartialLog(
+            guild_id,
+            chosen_category,
+            players,
+            timestamp,
         ),
-        steam: Optional[str] = nextcord.SlashOption(
-            name="steam", description="The steam ID to look up.", required=False
-        ),
-    ):
-        """Search for a player's stats."""
-        user: nextcord.User
-        steam_id: str
-        if discord is None and steam is None:
-            await interaction.send(
-                "You must provide either a discord or steam ID to search for."
-            )
-            return
-        if discord is not None:
-            user = discord
-            try:
-                player = await player_db.find_item({"discord": str(discord.id)})
-            except LookupError:
-                await interaction.send("Unable to find provided user.")
-                return
-            steam_id = player["steam"]
-        elif steam is not None:
-            steam_id = steam
-            try:
-                player = await player_db.find_item({"steam": str(get_steam64(steam))})
-            except LookupError:
-                await interaction.send("Unable to find provided user.")
-                return
-            user = await self.bot.fetch_user(int(player["discord"]))
+        logstf_id,
+        log,
+    )
+    await parse_log(full_log)
 
-        stats_embed = nextcord.Embed(
-            title=f"{user.name}'s stats",
-            description="Fetching stats...",
-            color=BOT_COLOR,
-        )
-        stats_embed.set_thumbnail(url=user.avatar.url)
-        await interaction.send(embed=stats_embed)
 
-        elo_ratings: Elo = await get_elo(steam=int(steam_id))
-        print(elo_ratings.as_dict())
-        stats_embed.description = None
-        stats_embed.add_field(
-            name="Sixes ELO",
-            value=f"{elo_ratings.global_elo.sixes}",
-            inline=True,
-        )
-        stats_embed.add_field(
-            name="Highlander ELO",
-            value=f"{elo_ratings.global_elo.highlander}",
-            inline=True,
-        )
-        stats_embed.add_field(
-            name="Passtime ELO",
-            value=f"{elo_ratings.global_elo.passtime}",
-            inline=True,
-        )
-
-        server_elo = await elo_ratings.get_elo_from_mode("server", interaction.guild.id)
-        stats_embed.add_field(
-            name="Server ELO",
-            value=server_elo,
-            inline=False,
-        )
-
-        try:
-            category_string = ""
-            for category, elo in elo_ratings.server_elo[
-                str(interaction.guild.id)
-            ].categories.items():
-                print(category)
-                print(elo)
-                category_string += f"{category}: {elo}\n"
-
-            if len(category_string) != 0:
-                stats_embed.add_field(
-                    name="Server ELO by category",
-                    value=category_string,
-                    inline=False,
-                )
-        except ValueError:
-            pass
-
-        stats_embed.url = f"https://logs.tf/profile/{steam_id}"
-        stats_embed.set_footer(
-            text="See more detailed stats at pugbot.tf (soon) | Steam ID: " + steam_id
-        )
-        await interaction.edit_original_message(embed=stats_embed)
+    
+if __name__ == "__main__":
+    asyncio.run(_get_log())
+    
