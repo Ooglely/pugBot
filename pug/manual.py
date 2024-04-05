@@ -143,6 +143,11 @@ class ManualPugCog(commands.Cog):
                 )
             except nextcord.errors.Forbidden:
                 print("Missing permissions to edit channel topic.\nGuild: ", guild)
+            except nextcord.HTTPException:
+                print(
+                    "HTTP Exception when editing channel topic. Likely inappropriate username.\nGuild: ",
+                    guild,
+                )
 
     @status_check.error
     @update_channel_status.error

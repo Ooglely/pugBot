@@ -337,7 +337,7 @@ class UpdateRolesCog(commands.Cog):
         self.bot: nextcord.Client = bot
         self.update_rgl.start()  # pylint: disable=no-member
 
-    @tasks.loop(time=update_time)  # time=update_time
+    @tasks.loop(time=update_time)
     async def update_rgl(self):
         """
         Updates RGL divisions and roles for all registered players in all guilds
@@ -400,7 +400,8 @@ class UpdateRolesCog(commands.Cog):
                     await asyncio.sleep(30)
                 except LookupError as err:
                     print(err, "Somehow this player is registered though??")
-                    continue
+                    ban_check = True
+                    await asyncio.sleep(15)
 
             # Attempt to update this player in every guild they are in
             for loaded in guilds.values():
