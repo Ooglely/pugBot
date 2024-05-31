@@ -1,5 +1,6 @@
 """Classes for use in the servers cog."""
-from datetime import datetime, tzinfo
+from datetime import datetime
+from typing import Optional
 
 import nextcord
 import pytz
@@ -51,10 +52,11 @@ class Reservation:
         messages (list[tuple[int]]): List of the channel and message ids associated with this reservation
     """
 
-    def __init__(self, reservation_id: int, api_key: str, messages) -> None:
+    def __init__(self, reservation_id: int, api_key: str, guild: int, messages) -> None:
         self.reservation_id = reservation_id
         self.api_key = api_key
         self.messages = messages
+        self.guild: int = guild
 
     def __hash__(self):
         return hash(self.reservation_id)
@@ -88,9 +90,20 @@ class Reservation:
         """
         for message in self.messages:
             try:
-                await (
-                    await bot.get_channel(message[0]).fetch_message(message[1])
-                ).delete()
+                guild: nextcord.Guild | None = bot.get_guild(self.guild)
+                if guild is not None:
+                    channel: Optional[nextcord.abc.GuildChannel] = guild.get_channel(
+                        message[0]
+                    )
+                    if isinstance(channel, nextcord.TextChannel):
+                        guild_message: nextcord.Message = await channel.fetch_message(
+                            message[1]
+                        )
+                        await guild_message.delete()
+                    else:
+                        print(
+                            f"Couldn't delete reservation message: Channel {message[0]} not found in guild {guild}, likely due to permission issues."
+                        )
             except nextcord.HTTPException as err:
                 print(f"Couldn't delete reservation message: {err}\n{message}")
 

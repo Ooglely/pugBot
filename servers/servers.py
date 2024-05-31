@@ -436,7 +436,9 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
         message_list.append((connect_channel.id, connect_msg.id))
 
-        self.servers.add(Reservation(server_id, serveme_api_key, message_list))
+        self.servers.add(
+            Reservation(server_id, serveme_api_key, interaction.guild.id, message_list)
+        )
 
     @util.is_setup()
     @util.is_runner()
@@ -686,7 +688,7 @@ class ServerCog(commands.Cog):
         )
 
     @tasks.loop(minutes=1)
-    async def server_status(self):
+    async def server_status(self) -> None:
         """
         Attempt to clear ended Reservations
         On a one-minute loop
