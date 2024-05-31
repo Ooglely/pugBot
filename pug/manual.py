@@ -1,5 +1,6 @@
 """Cog storing commands to manually add up to pugs."""
 import time
+import traceback
 
 import nextcord
 from nextcord.ext import commands, tasks
@@ -151,16 +152,14 @@ class ManualPugCog(commands.Cog):
 
     @status_check.error
     @update_channel_status.error
-    async def server_check_error_handler(self, exception: Exception):
+    async def server_check_error_handler(self, _exception: Exception):
         """Handles printing errors to console for the loop
 
         Args:
             exception (Exception): The exception that was raised
         """
         print("Error in manual status check loop:\n")
-        print(exception.__class__.__name__)
-        print(exception.__cause__)
-        print(exception)
+        print(traceback.format_exc())
 
     @PugRunningCog.pug.subcommand(name="manual")  # pylint: disable=no-member
     async def manual_group(self, interaction: nextcord.Interaction):

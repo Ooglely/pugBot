@@ -1,5 +1,6 @@
 """Contains the cog to update users roles over time."""
 import datetime
+import traceback
 
 import asyncio
 import logging
@@ -411,16 +412,14 @@ class UpdateRolesCog(commands.Cog):
                     )
 
     @update_rgl.error
-    async def error_handler(self, exception: Exception):
+    async def error_handler(self, _exception: Exception):
         """Handles printing errors to console for the loop
 
         Args:
             exception (Exception): The exception that was raised
         """
         print("Error in update_rgl loop:\n")
-        print(exception.__class__.__name__)
-        print(exception.__cause__)
-        print(exception)
+        print(traceback.format_exc())
 
     @nextcord.slash_command(
         name="updateall",
