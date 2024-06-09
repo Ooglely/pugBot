@@ -386,7 +386,7 @@ class UpdateRolesCog(commands.Cog):
                     player_divs = await RGL.get_div_data(steam_id)
                 except RateLimitException as err:
                     print(err, ", waiting and trying again...")
-                    await asyncio.sleep(30)
+                    await asyncio.sleep(60)
                 except LookupError as err:
                     print(err)
                     continue
@@ -398,7 +398,7 @@ class UpdateRolesCog(commands.Cog):
                     ban_check = True
                 except RateLimitException as err:
                     print(err, ", waiting and trying again...")
-                    await asyncio.sleep(30)
+                    await asyncio.sleep(60)
                 except LookupError as err:
                     print(err, "Somehow this player is registered though??")
                     ban_check = True
