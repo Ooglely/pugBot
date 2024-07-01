@@ -1,4 +1,5 @@
 """Files containing the server cog with commands for reserving/managing servers."""
+
 import asyncio
 import json
 import re

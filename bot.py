@@ -1,4 +1,5 @@
 """Main file for running and starting the bot, with general global commands."""
+
 import random
 import re
 from typing import Optional
