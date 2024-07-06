@@ -523,7 +523,7 @@ class ManualPugCog(commands.Cog):
             player_ids: list[int] = [
                 player[0] for player in guild_settings["manual"]["players"]
             ]
-            if interaction.user.id not in player_ids:
+            if player.id not in player_ids:
                 await interaction.send("The user is not in the pug queue.")
                 return
             for added_player in guild_settings["manual"]["players"]:
