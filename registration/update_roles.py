@@ -4,20 +4,19 @@ import traceback
 
 import asyncio
 import logging
-from typing import Optional
 
 import nextcord
 from nextcord.ext import tasks, commands
 
 import database as db
 from test_cog import TestCog
-from constants import BOT_COLOR, DEV_REGISTRATIONS
+from constants import BOT_COLOR
 from registration import RegistrationSettings
 from rglapi import RglApi, RateLimitException
 
 RGL: RglApi = RglApi()
 
-update_time = datetime.time(hour=6, minute=0, tzinfo=datetime.timezone.utc)
+update_time = datetime.time(hour=8, minute=0, tzinfo=datetime.timezone.utc)
 
 
 def get_guild_old_div(loaded: dict, member: nextcord.Member) -> set[nextcord.Role]:
@@ -125,13 +124,6 @@ async def send_banned_embed(
         return
     removed_value = ""
 
-    for role in old_roles:
-        if role == ban_role:
-            continue
-        await member.remove_roles(role)
-        removed_value += f"<@&{role.id}> "
-    await member.add_roles(ban_role)
-
     ban_embed = nextcord.Embed(
         title="RGL Banned Player",
         url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
@@ -150,6 +142,20 @@ async def send_banned_embed(
             value=removed_value,
             inline=True,
         )
+
+    try:
+        for role in old_roles:
+            if role == ban_role:
+                continue
+            await member.remove_roles(role)
+            removed_value += f"<@&{role.id}> "
+        await member.add_roles(ban_role)
+    except nextcord.DiscordException:
+        ban_embed.add_field(
+            name="Error",
+            value="There was an error changing roles, please check that the bot has Manage Roles permissions, and change this users roles manually.",
+        )
+
     await logs_channel.send(embed=ban_embed)
 
 
@@ -174,9 +180,6 @@ async def send_unbanned_embed(
         print("Error, logs channel not set up.")
         return
 
-    await member.remove_roles(ban_role)
-    await member.add_roles(new_role)
-
     ban_embed = nextcord.Embed(
         title="RGL Unbanned Player",
         url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
@@ -194,6 +197,16 @@ async def send_unbanned_embed(
         value=f"<@&{ban_role.id}>",
         inline=False,
     )
+
+    try:
+        await member.remove_roles(ban_role)
+        await member.add_roles(new_role)
+    except nextcord.DiscordException:
+        ban_embed.add_field(
+            name="Error",
+            value="There was an error changing roles, please check that the bot has Manage Roles permissions, and change this users roles manually.",
+        )
+
     await logs_channel.send(embed=ban_embed)
 
 
@@ -251,6 +264,61 @@ async def update_guild_player(
     ):
         # Player is registered but doesn't have the registered role
         await member.add_roles(loaded["roles"]["registered"])
+
+
+async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> bool:
+    """
+    Retrieves updated player data from RGL and updates the database
+    :param player: The player to check
+    :return: True if the player has the required data
+    """
+    attempts: int = 0
+    try:
+        steam_id = int(player["steam"])
+        discord_id = int(player["discord"])
+    except KeyError:
+        return False
+
+    # Get updated information from RGL
+    player_divs: dict[str, dict[str, int]] = {}
+    while not player_divs and attempts < 3:
+        try:
+            player_divs = await RGL.get_div_data(steam_id)
+        except RateLimitException as err:
+            print(err, ", waiting and trying again...")
+            await asyncio.sleep(60)
+            attempts += 1
+        except LookupError as err:
+            print(err)
+            await asyncio.sleep(15)
+            attempts += 1
+    if player_divs == {}:
+        return False
+    await db.update_divisons(steam_id, player_divs)
+    ban_check: bool = False
+    while not ban_check and attempts < 3:
+        try:
+            new_ban = await RGL.check_banned(steam_id)
+            ban_check = True
+        except RateLimitException as err:
+            print(err, ", waiting and trying again...")
+            await asyncio.sleep(60)
+            attempts += 1
+        except LookupError as err:
+            print(err, "Somehow this player is registered though??")
+            await asyncio.sleep(15)
+            attempts += 1
+    if not ban_check:
+        return False
+
+    # Attempt to update this player in every guild they are in
+    for loaded in guilds.values():
+        if loaded is not None:
+            await update_guild_player(
+                loaded, player_divs, new_ban, steam_id, discord_id
+            )
+
+    return True
 
 
 def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
@@ -339,7 +407,7 @@ class UpdateRolesCog(commands.Cog):
         self.update_rgl.start()  # pylint: disable=no-member
 
     @tasks.loop(time=update_time)
-    async def update_rgl(self):
+    async def update_rgl(self) -> None:
         """
         Updates RGL divisions and roles for all registered players in all guilds
         """
@@ -369,47 +437,10 @@ class UpdateRolesCog(commands.Cog):
             guilds[server["guild"]] = load_guild_settings(self.bot, server["guild"])
 
         for player in all_players:
-            print(player)
-            try:
-                steam_id = int(player["steam"])
-                discord_id = int(player["discord"])
-            except KeyError:
-                await self.bot.get_channel(DEV_REGISTRATIONS).send(
-                    content=f"A player in the database is missing a steam or discord id.\nPlayer: {player}"
-                )
-                continue
-
-            # Get updated information from RGL
-            player_divs: dict[str, dict[str, int]] = {}
-            while not player_divs:
-                try:
-                    player_divs = await RGL.get_div_data(steam_id)
-                except RateLimitException as err:
-                    print(err, ", waiting and trying again...")
-                    await asyncio.sleep(60)
-                except LookupError as err:
-                    print(err)
-                    continue
-            await db.update_divisons(steam_id, player_divs)
-            ban_check: bool = False
-            while not ban_check:
-                try:
-                    new_ban = await RGL.check_banned(steam_id)
-                    ban_check = True
-                except RateLimitException as err:
-                    print(err, ", waiting and trying again...")
-                    await asyncio.sleep(60)
-                except LookupError as err:
-                    print(err, "Somehow this player is registered though??")
-                    ban_check = True
-                    await asyncio.sleep(15)
-
-            # Attempt to update this player in every guild they are in
-            for loaded in guilds.values():
-                if loaded is not None:
-                    await update_guild_player(
-                        loaded, player_divs, new_ban, steam_id, discord_id
-                    )
+            result: bool = await check_player_data(player, guilds)
+            if result is False:
+                print(f"Error updating player {player}, skipping...")
+            await asyncio.sleep(15)  # No spamming!
 
     @update_rgl.error
     async def error_handler(self, _exception: Exception):
@@ -451,41 +482,15 @@ class UpdateRolesCog(commands.Cog):
         loaded = load_guild_settings(self.bot, server["guild"])
 
         for player in players:
-            print(player)
-            try:
-                steam_id = int(player["steam"])
-                discord_id = int(player["discord"])
-            except KeyError:
-                continue
-            # First check if the user is in the server
-            member: nextcord.Member = interaction.guild.get_member(discord_id)
-            if member is None:
-                print("Member not in guild")
-                continue
-            player_divs: dict[str, dict[str, int]] = {}
-            try:
-                player_divs = await RGL.get_div_data(steam_id)
-            except RateLimitException as err:
-                print(err, ", waiting and trying again...")
-                await asyncio.sleep(30)
-            except LookupError as err:
-                print(err)
-                continue
-            await db.update_divisons(steam_id, player_divs)
-            try:
-                new_ban = await RGL.check_banned(steam_id)
-            except LookupError as err:
-                print(err, "Somehow this player is registered though??")
-                continue
-
-            # Attempt to update this player
-            if loaded is not None:
-                await update_guild_player(
-                    loaded, player_divs, new_ban, steam_id, discord_id
-                )
+            result: bool = await check_player_data(
+                player, {str(interaction.guild_id): loaded}
+            )
+            if result is False:
+                print(f"Error updating player {player}, skipping...")
+            await asyncio.sleep(15)  # No spamming!
 
     @commands.Cog.listener("on_member_join")
-    async def new_member(self, member: nextcord.Member, banned: Optional[bool] = None):
+    async def new_member(self, member: nextcord.Member):
         """
         Assigns roles to new members of a server if they are registered.
         """
@@ -495,8 +500,6 @@ class UpdateRolesCog(commands.Cog):
             player = db.get_player_from_discord(member.id)
         except LookupError:
             return
-
-        steam_id = int(player["steam"])
 
         # If registration settings are not set up, skip
         if "registration" not in server or not server["registration"]["enabled"]:
@@ -512,79 +515,10 @@ class UpdateRolesCog(commands.Cog):
             # Guild has a valid bypass role and this user has it, skip
             return
 
-        # Get updated information from RGL
-        player_divs: dict[str, dict[str, int]] = {}
-        while not player_divs:
-            try:
-                player_divs = await RGL.get_div_data(steam_id)
-            except RateLimitException as err:
-                print(err, ", waiting and trying again...")
-                await asyncio.sleep(30)
-            except LookupError as err:
-                print(err)
-                continue
-        await db.update_divisons(steam_id, player_divs)
-        # Normal behavior is to always check RGL API, banned will not be None only in testing
-        new_ban = banned
-        if banned is None:
-            try:
-                new_ban = await RGL.check_banned(steam_id)
-            except LookupError as err:
-                print(err, "Somehow this player is registered though??")
-                return
-
-        game_mode = loaded["settings"]["game_mode"]
-        mode = loaded["settings"]["mode"]
-
-        # Division from RGL
-        division = player_divs[game_mode][mode]
-        new_role = loaded["roles"]["divisions"][division]
-
-        roles = get_guild_old_div(loaded, member)
-
-        removed_value = ""
-        ban_role = loaded["roles"]["rgl_ban"]
-        if loaded["settings"]["ban"]:
-            old_ban = member.get_role(ban_role.id)
-            if new_ban:
-                # Player has a new RGL ban
-                for role in roles:
-                    await member.remove_roles(role)
-                    removed_value += f"<@&{role.id}> "
-                new_role = ban_role
-            elif old_ban:
-                # Player has an unnecessary ban role
-                await member.remove_roles(ban_role)
-                removed_value += f"<@&{ban_role.id}> "
-
-        await member.add_roles(new_role)
-        # Also add registered role if it exists
-        registered_role = loaded["roles"]["registered"]
-        await member.add_roles(registered_role)
-
-        log_embed = nextcord.Embed(
-            title="New Member",
-            url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(player["steam"]),
-            color=BOT_COLOR,
-        )
-        log_embed.add_field(
-            name="Discord", value=f"<@{player['discord']}>", inline=True
-        )
-        log_embed.add_field(name="Steam", value=str(player["steam"]), inline=True)
-        log_embed.add_field(
-            name="Roles Added",
-            value=f"<@&{new_role.id}>",
-            inline=False,
-        )
-        if removed_value:
-            log_embed.add_field(
-                name="Roles Removed",
-                value=removed_value,
-                inline=True,
-            )
-
-        logs_channel = loaded["channels"]["logs"]
-        await logs_channel.send(embed=log_embed)
+        result: bool = await check_player_data(player, {str(member.guild.id): loaded})
+        if result is False:
+            print(f"Error updating player {player}, skipping...")
+            return
 
     @TestCog.test.subcommand(  # pylint: disable=no-member
         name="newjoin",
@@ -595,11 +529,6 @@ class UpdateRolesCog(commands.Cog):
         interaction: nextcord.Interaction,
         user: nextcord.User = nextcord.SlashOption(
             name="discord", description="The user to look up.", required=True
-        ),
-        banned: bool = nextcord.SlashOption(
-            name="banned",
-            description="Pretend the user is banned or not",
-            required=False,
         ),
     ):
         """
@@ -620,4 +549,4 @@ class UpdateRolesCog(commands.Cog):
             return
 
         member = interaction.guild.get_member(user.id)
-        await self.new_member(member, banned)
+        await self.new_member(member)

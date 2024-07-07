@@ -138,7 +138,6 @@ class RglApi:
             dict: The team data.
         """
         all_teams = await self.get_all_teams(steam_id)
-
         core_seasons = {}
         sixes_teams = []
         hl_teams = []
@@ -221,7 +220,6 @@ class RglApi:
             steam_id (int): The steamid of the player to get.
         """
         player = await self.get_core_teams(steam_id)
-        print(player)
         player_divs = {
             "sixes": {"highest": -1, "current": -1},
             "hl": {"highest": -1, "current": -1},
