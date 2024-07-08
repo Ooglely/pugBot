@@ -443,10 +443,14 @@ class UpdateRolesCog(commands.Cog):
             result: bool = await check_player_data(player, guilds)
             if result is False:
                 print(f"Error updating player {player}, skipping...")
-                await self.bot.get_channel(1259641880015147028).send(f"Error updating player {player}, skipping...")
+                await self.bot.get_channel(1259641880015147028).send(
+                    f"Error updating player {player}, skipping..."
+                )
             await asyncio.sleep(15)  # No spamming!
-        
-        await self.bot.get_channel(1259641880015147028).send("Finished updating RGL divisions and roles for all registered players in all servers.")
+
+        await self.bot.get_channel(1259641880015147028).send(
+            "Finished updating RGL divisions and roles for all registered players in all servers."
+        )
 
     @update_rgl.error
     async def error_handler(self, _exception: Exception):
@@ -458,7 +462,6 @@ class UpdateRolesCog(commands.Cog):
         print("Error in update_rgl loop:\n")
         print(traceback.format_exc())
         await self.bot.get_channel(1259641880015147028).send(traceback.format_exc())
-        
 
     @nextcord.slash_command(
         name="updateall",
@@ -491,7 +494,9 @@ class UpdateRolesCog(commands.Cog):
 
         for player in players:
             try:
-                member: nextcord.Member | None = interaction.guild.get_member(int(player["discord"]))
+                member: nextcord.Member | None = interaction.guild.get_member(
+                    int(player["discord"])
+                )
                 if member is None:
                     # Member is not in this guild
                     continue
@@ -503,7 +508,7 @@ class UpdateRolesCog(commands.Cog):
                 )
             except nextcord.HTTPException:
                 pass
-                
+
             result: bool = await check_player_data(
                 player, {str(interaction.guild_id): loaded}
             )
@@ -579,15 +584,12 @@ class UpdateRolesCog(commands.Cog):
 
         member = interaction.guild.get_member(user.id)
         await self.new_member(member)
-    
+
     @TestCog.test.subcommand(  # pylint: disable=no-member
         name="updateall",
         description="For testing only. Runs update loop for all guilds.",
     )
-    async def simulate_update_loop(
-        self,
-        interaction: nextcord.Interaction
-    ):
+    async def simulate_update_loop(self, interaction: nextcord.Interaction):
         """
         Command to simulate the update loop for all guilds
         :param interaction: The interaction
