@@ -39,7 +39,6 @@ class PartialLog:
     ) -> None:
         self.guild: int = guild
         self.timestamp: int = timestamp or time.time().__round__()
-        print(f"Timestamp is {self.timestamp}")
         self.category: PugCategory = category
         self.players: list[Player] = players
 
@@ -113,8 +112,6 @@ class LogSearcher:
                 players,
                 searcher_log["timestamp"],
             )
-            print(f"Timestamp: {partial_log.timestamp}")
-            print(f"Current time: {round(time.time())}")
 
             if round(time.time()) - partial_log.timestamp > 21600:
                 await LogSearcher._delete_searcher_game(searcher_log["_id"])
@@ -127,7 +124,6 @@ class LogSearcher:
             for player in partial_log.players:
                 if player.steam_64 is not None:
                     steam_ids.append(player.steam_64)
-            print(f"Searcher Steam IDs: {steam_ids}")
             if len(steam_ids) == 0:
                 await LogSearcher._delete_searcher_game(searcher_log["_id"])
                 await self.log_failed_log(
@@ -136,7 +132,6 @@ class LogSearcher:
                 continue
 
             query = await LogsAPI.search_for_log(players=steam_ids, limit=3)
-            print(f"Result: {query}")
             try:
                 if query["success"] and query["results"] > 0:
                     for log in query["logs"]:
@@ -144,17 +139,11 @@ class LogSearcher:
                         if (
                             log["date"] < partial_log.timestamp - 240
                         ):  # Reduced by 4 minutes to account for machine differences
-                            print("Log is too old.")
                             continue
                         if not log_data["success"]:
-                            print("Log query was not successful.")
                             continue
                         if log["id"] in await list_all_logs():
-                            print(
-                                "Log is either already in the database or is being processed."
-                            )
                             continue
-                        print(f"Log: {log}")
                         full_log = FullLog(partial_log, log["id"], log_data)
                         await LogSearcher._add_queue_game(full_log)
                         await LogSearcher._delete_searcher_game(searcher_log["_id"])
@@ -164,9 +153,7 @@ class LogSearcher:
 
             # Incase not all players are in the game, check for logs with only some of the players
             for steam_id in steam_ids:
-                print(f"Steam ID: {steam_id}")
                 query = await LogsAPI.search_for_log(players=[steam_id], limit=3)
-                print(f"Result: {query}")
                 try:
                     if query["success"] and query["results"] > 0:
                         for log in query["logs"]:
@@ -177,22 +164,15 @@ class LogSearcher:
                                 if get_steam64(player_id) in steam_ids:
                                     player_count += 1
                             if player_count < (len(steam_ids) / 2):
-                                print("Not enough players in log.")
                                 continue
                             if log["date"] < partial_log.timestamp - 240:
-                                print("Log is too old.")
                                 continue
                             if not log_data["success"]:
-                                print("Log query was not successful.")
                                 continue
                             if log["id"] in await list_all_logs():
-                                print(
-                                    "Log is either already in the database or is being processed."
-                                )
                                 continue
 
                             # If passes...
-                            print(f"Log: {log}")
                             full_log = FullLog(partial_log, log["id"], log_data)
                             await LogSearcher._add_queue_game(full_log)
                             await LogSearcher._delete_searcher_game(searcher_log["_id"])
@@ -214,8 +194,6 @@ class LogSearcher:
         print("Running queue...")
         queue_logs = await queue_db.find_all_items()
         for queue_log in queue_logs:
-            print(f"Queue Log: {queue_log['_id']}")
-
             players = [Player(data=player) for player in queue_log["players"]]
             full_log = FullLog(
                 PartialLog(
@@ -228,10 +206,7 @@ class LogSearcher:
                 await LogsAPI.get_single_log(queue_log["log_id"]),
             )
 
-            print(round(time.time()) - full_log.timestamp)
-
             if (round(time.time()) - full_log.timestamp) > 3600:
-                print("Log has hit 1 hour old, deleting...")
                 await self.log_completed_log(full_log)
                 await LogSearcher._delete_queue_game(queue_log["_id"])
                 continue
@@ -282,9 +257,6 @@ class LogSearcher:
 
     async def log_completed_log(self, log: FullLog):
         """Log a completed log to the database"""
-        print("Logging completed log...")
-        print(log.export())
-
         guild_settings = await guild_settings_db.find_item({"guild": log.guild})
 
         if "logs" in guild_settings:
@@ -343,17 +315,14 @@ class LogSearcher:
         Args:
             database_id (int | str): The database ID of the game to delete.
         """
-        print(f"Deleting game {database_id}...")
         await searcher_db.delete_item({"_id": database_id})
 
     @staticmethod
     async def _add_queue_game(log: FullLog) -> None:
-        print("Adding to queue...")
         await queue_db.add_item(log.export())
 
     @staticmethod
     async def _delete_queue_game(database_id: str) -> None:
-        print(f"Deleting queue game {database_id}...")
         await queue_db.delete_item({"_id": database_id})
 
 
@@ -404,5 +373,4 @@ async def list_all_logs():
     log_ids = [log["log_id"] for log in logs]
     for log in await queue_db.find_all_items():
         log_ids.append(log["log_id"])
-    print(log_ids)
     return log_ids
