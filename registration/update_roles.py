@@ -207,7 +207,10 @@ async def send_unbanned_embed(
             value="There was an error changing roles, please check that the bot has Manage Roles permissions, and change this users roles manually.",
         )
 
-    await logs_channel.send(embed=ban_embed)
+    try:
+        await logs_channel.send(embed=ban_embed)
+    except nextcord.DiscordException:
+        print(f"Error sending embed message in guild {str(member.guild.id)}")
 
 
 async def update_guild_player(
@@ -440,7 +443,10 @@ class UpdateRolesCog(commands.Cog):
             result: bool = await check_player_data(player, guilds)
             if result is False:
                 print(f"Error updating player {player}, skipping...")
+                await self.bot.get_channel(1259641880015147028).send(f"Error updating player {player}, skipping...")
             await asyncio.sleep(15)  # No spamming!
+        
+        await self.bot.get_channel(1259641880015147028).send("Finished updating RGL divisions and roles for all registered players in all servers.")
 
     @update_rgl.error
     async def error_handler(self, _exception: Exception):
@@ -451,6 +457,8 @@ class UpdateRolesCog(commands.Cog):
         """
         print("Error in update_rgl loop:\n")
         print(traceback.format_exc())
+        await self.bot.get_channel(1259641880015147028).send(traceback.format_exc())
+        
 
     @nextcord.slash_command(
         name="updateall",
@@ -482,12 +490,33 @@ class UpdateRolesCog(commands.Cog):
         loaded = load_guild_settings(self.bot, server["guild"])
 
         for player in players:
+            try:
+                member: nextcord.Member | None = interaction.guild.get_member(int(player["discord"]))
+                if member is None:
+                    # Member is not in this guild
+                    continue
+            except KeyError:
+                continue
+            try:
+                await interaction.edit_original_message(
+                    content=f"Updating RGL divisions and roles for all registered players in this server.\nThis will take a while.\nUpdating player <@{player['discord']}>..."
+                )
+            except nextcord.HTTPException:
+                pass
+                
             result: bool = await check_player_data(
                 player, {str(interaction.guild_id): loaded}
             )
             if result is False:
                 print(f"Error updating player {player}, skipping...")
+                continue
             await asyncio.sleep(15)  # No spamming!
+        try:
+            await interaction.send(
+                content="Finished updating RGL divisions and roles for all registered players in this server."
+            )
+        except nextcord.HTTPException:
+            pass
 
     @commands.Cog.listener("on_member_join")
     async def new_member(self, member: nextcord.Member):
@@ -550,3 +579,19 @@ class UpdateRolesCog(commands.Cog):
 
         member = interaction.guild.get_member(user.id)
         await self.new_member(member)
+    
+    @TestCog.test.subcommand(  # pylint: disable=no-member
+        name="updateall",
+        description="For testing only. Runs update loop for all guilds.",
+    )
+    async def simulate_update_loop(
+        self,
+        interaction: nextcord.Interaction
+    ):
+        """
+        Command to simulate the update loop for all guilds
+        :param interaction: The interaction
+        :return: None
+        """
+        await interaction.send("Running update loop for all guilds.")
+        await self.update_rgl()
