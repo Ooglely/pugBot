@@ -50,7 +50,7 @@ class ServerCog(commands.Cog):
         self.server_status.start()  # pylint: disable=no-member
 
     @tasks.loop(hours=4)
-    async def map_updater(self):
+    async def map_updater(self) -> None:
         """Updates the map pool for the bot, grabbing the latest from the RGL website."""
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -73,7 +73,7 @@ class ServerCog(commands.Cog):
                         continue
                     HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
 
-        # print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
+        print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
 
         map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
 
@@ -82,14 +82,8 @@ class ServerCog(commands.Cog):
         with open("maps.json", "w", encoding="UTF-8") as outfile:
             outfile.write(map_json)
 
-        # Handle the FastDL all map pool
-        # Can't use serveme for now
-        # self.all_maps = await ServemeAPI.fetch_all_maps(False)
-        with open("map_list.txt", "r", encoding="UTF-8") as map_file:
-            map_list = map_file.read()
-
-        self.all_maps = re.findall(r"(?<=\(fs\) ).*", map_list)
-        # print(self.all_maps)
+        # Grab the map list from serveme.tf
+        self.all_maps = await ServemeAPI.fetch_all_maps()
 
         await self.bot.sync_all_application_commands(update_known=True)
         print("All app commands synced")
@@ -282,18 +276,12 @@ class ServerCog(commands.Cog):
         server_config_id = None
         if gamemode == "sixes":
             whitelist_id = 20  # 6s whitelist ID
-            if tf_map not in maps["sixes"].values():
-                await interaction.send("Invalid map.")
-                return
             if tf_map.startswith("cp_"):
                 server_config_id = 69  # rgl_6s_5cp_scrim
             else:
                 server_config_id = 68  # rgl_6s_koth_bo5
         elif gamemode == "highlander":
             whitelist_id = 22  # HL whitelist ID
-            if tf_map not in maps["hl"].values():
-                await interaction.send("Invalid map.")
-                return
             if tf_map.startswith("pl_"):
                 server_config_id = 55
             else:

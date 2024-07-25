@@ -2,9 +2,10 @@
 import json
 import re
 from datetime import datetime, timedelta
-from typing import Dict, no_type_check
+from typing import Dict, no_type_check, List
 
 import aiohttp
+from bs4 import BeautifulSoup, Tag
 
 with open("maps.json", encoding="UTF-8") as json_file:
     maps_dict: dict = json.load(json_file)
@@ -127,24 +128,30 @@ class ServemeAPI:
                 return active_servers, future_servers
 
     @staticmethod
-    async def fetch_all_maps(map_names_only: bool = True):
+    async def fetch_all_maps() -> list[str]:
         """Fetches all maps from the serveme.tf FastDL and updates the cached list.
 
         Returns:
             list: A list of all maps.
         """
+        all_maps: list[str] = []
         async with aiohttp.ClientSession() as session:
-            async with session.get("http://dl.serveme.tf/maps/") as resp:
-                maps = await resp.text()
-                if map_names_only:
-                    return re.findall(r"(?<=>)(.*?)(?=.bsp)", maps)
-                return maps
+            async with session.get("https://na.serveme.tf/maps") as resp:
+                html = await resp.text()
+                soup: BeautifulSoup = BeautifulSoup(html, "html.parser")
+                table: Tag = soup.find("table")
+                maps: List[Tag] = table.find_all("tr")
+                maps.pop(0)  # Remove the first title row
+
+                row: Tag
+                for row in maps:
+                    map_name = row.find("td").text
+                    all_maps.append(map_name.strip())
+        return all_maps
 
     @staticmethod
     @no_type_check  # LOLLLLL
-    async def fetch_newest_version(
-        map_name: str, maps_list: list = None
-    ) -> list[str] | None:
+    async def fetch_newest_version(map_name: str, maps_list: list) -> list[str] | None:
         """Fetches the newest version of a map from the serveme.tf FastDL.
 
         Args:
@@ -157,10 +164,6 @@ class ServemeAPI:
         """
         if map_name in COMP_MAPS:
             return [COMP_MAPS[map_name]]
-        if maps_list is None:
-            async with aiohttp.ClientSession() as session:
-                async with session.get("http://dl.serveme.tf/maps/") as resp:
-                    maps_list = await resp.text()
 
         # Get all maps that match the name
         # maps = re.findall(rf"{map_name}.*", maps_list)
@@ -213,22 +216,19 @@ class ServemeAPI:
 if __name__ == "__main__":
     import asyncio
 
-    with open("map_list.txt", "r", encoding="UTF-8") as map_file:
-        map_list = map_file.read()
-
-    all_maps = re.findall(r"(?<=\(fs\) ).*", map_list)
+    map_list = asyncio.run(ServemeAPI.fetch_all_maps())
+    print(map_list)
 
     print(asyncio.run(ServemeAPI.check_whitelist_status()))
     print(
-        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena', all_maps))}"
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena', map_list))}"
     )
     print(
-        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg', all_maps))}"
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('dkhgjfdshg', map_list))}"
     )
     print(
-        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product', all_maps))}"
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('koth_product', map_list))}"
     )
     print(
-        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('cp_proces', all_maps))}"
+        f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('cp_proces', map_list))}"
     )
-    print(asyncio.run(ServemeAPI.fetch_all_maps()))
