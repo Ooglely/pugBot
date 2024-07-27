@@ -267,7 +267,10 @@ class LogSearcher:
         if "logs" in guild_settings:
             if not guild_settings["logs"]["enabled"]:
                 return
-            logs_channel = guild_settings["logs"]["channel"]
+            logs_channel_id: int = guild_settings["logs"]["channel"]
+            logs_channel: nextcord.abc.GuildChannel = self.bot.get_channel(
+                logs_channel_id
+            )
         else:
             return
 
@@ -285,9 +288,9 @@ class LogSearcher:
         else:
             log_url = f"https://logs.tf/{log.log_id}"
 
-        await self.bot.get_channel(logs_channel).send(
-            content=f"{category_string}{log_url}"
-        )
+        if logs_channel:
+            await logs_channel.send(content=f"{category_string}{log_url}")
+
         await self.bot.get_channel(DEV_SUCCESSFUL_LOGS).send(
             content=f"{category_string}{log_url}\nGuild: {log.guild}"
         )
