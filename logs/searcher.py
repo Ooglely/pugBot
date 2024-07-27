@@ -181,7 +181,7 @@ class LogSearcher:
                     continue
 
     @tasks.loop(minutes=1)
-    async def queue(self):
+    async def queue(self) -> None:
         """The queue looks through each log in it and checks to see if the log has been completed.
 
         Here are the conditions for a match being considered done (may change):
@@ -195,6 +195,11 @@ class LogSearcher:
         queue_logs = await queue_db.find_all_items()
         for queue_log in queue_logs:
             players = [Player(data=player) for player in queue_log["players"]]
+            log_data: dict = await LogsAPI.get_single_log(queue_log["log_id"])
+            if not log_data["success"]:
+                # Log must have been deleted between searcher and queue. Remove.
+                await LogSearcher._delete_queue_game(queue_log["_id"])
+                continue
             full_log = FullLog(
                 PartialLog(
                     queue_log["guild"],
@@ -203,7 +208,7 @@ class LogSearcher:
                     queue_log["timestamp"],
                 ),
                 queue_log["log_id"],
-                await LogsAPI.get_single_log(queue_log["log_id"]),
+                log_data,
             )
 
             if (round(time.time()) - full_log.timestamp) > 3600:
@@ -219,17 +224,17 @@ class LogSearcher:
 
     @searcher.error
     @queue.error
-    async def loop_error_handler(self, exception: Exception):
+    async def loop_error_handler(self, _exception: Exception):
         """Handles printing errors to console for the loop
 
         Args:
             exception (Exception): The exception that was raised
         """
         print("Error in loop:\n")
-        print(exception.__class__.__name__)
-        print(exception.__cause__)
-        print(exception)
         print(traceback.format_exc())
+        await self.bot.get_channel(1259641880015147028).send(
+            f"Error in log loop: {traceback.format_exc()}"
+        )
 
     async def log_failed_log(self, log: PartialLog, reason: str):
         """Log a failed log to the database"""
