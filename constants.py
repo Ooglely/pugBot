@@ -1,4 +1,5 @@
 """Constants for the bot."""
+
 import json
 import os
 
