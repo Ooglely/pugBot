@@ -187,16 +187,23 @@ async def send_unbanned_embed(
     )
     ban_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
     ban_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-    ban_embed.add_field(
-        name="Roles Added",
-        value=f"<@&{new_role.id}>",
-        inline=False,
-    )
-    ban_embed.add_field(
-        name="Roles Removed",
-        value=f"<@&{ban_role.id}>",
-        inline=False,
-    )
+    try:
+        ban_embed.add_field(
+            name="Roles Added",
+            value=f"<@&{new_role.id}>",
+            inline=False,
+        )
+        ban_embed.add_field(
+            name="Roles Removed",
+            value=f"<@&{ban_role.id}>",
+            inline=False,
+        )
+    except AttributeError:
+        ban_embed.add_field(
+            name="Error",
+            value="There was an error getting one of the roles for this server. Please check that the roles in /registration still exist.",
+            inline=False,
+        )
 
     try:
         await member.remove_roles(ban_role)
