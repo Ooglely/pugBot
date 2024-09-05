@@ -1,10 +1,10 @@
 """Cog to hold commands to set up the registration part of the bot per server."""
 import nextcord
 from nextcord.ext import commands
+from nextcord.ui import RoleSelect, ChannelSelect
 
 from constants import BOT_COLOR
 from registration import (
-    SetupIntroduction,
     RegistrationSettings,
     RegistrationRoles,
     GamemodeSelect,
@@ -12,11 +12,13 @@ from registration import (
     TrueFalseSelect,
     ChannelSelect,
 )
+from menus import BotMenu
+from menus.callbacks import action_stop_callback
 from util import guild_config_check
 
 
 class RegistrationSetupCog(commands.Cog):
-    """Cog storing all the commands revolving around stats"""
+    """Cog storing the registration setup command."""
 
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
@@ -30,7 +32,18 @@ class RegistrationSetupCog(commands.Cog):
     async def setup_registration(self, interaction: nextcord.Interaction):
         """Setup pugBot.tf registration for this server."""
         settings = RegistrationSettings()
-        settings.import_from_db(interaction.guild.id)
+        if interaction.guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+        if interaction.user is None:
+            await interaction.response.send_message(
+                "This command must be run by a user.", ephemeral=True
+            )
+            return
+
+        await settings.load_data(interaction.guild.id)
         setup_embed = nextcord.Embed(
             title="Registration Setup",
             color=BOT_COLOR,
@@ -40,45 +53,59 @@ class RegistrationSetupCog(commands.Cog):
             name="Current Settings",
             value=f"Enabled: {settings.enabled}\nGamemode: {settings.gamemode}\nMode: {settings.mode}\nBan: {settings.ban}\nBypass: {settings.bypass}",
         )
-        try:
-            setup_embed.add_field(
-                name="Roles",
-                value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>\nRegistered: <@&{settings.roles['registered']}>",
-            )
-        except KeyError:
-            setup_embed.add_field(
-                name="Roles",
-                value=f"Newcomer: <@&{settings.roles['newcomer']}>\nAmateur: <@&{settings.roles['amateur']}>\nIntermediate: <@&{settings.roles['intermediate']}>\nMain: <@&{settings.roles['main']}>\nAdvanced: <@&{settings.roles['advanced']}>\nInvite: <@&{settings.roles['invite']}>\nBypass: <@&{settings.roles['bypass']}>\nBan: <@&{settings.roles['ban']}>\nRegistered: None",
-            )
+
+        role_string = ""
+        for role, role_id in vars(settings.roles).values():
+            role_string += f"{role.capitalize()}: <@&{role_id}>\n"
+        setup_embed.add_field(
+            name="Roles",
+            value=role_string,
+        )
+
+        channel_string = ""
+        for channel, channel_id in vars(settings.channels).values():
+            channel_string += f"{channel.capitalize()}: <@&{channel_id}>\n"
         setup_embed.add_field(
             name="Channels",
-            value=f"Registration: <#{settings.channels['registration']}>\nLogs: <#{settings.channels['logs']}>",
+            value=channel_string,
         )
-        introduction = SetupIntroduction()
-        await interaction.send(embed=setup_embed, view=introduction, ephemeral=True)
-        await introduction.wait()
-        action = introduction.action
+
+        menu: BotMenu = BotMenu(embed=setup_embed)
+        menu.add_button("Enable", await action_stop_callback("enable", interaction.user.id), nextcord.ButtonStyle.green)
+        menu.add_button("Disable", await action_stop_callback("disable", interaction.user.id), nextcord.ButtonStyle.red)
+        menu.add_button("Cancel", await action_stop_callback("cancel", interaction.user.id), nextcord.ButtonStyle.gray)
+        await menu.send(interaction)
+        menu_status: bool = await menu.wait()
+        if menu_status or menu.action is None:
+            await interaction.delete_original_message()
+            return
+        action: str = menu.action
         if action == "disable":
             settings.enabled = False
-            settings.export_to_db(interaction.guild.id)
+            await settings.upload_data(interaction.guild.id)
             setup_embed.description = "Registration has been disabled."
-            await interaction.edit_original_message(embed=setup_embed, view=None)
-            await interaction.delete_original_message(delay=5)
+            menu.embed = setup_embed
+            await menu.edit(interaction)
+            await menu.delete_after(interaction, 5)
             return
         if action == "cancel":
-            await interaction.edit_original_message(view=None)
-            await interaction.delete_original_message(delay=1)
+            await menu.delete_after(interaction, 1)
             return
         settings.enabled = True
 
+        # Registration is being enabled, start role selections
         setup_embed.clear_fields()
-        roles_view = RegistrationRoles(
-            ["noexp", "newcomer", "amateur", "intermediate"], settings.roles
-        )
         setup_embed.description = "Please select the roles you would like to be assigned to each division. You can select one role for multiple divisions.\n\n**Note: Due to client-side discord limitations, you may need to SEARCH for the role in the select menu.**"
-        await interaction.edit_original_message(embed=setup_embed, view=roles_view)
-        await roles_view.wait()
-        if roles_view.action == "cancel":
+        menu.clear_items()
+        menu.add_item(RoleSelect(placeholder="Newcomer Role", max_values=1))
+        menu.add_item(RoleSelect(placeholder="Amateur Role", max_values=1))
+        menu.add_item(RoleSelect(placeholder="Intermediate Role", max_values=1))
+        menu.add_item(RoleSelect(placeholder="Main Role", max_values=1))
+        await menu.add_continue_buttons(interaction.user.id)
+        menu.embed = setup_embed
+        await menu.edit(interaction)
+        menu_status = await menu.wait()
+        if menu_status or menu.action in (None, "cancel"):
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
