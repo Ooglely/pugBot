@@ -3,9 +3,10 @@ import asyncio
 from typing import Callable, Optional
 
 import nextcord
-from nextcord.ui import View
+from nextcord.ui import View, Item
+from nextcord.enums import ComponentType
 
-from menus.callbacks import action_stop_callback
+from menus.callbacks import action_callback
 
 
 class BotMenu(View):
@@ -17,11 +18,12 @@ class BotMenu(View):
         The base nextcord View.
     """
 
-    def __init__(self, embed: Optional[nextcord.Embed] = None) -> None:
+    def __init__(self, user_id: int, embed: Optional[nextcord.Embed] = None) -> None:
         View.__init__(self)
         self.embed = embed
         self.values: dict = {}
         self.action: str | None = None
+        self.user: int = user_id
 
     def add_button(
         self, label: str, callback: Callable, style: nextcord.ButtonStyle
@@ -49,32 +51,83 @@ class BotMenu(View):
 
         View.add_item(self, MenuButton())
 
-    async def add_continue_buttons(self, author: int) -> None:
+    async def add_continue_buttons(self) -> None:
         """Adds continue and cancel buttons to the menu."""
-        self.add_button("Continue", await action_stop_callback("continue", author), nextcord.ButtonStyle.green)
-        self.add_button("Cancel", await action_stop_callback("cancel", author), nextcord.ButtonStyle.red)
+        self.add_button(
+            "Continue",
+            await action_callback("continue", self.user),
+            nextcord.ButtonStyle.green,
+        )
+        self.add_button(
+            "Cancel",
+            await action_callback("cancel", self.user),
+            nextcord.ButtonStyle.red,
+        )
+
+    async def add_action_buttons(self, items: list[str], author: int) -> None:
+        """Adds buttons for each item in the list."""
+        for item in items:
+            self.add_button(
+                item, await action_callback(item, author), nextcord.ButtonStyle.grey
+            )
+
+    def get_child(self, custom_id: str) -> nextcord.ui.Item | None:
+        """Gets a child button by its custom id."""
+        for child in self.children:
+            if hasattr(child, "custom_id") and child.custom_id == custom_id:
+                return child
+        return None
 
     async def send(self, interaction: nextcord.Interaction) -> None:
         """Sends the menu to the interaction."""
+        self.action = None
         if self.embed:
-            await interaction.response.send_message(embed=self.embed, view=self)
+            await interaction.send(embed=self.embed, view=self)
         else:
             await interaction.send(view=self)
 
+    async def wait_for_action(self, client: nextcord.Client) -> bool:
+        """
+        Waits for an action to be associated with the menu.
+        Returns True if an action was received, False if it timed out.
+        """
+
+        def button_check(interaction: nextcord.Interaction) -> bool:
+            if interaction.user is None:  # No user associated with the interaction?
+                return False
+            if (
+                interaction.type is not nextcord.InteractionType.component
+                or interaction.data is None
+            ):  # Interaction is not a button press
+                # Interaction is not a button press
+                return False
+            if (
+                interaction.user.id == self.user
+                and interaction.data.get("component_type") == 2
+            ):  # Button
+                return True
+            return False
+
+        try:
+            await client.wait_for("interaction", check=button_check, timeout=180)
+            return True
+        except asyncio.TimeoutError:
+            return False
+
     async def edit(self, interaction: nextcord.Interaction) -> None:
         """Edits the menu in the interaction."""
+        self.action = None
         if self.embed:
-            await interaction.response.edit_message(embed=self.embed, view=self)
+            await interaction.edit_original_message(embed=self.embed, view=self)
         else:
-            await interaction.response.edit_message(view=self)
+            await interaction.edit_original_message(view=self)
 
-    async def delete_after(self, interaction: nextcord.Interaction, delay: int) -> None:
-        """Deletes the menu after a delay."""
-        await asyncio.sleep(delay)
-        await interaction.delete_original_message()
-        
-    def clear_fields(self) -> None:
+    def clear_entry_fields(self) -> None:
         """Clears all children of the view that are not buttons."""
-        for child in self.children:
-            if not isinstance(child, nextcord.ui.Button):
-                self.remove_item(child)
+        items_to_remove: list[Item] = []
+        for child in self.children:  # Skip the last two buttons (Continue and Cancel)
+            if child.type == ComponentType.role_select:
+                items_to_remove.append(child)
+
+        for item in items_to_remove:
+            self.remove_item(item)
