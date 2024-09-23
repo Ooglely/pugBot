@@ -23,6 +23,22 @@ class DivisionRoles:
     def __str__(self) -> str:
         return f"No Experience: <@&{self.noexp}>\nNewcomer: <@&{self.newcomer}>\nAmateur: <@&{self.amateur}>\nIntermediate: <@&{self.intermediate}>\nMain: <@&{self.main}>\nAdvanced: <@&{self.advanced}>\nInvite: <@&{self.invite}>"
 
+    def get_div_list(self) -> list[int | None]:
+        """
+        Get a list of all the division roles.
+        Advanced is doubled because it also acts as the Challenger role.
+        """
+        return [
+            self.noexp,
+            self.newcomer,
+            self.amateur,
+            self.intermediate,
+            self.main,
+            self.advanced,
+            self.advanced,
+            self.invite,
+        ]
+
 
 @dataclass
 class RegistrationRoles:
@@ -50,6 +66,7 @@ class RegistrationSettings:
     """Stores the registration settings for a guild."""
 
     def __init__(self) -> None:
+        self.guild_id: int = 0
         self.enabled: bool = False
         self.ban: bool = False
         self.bypass: bool = False
@@ -74,6 +91,8 @@ class RegistrationSettings:
             config: dict = await guild_config_db.find_item({"guild": guild_id})
         except LookupError:
             return
+
+        self.guild_id = guild_id
 
         if "registration" in config:
             reg_settings: dict = config["registration"]

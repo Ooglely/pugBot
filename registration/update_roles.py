@@ -1,12 +1,13 @@
 """Contains the cog to update users roles over time."""
 import datetime
-import traceback
 
 import asyncio
 import logging
 
 import nextcord
 from nextcord.ext import tasks, commands
+from nextcord.ext.tasks import ET
+from nextcord.guild import GuildChannel
 
 import database as db
 from test_cog import TestCog
@@ -19,28 +20,133 @@ RGL: RglApi = RglApi()
 update_time = datetime.time(hour=8, minute=0, tzinfo=datetime.timezone.utc)
 
 
-def get_guild_old_div(loaded: dict, member: nextcord.Member) -> set[nextcord.Role]:
+class LoadedRegSettings():
     """
-    Get the guild members current division roles
-    :param loaded: Loaded pug registration settings for a guild (see load_guild_settings)
-    :param member: Member of the loaded guild
-    :return: users current division roles
+    Stores the loaded registration settings for a guild.
+    This is different from the normal RegistrationSettings class which just gives the ids for everything.
+    Catches a lot of the errors that can happen when trying to load roles/channels.
     """
-    # Attempt to get the players current division roles in this guild
-    roles = set()
-    for role in loaded["roles"]["divisions"]:
-        if role in member.roles:
-            roles.add(role)
 
-    return roles
+    def __init__(self, bot: nextcord.Client, settings: RegistrationSettings) -> None:
+        guild: nextcord.Guild | None = bot.get_guild(settings.guild_id)
+        if guild is None:
+            raise AttributeError(settings.guild_id, "Guild could not be found. Is the bot in the guild?")
+        self.guild: nextcord.Guild = guild
+        self.gamemode: str = settings.gamemode
+        self.mode: str = settings.mode
+
+        # Load sixes roles
+        self.sixes: list[nextcord.Role | None] = []
+        for role_id in settings.roles.sixes.get_div_list():
+            if role_id is None:
+                self.sixes.append(None)
+            else:
+                role = guild.get_role(role_id)
+                if role is None:
+                    raise AttributeError(role_id, "Role could not be found.")
+                self.sixes.append(role)
+
+        # Load highlander roles
+        self.highlander: list[nextcord.Role | None] = []
+        for role_id in settings.roles.highlander.get_div_list():
+            if role_id is None:
+                self.highlander.append(None)
+            else:
+                role = guild.get_role(role_id)
+                if role is None:
+                    raise AttributeError(role_id, "Role could not be found.")
+                self.highlander.append(role)
+                
+        # Load generic roles
+        self.bypass: nextcord.Role | None = None
+        self.ban: nextcord.Role | None = None
+        self.registered: nextcord.Role | None = None
+        if settings.roles.bypass is not None:
+            if guild.get_role(settings.roles.bypass) is None:
+                raise AttributeError(settings.roles.bypass, "Role could not be found.")
+            self.bypass = guild.get_role(settings.roles.bypass)
+        if settings.roles.ban is not None:
+            if guild.get_role(settings.roles.ban) is None:
+                raise AttributeError(settings.roles.ban, "Role could not be found.")
+            self.ban = guild.get_role(settings.roles.ban)
+        if settings.roles.registered is not None:
+            if guild.get_role(settings.roles.registered) is None:
+                raise AttributeError(settings.roles.registered, "Role could not be found.")
+            self.registered = guild.get_role(settings.roles.registered)
+
+        # Load channels
+        self.registration: nextcord.TextChannel | None
+        self.logs: nextcord.TextChannel | None
+        if settings.channels.registration is not None:
+            reg_channel: GuildChannel | None = guild.get_channel(settings.channels.registration)
+            if not isinstance(reg_channel, nextcord.TextChannel):
+                raise AttributeError(settings.channels.registration, "Channel could not be found or is not a text channel.")
+            self.registration = reg_channel
+        else:
+            self.registration = None
+        if settings.channels.logs is not None:
+            log_channel: GuildChannel | None = guild.get_channel(settings.channels.logs)
+            if not isinstance(log_channel, nextcord.TextChannel):
+                raise AttributeError(settings.channels.logs, "Channel could not be found or is not a text channel.")
+            self.logs = log_channel
+        else:
+            self.logs = None
 
 
-async def send_update_embed(
-    loaded,
+async def guild_log_failed(guild_id: int, reason: str, data: str) -> None:
+    """Send a message to the guild or guild owner about a failed action
+
+    Parameters
+    ----------
+    guild_id : int
+        The guild the error happened in
+    reason : str
+        The reason the action failed
+    data : str
+        Any data associated with the error
+    """
+    # TODO: Actually send message to pugbot guild or the guild error happened for (or owner)
+    pass
+
+async def admin_log_failed(reason: str, data: str) -> None:
+    """Send a message to the admin log channel about a failed action
+
+    Parameters
+    ----------
+    reason : str
+        The reason the action failed
+    data : str
+        Any data associated with the error
+    """
+    # TODO: Actually send message to pugbot guild , embed with reason and data
+    pass
+
+def get_current_roles(roles: list[nextcord.Role | None], member: nextcord.Member) -> set[nextcord.Role]:
+    """Get the current roles of a member
+
+    Parameters
+    ----------
+    roles : list[nextcord.Role  |  None]
+        A role list from the loaded guild settings
+    member : nextcord.Member
+        The member to get the roles of
+
+    Returns
+    -------
+    set[nextcord.Role]
+        The roles the member has
+    """
+    current_roles = [role for role in roles if role is not None]
+    return set(current_roles) & set(member.roles)
+    # TODO: test this lol
+
+
+async def update_player(
+    settings: LoadedRegSettings,
     member: nextcord.Member,
-    steam_id,
-    old_roles: set[nextcord.Role],
-    new_role: nextcord.Role,
+    steam_id: int,
+    old_roles: list[nextcord.Role],
+    new_roles: list[nextcord.Role],
 ):
     """
     Outputs an embed to the member's discord and updates the members roles
@@ -51,32 +157,32 @@ async def send_update_embed(
     :param new_role: The ban role to add to the member
     :return: None
     """
+    removed_role_string: str = ""
+    added_role_string: str = ""
+    # Remove old roles
+    for role in old_roles:
+        if role not in new_roles:
+            removed_role_string += f"<@&{role.id}> "
+            try:
+                await member.remove_roles(role, reason="Removing old division roles.")
+            except nextcord.Forbidden as err:
+                await guild_log_failed(settings.guild.id, f"Could not remove role {role} from <@{member.id}>.", err.text)
+                return
+    
+    for role in new_roles:
+        if role not in member.roles:
+            added_role_string += f"<@&{role.id}> "
+            try:
+                await member.add_roles(role, reason="Adding new division roles.")
+            except nextcord.Forbidden as err:
+                await guild_log_failed(settings.guild.id, f"Could not add role {role} to <@{member.id}>.", err.text)
+                return
 
-    # If the role it is trying to add doesn't exist it's going to cause issues
-    if new_role is None:
-        return
-
-    logs_channel = loaded["channels"]["logs"]
+    logs_channel: nextcord.TextChannel | None = settings.logs
     if logs_channel is None:
-        print("Error, logs channel not set up.")
-        print(loaded)
         return
-    removed_value = ""
-
-    try:
-        for role in old_roles:
-            if role == new_role:
-                continue
-            await member.remove_roles(role)
-            removed_value += f"<@&{role.id}> "
-        await member.add_roles(new_role)
-    except nextcord.DiscordException:
-        print("Error adding roles.")
-        error_embed = nextcord.Embed(
-            title="Error",
-            description="There was an error adding roles, please check that the bot has Manage Roles permissions.",
-        )
-        await logs_channel.send(embed=error_embed)
+    if not logs_channel.permissions_for(settings.guild.me).send_messages:
+        await guild_log_failed(settings.guild.id, "Could not send message to logs channel.", f"<#{settings.logs}>")
 
     log_embed = nextcord.Embed(
         title="Updated Division",
@@ -85,49 +191,61 @@ async def send_update_embed(
     )
     log_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
     log_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-    log_embed.add_field(
-        name="Roles Added",
-        value=f"<@&{new_role.id}>",
-        inline=False,
-    )
-    if old_roles:
+    if removed_role_string:
         log_embed.add_field(
             name="Roles Removed",
-            value=removed_value,
-            inline=True,
+            value=removed_role_string,
+            inline=False,
         )
-    try:
-        await logs_channel.send(embed=log_embed)
-    except nextcord.DiscordException:
-        print("Error sending embed message.")
+    if added_role_string:
+        log_embed.add_field(
+            name="Roles Added",
+            value=added_role_string,
+            inline=False,
+        )
+        
+    await logs_channel.send(embed=log_embed)
 
 
-async def send_banned_embed(
-    loaded: dict,
+async def ban_player(
+    settings: LoadedRegSettings,
     member: nextcord.Member,
-    steam_id,
-    old_roles: set[nextcord.Role],
+    steam_id: int,
+    old_roles: list[nextcord.Role],
     ban_role: nextcord.Role,
 ):
+    """Gives a player the ban role and removed all other division roles.
+
+    Parameters
+    ----------
+    settings : LoadedRegSettings
+        Loaded registration settings for the guild.
+    member : nextcord.Member
+        The member to ban.
+    steam_id : int
+        The steamID64 of the player.
+    old_roles : list[nextcord.Role]
+        The roles the player currently has.
+    ban_role : nextcord.Role
+        The ban role to give the player
     """
-    Outputs a ban embed to the member's discord and updates the members roles
-    :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
-    :param member: Discord member to ban
-    :param steam_id: Player's steamID64
-    :param old_roles: The old roles to remove from the member
-    :param ban_role: The ban role to add to the member
-    :return: None
-    """
-    logs_channel = loaded["channels"]["logs"]
-    if logs_channel is None:
-        print("Error, logs channel not set up.")
+    try:
+        await member.remove_roles(*old_roles, reason="Removing current division roles as part of RGL ban.")
+        await member.add_roles(ban_role, reason="Adding RGL ban role.")
+    except nextcord.Forbidden as err:
+        await guild_log_failed(settings.guild.id, f"Could not change roles for banned player: <@{member.id}.", err.text)
         return
-    removed_value = ""
+
+    logs_channel: nextcord.TextChannel | None = settings.logs
+    if logs_channel is None:
+        return
+    if not logs_channel.permissions_for(settings.guild.me).send_messages:
+        await guild_log_failed(settings.guild.id, "Could not send message to logs channel.", f"<#{settings.logs}>")
 
     ban_embed = nextcord.Embed(
         title="RGL Banned Player",
         url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
-        color=BOT_COLOR,
+        color=0xeb4034,
     )
     ban_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
     ban_embed.add_field(name="Steam", value=str(steam_id), inline=True)
@@ -137,139 +255,132 @@ async def send_banned_embed(
         inline=False,
     )
     if old_roles:
+        removed_value = ""
+        for role in old_roles:
+            removed_value += f"<@&{role.id}> "
         ban_embed.add_field(
             name="Roles Removed",
             value=removed_value,
             inline=True,
         )
 
-    try:
-        for role in old_roles:
-            if role == ban_role:
-                continue
-            await member.remove_roles(role)
-            removed_value += f"<@&{role.id}> "
-        await member.add_roles(ban_role)
-    except nextcord.DiscordException:
-        ban_embed.add_field(
-            name="Error",
-            value="There was an error changing roles, please check that the bot has Manage Roles permissions, and change this users roles manually.",
-        )
-
     await logs_channel.send(embed=ban_embed)
 
 
-async def send_unbanned_embed(
-    loaded: dict,
+async def unban_player(
+    settings: LoadedRegSettings,
     member: nextcord.Member,
-    steam_id,
+    steam_id: int,
     ban_role: nextcord.Role,
-    new_role: nextcord.Role,
+    new_roles: list[nextcord.Role],
 ):
+    """Removes the ban role from a player and adds the new division roles.
+
+    Parameters
+    ----------
+    settings : LoadedRegSettings
+        The loaded registration settings for the guild.
+    member : nextcord.Member
+        The member to unban.
+    steam_id : int
+        The steamID64 of the player.
+    ban_role : nextcord.Role
+        The ban role to remove.
+    new_roles : list[nextcord.Role]
+        The new roles to add.
     """
-    Outputs an unban embed to the member's discord and updates the members roles
-    :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
-    :param member: Discord member to unban
-    :param steam_id: Player's steamID64
-    :param ban_role: The ban role to remove from the member
-    :param new_role: The new division role to give to the member
-    :return: None
-    """
-    logs_channel = loaded["channels"]["logs"]
-    if logs_channel is None:
-        print("Error, logs channel not set up.")
+    try:
+        await member.remove_roles(ban_role, reason="Removing RGL ban role.")
+        await member.add_roles(*new_roles, reason="Adding new division roles as part of unban.")
+    except nextcord.Forbidden as err:
+        await guild_log_failed(settings.guild.id, "Could not change roles for unbanned player.", err.text)
         return
+
+    logs_channel: nextcord.TextChannel | None = settings.logs
+    if logs_channel is None:
+        return
+    if not logs_channel.permissions_for(settings.guild.me).send_messages:
+        await guild_log_failed(settings.guild.id, "Could not send message to logs channel.", f"<#{settings.logs}>")
 
     ban_embed = nextcord.Embed(
         title="RGL Unbanned Player",
         url="https://rgl.gg/Public/PlayerProfile.aspx?p=" + str(steam_id),
-        color=BOT_COLOR,
+        color=0x26bf36,
     )
     ban_embed.add_field(name="Discord", value=f"<@{member.id}>", inline=True)
     ban_embed.add_field(name="Steam", value=str(steam_id), inline=True)
-    ban_embed.add_field(
-        name="Roles Added",
-        value=f"<@&{new_role.id}>",
-        inline=False,
-    )
+
+    add_field = ""
+    if new_roles:
+        for role in new_roles:
+            add_field += f"<@&{role.id}> "
+        ban_embed.add_field(
+            name="Roles Added",
+            value=add_field,
+            inline=False,
+        )
     ban_embed.add_field(
         name="Roles Removed",
         value=f"<@&{ban_role.id}>",
         inline=False,
     )
 
-    try:
-        await member.remove_roles(ban_role)
-        await member.add_roles(new_role)
-    except nextcord.DiscordException:
-        ban_embed.add_field(
-            name="Error",
-            value="There was an error changing roles, please check that the bot has Manage Roles permissions, and change this users roles manually.",
-        )
-
-    try:
-        await logs_channel.send(embed=ban_embed)
-    except nextcord.DiscordException:
-        print(f"Error sending embed message in guild {str(member.guild.id)}")
+    await logs_channel.send(embed=ban_embed)
 
 
 async def update_guild_player(
-    loaded: dict, player_divs: dict, banned, steam_id, discord_id
+    settings: LoadedRegSettings, player_divs: dict, banned: bool, steam_id: int, discord_id: int
 ):
     """
     Updates a single player and sends messages if the player is updated
-    :param loaded: The loaded settings, see Update_Roles_Cog.load_guild_settings()
-    :param player_divs: Player division information, see RglApi.get_div_data()
-    :param banned: If the player is banned
-    :param steam_id: Player's steamID64
-    :param discord_id: Player's discord id
-    :return: None
     """
-    guild = loaded["guild"]
-    member: nextcord.Member = guild.get_member(discord_id)
+    member: nextcord.Member | None = settings.guild.get_member(discord_id)
     if member is None:
         # Member is not in this guild
         return
 
-    bypass_role: nextcord.Role | None = loaded["roles"]["bypass"]
-    if bypass_role and member.get_role(bypass_role.id):
+    if settings.bypass and member.get_role(settings.bypass.id):
         # Guild has a valid bypass role and this user has it, skip
         return
 
-    game_mode = loaded["settings"]["game_mode"]
-    mode = loaded["settings"]["mode"]
-
     # Division from RGL
-    division = player_divs[game_mode][mode]
-    new_role = loaded["roles"]["divisions"][division]
+    current_roles: list[nextcord.Role] = []
+    new_roles: list[nextcord.Role] = []
+    if settings.gamemode in ("sixes", "combined", "both"):
+        current_roles.extend(get_current_roles(settings.sixes, member))
+        new_roles += settings.sixes[player_divs["sixes"][settings.mode]]
+    if settings.gamemode in ("highlander", "both"):
+        current_roles.extend(get_current_roles(settings.highlander, member))
+        new_roles += settings.highlander[player_divs["hl"][settings.mode]]
 
-    roles = get_guild_old_div(loaded, member)
-
-    old_ban = loaded["roles"]["rgl_ban"] in member.roles
-    if loaded["settings"]["ban"]:
-        ban_role = loaded["roles"]["rgl_ban"]
+    if settings.ban is not None:
+        ban_role: nextcord.Role = settings.ban
+        old_ban = ban_role in member.roles
         if not old_ban and banned:
             # Player has a new RGL ban
-            await send_banned_embed(loaded, member, steam_id, roles, ban_role)
+            await ban_player(settings, member, steam_id, current_roles, ban_role)
             return
         if old_ban and not banned:
             # Player was recently unbanned from RGL
-            await send_unbanned_embed(loaded, member, steam_id, ban_role, new_role)
+            await unban_player(settings, member, steam_id, ban_role, new_roles)
             return
 
-    if new_role not in roles or len(roles) != 1:
+    if not all(role in current_roles for role in new_roles):
         # Player doesn't have the desired role, or has extra roles
-        await send_update_embed(loaded, member, steam_id, roles, new_role)
+        await update_player(settings, member, steam_id, current_roles, new_roles)
 
     if (
-        loaded["roles"]["registered"] is not None
-        and loaded["roles"]["registered"] not in member.roles
+        settings.registered is not None
+        and settings.registered not in member.roles
     ):
         # Player is registered but doesn't have the registered role
-        await member.add_roles(loaded["roles"]["registered"])
+        try:
+            await member.add_roles(settings.registered)
+        except nextcord.Forbidden:
+            await guild_log_failed(settings.guild.id, "Could not add registered role.", str(member.id))
 
 
-async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> bool:
+async def check_player_data(player: dict, guilds: list[LoadedRegSettings]) -> bool:
     """
     Retrieves updated player data from RGL and updates the database
     :param player: The player to check
@@ -280,6 +391,7 @@ async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> boo
         steam_id = int(player["steam"])
         discord_id = int(player["discord"])
     except KeyError:
+        await admin_log_failed("Player data missing steam or discord ID.", str(player))
         return False
 
     # Get updated information from RGL
@@ -291,14 +403,14 @@ async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> boo
             print(err, ", waiting and trying again...")
             await asyncio.sleep(60)
             attempts += 1
-        except LookupError as err:
-            print(err)
-            await asyncio.sleep(15)
-            attempts += 1
+        except LookupError:
+            await admin_log_failed("Player not found in RGL database.", str(player))
+            return False
     if player_divs == {}:
         return False
     await db.update_divisons(steam_id, player_divs)
     ban_check: bool = False
+    new_ban: bool
     while not ban_check and attempts < 3:
         try:
             new_ban = await RGL.check_banned(steam_id)
@@ -308,98 +420,17 @@ async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> boo
             await asyncio.sleep(60)
             attempts += 1
         except LookupError as err:
-            print(err, "Somehow this player is registered though??")
-            await asyncio.sleep(15)
-            attempts += 1
+            await admin_log_failed("Player not found in RGL database during ban check.", str(player))
+            return False
     if not ban_check:
+        await admin_log_failed(f"Could not check if player {steam_id} is banned.", str(player))
         return False
 
     # Attempt to update this player in every guild they are in
-    for loaded in guilds.values():
-        if loaded is not None:
-            await update_guild_player(
-                loaded, player_divs, new_ban, steam_id, discord_id
-            )
+    for reg_settings in guilds:
+        await update_guild_player(reg_settings, player_divs, new_ban, steam_id, discord_id)
 
     return True
-
-
-def load_guild_settings(bot: nextcord.Client, guild_id: int) -> dict | None:
-    """
-    Loads all guild registration settings, roles, and channels
-    :param bot: The nextcord bot client
-    :param guild_id: Guild ID to load
-    :return: A dictionary containing the information
-    """
-    guild = bot.get_guild(guild_id)
-
-    if guild is None:
-        return None
-
-    reg_settings = RegistrationSettings()
-    reg_settings.import_from_db(guild_id)
-
-    no_exp_role: nextcord.Role = guild.get_role(reg_settings.roles["noexp"])
-    nc_role: nextcord.Role = guild.get_role(reg_settings.roles["newcomer"])
-    am_role: nextcord.Role = guild.get_role(reg_settings.roles["amateur"])
-    im_role: nextcord.Role = guild.get_role(reg_settings.roles["intermediate"])
-    main_role: nextcord.Role = guild.get_role(reg_settings.roles["main"])
-    adv_role: nextcord.Role = guild.get_role(reg_settings.roles["advanced"])
-    inv_role: nextcord.Role = guild.get_role(reg_settings.roles["invite"])
-    ban_role: nextcord.Role = guild.get_role(reg_settings.roles["ban"])
-    try:
-        registered_role: nextcord.Role | None = guild.get_role(
-            reg_settings.roles["registered"]
-        )
-    except KeyError:
-        registered_role = None
-
-    bypass_role = None
-    if reg_settings.bypass:
-        bypass_role = guild.get_role(reg_settings.roles["bypass"])
-
-    logs_channel: nextcord.TextChannel = guild.get_channel(
-        reg_settings.channels["logs"]
-    )
-    registration_channel: nextcord.TextChannel = guild.get_channel(
-        reg_settings.channels["registration"]
-    )
-
-    # Yes the double adv_role is intentional...
-    # It's to handle people whos top div is Challenger
-    division_roles: list[nextcord.Role] = [
-        no_exp_role,
-        nc_role,
-        am_role,
-        im_role,
-        main_role,
-        adv_role,
-        adv_role,
-        inv_role,
-    ]
-
-    loaded = {
-        "guild": guild,
-        "roles": {
-            "divisions": division_roles,
-            "rgl_ban": ban_role,
-            "bypass": bypass_role,
-            "registered": registered_role,
-        },
-        "channels": {"logs": logs_channel, "registration": registration_channel},
-        "settings": {
-            "game_mode": reg_settings.gamemode,
-            "mode": reg_settings.mode,
-            "ban": reg_settings.ban,
-        },
-    }
-
-    if reg_settings.gamemode == "sixes":
-        loaded["settings"]["game_mode"] = "sixes"
-    elif reg_settings.gamemode == "highlander":
-        loaded["settings"]["game_mode"] = "hl"
-
-    return loaded
 
 
 class UpdateRolesCog(commands.Cog):
@@ -411,57 +442,18 @@ class UpdateRolesCog(commands.Cog):
 
     @tasks.loop(time=update_time)
     async def update_rgl(self) -> None:
-        """
-        Updates RGL divisions and roles for all registered players in all guilds
-        """
-
-        # Get all players and servers from DB
-        player_cursor = db.get_all_players()
-        server_cursor = db.get_all_servers()
-        all_players = []
-        all_servers = []
-
-        # Gather all information before cursors timeout
-        for server in server_cursor:
-            all_servers.append(server)
-        for player in player_cursor:
-            all_players.append(player)
-
-        # Contains tuple pairs of guild objects and their registration settings
-        guilds: dict[str, dict | None] = {}
-        for server in all_servers:
-            # If registration settings are not set up, skip
-            if "registration" not in server:
-                continue
-            # If registration is disabled, skip
-            if not server["registration"]["enabled"]:
-                continue
-
-            guilds[server["guild"]] = load_guild_settings(self.bot, server["guild"])
-
-        for player in all_players:
-            result: bool = await check_player_data(player, guilds)
-            if result is False:
-                print(f"Error updating player {player}, skipping...")
-                await self.bot.get_channel(1259641880015147028).send(
-                    f"Error updating player {player}, skipping..."
-                )
-            await asyncio.sleep(15)  # No spamming!
-
-        await self.bot.get_channel(1259641880015147028).send(
-            "Finished updating RGL divisions and roles for all registered players in all servers."
-        )
+        """Updates RGL divisions and roles for all registered players in all guilds."""
+        pass
 
     @update_rgl.error
-    async def error_handler(self, _exception: Exception):
-        """Handles printing errors to console for the loop
+    async def error_handler(self, _exception: BaseException) -> None:
+        """Handles errors from the update_rgl loop.
 
-        Args:
-            exception (Exception): The exception that was raised
+        Parameters
+        ----------
+        _exception : BaseException
+            The exception that was raised
         """
-        print("Error in update_rgl loop:\n")
-        print(traceback.format_exc())
-        await self.bot.get_channel(1259641880015147028).send(traceback.format_exc())
 
     @nextcord.slash_command(
         name="updateall",
@@ -472,87 +464,12 @@ class UpdateRolesCog(commands.Cog):
         """
         Updates RGL divisions and roles for all registered players in the guild the command was run from
         """
-        await interaction.send(
-            "Updating RGL divisions and roles for all registered players in this server.\nThis will take a while."
-        )
-        print("Updating players in guild " + str(interaction.guild_id))
-        player_cursor = db.get_all_players()
-
-        players = []
-        for player in player_cursor:
-            players.append(player)
-        server = db.get_server(interaction.guild_id)
-
-        # If registration settings are not set up, skip
-        if "registration" not in server or not server["registration"]["enabled"]:
-            await interaction.send(
-                "Can't update, need to enable registration for this server!"
-            )
-            return
-
-        loaded = load_guild_settings(self.bot, server["guild"])
-
-        for player in players:
-            try:
-                member: nextcord.Member | None = interaction.guild.get_member(
-                    int(player["discord"])
-                )
-                if member is None:
-                    # Member is not in this guild
-                    continue
-            except KeyError:
-                continue
-            try:
-                await interaction.edit_original_message(
-                    content=f"Updating RGL divisions and roles for all registered players in this server.\nThis will take a while.\nUpdating player <@{player['discord']}>..."
-                )
-            except nextcord.HTTPException:
-                pass
-
-            result: bool = await check_player_data(
-                player, {str(interaction.guild_id): loaded}
-            )
-            if result is False:
-                print(f"Error updating player {player}, skipping...")
-                continue
-            await asyncio.sleep(15)  # No spamming!
-        try:
-            await interaction.send(
-                content="Finished updating RGL divisions and roles for all registered players in this server."
-            )
-        except nextcord.HTTPException:
-            pass
 
     @commands.Cog.listener("on_member_join")
     async def new_member(self, member: nextcord.Member):
         """
         Assigns roles to new members of a server if they are registered.
         """
-        server = db.get_server(member.guild.id)
-
-        try:
-            player = db.get_player_from_discord(member.id)
-        except LookupError:
-            return
-
-        # If registration settings are not set up, skip
-        if "registration" not in server or not server["registration"]["enabled"]:
-            return
-
-        loaded = load_guild_settings(self.bot, server["guild"])
-        if loaded is None:
-            logging.error("Could not load guild settings for guild %s", server["guild"])
-            return
-
-        bypass_role: nextcord.Role | None = loaded["roles"]["bypass"]
-        if bypass_role and member.get_role(bypass_role.id):
-            # Guild has a valid bypass role and this user has it, skip
-            return
-
-        result: bool = await check_player_data(player, {str(member.guild.id): loaded})
-        if result is False:
-            print(f"Error updating player {player}, skipping...")
-            return
 
     @TestCog.test.subcommand(  # pylint: disable=no-member
         name="newjoin",
@@ -573,18 +490,6 @@ class UpdateRolesCog(commands.Cog):
         :return: None
         """
 
-        embed = nextcord.Embed(description=f"Pretending that <@{user.id}> just joined")
-        await interaction.send(embed=embed)
-        if interaction.user.get_role(1144720671558078485) is None:
-            await interaction.send(
-                "You do not have the Contributors role and cannot run this command.",
-                ephemeral=True,
-            )
-            return
-
-        member = interaction.guild.get_member(user.id)
-        await self.new_member(member)
-
     @TestCog.test.subcommand(  # pylint: disable=no-member
         name="updateall",
         description="For testing only. Runs update loop for all guilds.",
@@ -595,5 +500,4 @@ class UpdateRolesCog(commands.Cog):
         :param interaction: The interaction
         :return: None
         """
-        await interaction.send("Running update loop for all guilds.")
-        await self.update_rgl()
+        # TODO: Make this an owner only command
