@@ -733,6 +733,38 @@ class UpdateRolesCog(commands.Cog):
         progress_embed.description = "All registered players have been updated."
         await interaction.edit_original_message(embed=progress_embed)
 
+    @nextcord.slash_command(
+        name="clearbypass",
+        description="Clears the bypass role from all members in the server.",
+        default_member_permissions=nextcord.Permissions(manage_guild=True),
+    )
+    async def clear_all_bypasses(self, interaction: nextcord.Interaction):
+        """Clears the bypass role from all members in the server.
+
+        Parameters
+        ----------
+        interaction : nextcord.Interaction
+            Interaction object
+        """
+        guild: nextcord.Guild | None = interaction.guild
+        if guild is None:
+            await interaction.send("This command must be run in a guild.")
+            return
+
+        settings: RegistrationSettings = RegistrationSettings()
+        await settings.load_data(guild.id)
+        if not settings.enabled:
+            await interaction.send("Registration is not enabled for this server.")
+            return
+
+        loaded: LoadedRegSettings = LoadedRegSettings(self.bot, settings)
+
+        await interaction.response.defer()
+        for member in guild.members:
+            if loaded.bypass in member.roles:
+                await member.remove_roles(loaded.bypass)
+        await interaction.send("Bypass role cleared from all members.")
+
     @commands.Cog.listener("on_member_join")
     async def new_member(self, member: nextcord.Member) -> None:
         """
