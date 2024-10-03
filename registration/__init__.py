@@ -1,6 +1,6 @@
 """Contains classes for registration of new users."""
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 
 from database import BotCollection
@@ -44,8 +44,8 @@ class DivisionRoles:
 class RegistrationRoles:
     """Stores the role IDs for registration roles."""
 
-    sixes: DivisionRoles = DivisionRoles()
-    highlander: DivisionRoles = DivisionRoles()
+    sixes: DivisionRoles = field(default_factory=DivisionRoles)
+    highlander: DivisionRoles = field(default_factory=DivisionRoles)
     bypass: int | None = None
     ban: int | None = None
     registered: int | None = None
