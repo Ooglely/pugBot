@@ -1,4 +1,5 @@
 """Contains the webserver cog, which is responsible for the webserver and registering users."""
+
 import asyncio
 import aiohttp
 import nextcord
