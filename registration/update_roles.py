@@ -165,7 +165,7 @@ async def update_player(
     steam_id: int,
     old_roles: list[nextcord.Role],
     new_roles: list[nextcord.Role],
-):
+) -> None:
     """Updates the roles of a player to match the new division.
 
     Parameters
@@ -249,7 +249,7 @@ async def ban_player(
     steam_id: int,
     old_roles: list[nextcord.Role],
     ban_role: nextcord.Role,
-):
+) -> None:
     """Gives a player the ban role and remove all other division roles.
 
     Parameters
@@ -319,7 +319,7 @@ async def unban_player(
     steam_id: int,
     old_roles: list[nextcord.Role],
     new_roles: list[nextcord.Role],
-):
+) -> None:
     """Removes the ban role from a player and adds the new division roles.
 
     Parameters
@@ -402,7 +402,7 @@ async def update_guild_player(
     banned: bool,
     steam_id: int,
     discord_id: int,
-):
+) -> None:
     """Updates the roles of a player in a guild. Checks whether the player is banned and updates roles accordingly.
 
     Parameters
@@ -445,6 +445,16 @@ async def update_guild_player(
         )  # Both roles are stored in sixes for simplicity
         new_roles.append(settings.sixes[player_div])
 
+    if settings.registered is not None and settings.registered not in member.roles:
+        # Player is registered but doesn't have the registered role
+        try:
+            await member.add_roles(settings.registered)
+        except nextcord.Forbidden:
+            await guild_log_failed(
+                settings, "Could not add registered role.", str(member.id)
+            )
+            return
+
     if settings.ban is not None:
         ban_role: nextcord.Role = settings.ban
         old_ban = ban_role in member.roles
@@ -467,15 +477,6 @@ async def update_guild_player(
     if not set(current_roles) == set(new_roles):
         # Player doesn't have the desired role, or has extra roles
         await update_player(settings, member, steam_id, current_roles, new_roles)
-
-    if settings.registered is not None and settings.registered not in member.roles:
-        # Player is registered but doesn't have the registered role
-        try:
-            await member.add_roles(settings.registered)
-        except nextcord.Forbidden:
-            await guild_log_failed(
-                settings, "Could not add registered role.", str(member.id)
-            )
 
 
 class UpdateRolesCog(commands.Cog):

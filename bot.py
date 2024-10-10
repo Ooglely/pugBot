@@ -20,16 +20,18 @@ from test_cog import TestCog
 from util import get_steam64
 from servers.servers import ServerCog
 from logs.searcher import LogSearcher
-from logs.logs import LogsCog
-from logs.elo_cog import EloCog
-from logs.stats import StatsCog
-from pug.manual import ManualPugCog
-from pug.med_immunity import PugMedicCog
-from pug.setup import PugSetupCog
-from pug.pug import PugRunningCog
+
+# from logs.logs import LogsCog
+# from logs.elo_cog import EloCog
+# from logs.stats import StatsCog
+# from pug.manual import ManualPugCog
+# from pug.med_immunity import PugMedicCog
+# from pug.setup import PugSetupCog
+# from pug.pug import PugRunningCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
-from registration.webserver import WebserverCog
+from registration.registration import RegistrationCog
+from registration.webserver import Webserver
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -37,7 +39,7 @@ intents.message_content = True
 intents.voice_states = True
 
 activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.watching)
-bot: nextcord.Client = commands.Bot(intents=intents, activity=activity)
+bot: commands.Bot = commands.Bot(intents=intents, activity=activity)
 
 bot.add_cog(
     TestCog(bot)
@@ -45,13 +47,13 @@ bot.add_cog(
 bot.add_cog(ServerCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
-bot.add_cog(PugSetupCog(bot))
-bot.add_cog(PugRunningCog(bot))
-bot.add_cog(PugMedicCog(bot))
-bot.add_cog(LogsCog(bot))
-bot.add_cog(EloCog(bot))
-bot.add_cog(StatsCog(bot))
-bot.add_cog(ManualPugCog(bot))
+# bot.add_cog(PugSetupCog(bot))
+# bot.add_cog(PugRunningCog(bot))
+# bot.add_cog(PugMedicCog(bot))
+# bot.add_cog(LogsCog(bot))
+# bot.add_cog(EloCog(bot))
+# bot.add_cog(StatsCog(bot))
+# bot.add_cog(ManualPugCog(bot))
 bot.remove_command("help")
 
 RGL: RglApi = RglApi()
@@ -60,14 +62,17 @@ logging.basicConfig(level=logging.INFO)
 
 
 @bot.event
-async def on_ready():
+async def on_ready() -> None:
     """Prints bot information on ready, starts webserver, and syncs commands."""
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print(f"Running: {NEW_COMMIT_NAME}")
-    print("------")
-    # Need to add cog on ready instead of before for webserver async to be friendly
-    if bot.get_cog("WebserverCog") is None:
-        bot.add_cog(WebserverCog(bot))
+    if bot.user is not None:
+        logging.info("Logged in as %s (ID: %d)", bot.user.name, bot.user.id)
+        logging.info("Running: %s", NEW_COMMIT_NAME)
+        logging.info("------")
+    logging.info("Starting webserver...")
+    registration_cog: RegistrationCog = RegistrationCog(bot)
+    bot.add_cog(registration_cog)
+    webserver: Webserver = Webserver(registration_cog)
+    await registration_cog.start_server(webserver.app)
     await bot.sync_all_application_commands()
     update_status.start()
     log_searcher = LogSearcher(bot)
