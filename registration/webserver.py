@@ -1,5 +1,6 @@
 """File holding the actual FastAPI webserver for use with the registration cog."""
 from fastapi import FastAPI, APIRouter, Request, Response, status
+import logging
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from database import player_count, log_count
@@ -56,11 +57,9 @@ class Webserver:
         Returns:
             dict: Describes success or errors
         """
-        print(registration)
+        logging.info(registration)
         if "password" in request.headers:
             if request.headers["password"] == API_PASSWORD:
-                print(registration.steam)
-                print(registration.discord)
                 result = await self.cog.register_new_user(
                     int(registration.discord), int(registration.steam)
                 )
@@ -74,8 +73,6 @@ class Webserver:
             response.status_code = status.HTTP_401_UNAUTHORIZED
             return {"error": "Wrong API password. Contact pugBot devs."}
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        print("Incorrect password in headers")
-        print(request.headers)
         return {"error": "Wrong API password. Contact pugBot devs."}
 
     async def get_bot_stats(self, response: Response):
