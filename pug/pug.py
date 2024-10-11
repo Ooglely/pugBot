@@ -412,8 +412,8 @@ class PugRunningCog(commands.Cog):
         pug_embed.description = None
 
         reg_settings = RegistrationSettings()
-        reg_settings.import_from_db(interaction.guild.id)
-        if reg_settings.mode == "" or reg_settings.gamemode == "":
+        await reg_settings.load_data(interaction.guild.id)
+        if not reg_settings.enabled:
             balancing_disabled = True
 
         elo_settings = EloSettings(interaction.guild.id)

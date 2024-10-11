@@ -1,6 +1,7 @@
 """File holding the actual FastAPI webserver for use with the registration cog."""
-from fastapi import FastAPI, APIRouter, Request, Response, status
 import logging
+
+from fastapi import FastAPI, APIRouter, Request, Response, status
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from database import player_count, log_count

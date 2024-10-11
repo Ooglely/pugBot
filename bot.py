@@ -21,13 +21,13 @@ from util import get_steam64
 from servers.servers import ServerCog
 from logs.searcher import LogSearcher
 
-# from logs.logs import LogsCog
-# from logs.elo_cog import EloCog
-# from logs.stats import StatsCog
-# from pug.manual import ManualPugCog
-# from pug.med_immunity import PugMedicCog
-# from pug.setup import PugSetupCog
-# from pug.pug import PugRunningCog
+from logs.logs import LogsCog
+from logs.elo_cog import EloCog
+from logs.stats import StatsCog
+from pug.manual import ManualPugCog
+from pug.med_immunity import PugMedicCog
+from pug.setup import PugSetupCog
+from pug.pug import PugRunningCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
 from registration.registration import RegistrationCog
@@ -47,13 +47,13 @@ bot.add_cog(
 bot.add_cog(ServerCog(bot))
 bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
-# bot.add_cog(PugSetupCog(bot))
-# bot.add_cog(PugRunningCog(bot))
-# bot.add_cog(PugMedicCog(bot))
-# bot.add_cog(LogsCog(bot))
-# bot.add_cog(EloCog(bot))
-# bot.add_cog(StatsCog(bot))
-# bot.add_cog(ManualPugCog(bot))
+bot.add_cog(PugSetupCog(bot))
+bot.add_cog(PugRunningCog(bot))
+bot.add_cog(PugMedicCog(bot))
+bot.add_cog(LogsCog(bot))
+bot.add_cog(EloCog(bot))
+bot.add_cog(StatsCog(bot))
+bot.add_cog(ManualPugCog(bot))
 bot.remove_command("help")
 
 RGL: RglApi = RglApi()
@@ -75,7 +75,7 @@ async def on_ready() -> None:
     await registration_cog.start_server(webserver.app)
     await bot.sync_all_application_commands()
     update_status.start()
-    log_searcher = LogSearcher(bot)
+    log_searcher: LogSearcher = LogSearcher(bot)
     log_searcher.searcher.start()  # pylint: disable=no-member
     log_searcher.queue.start()  # pylint: disable=no-member
 

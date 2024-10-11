@@ -7,12 +7,14 @@ import nextcord
 from nextcord.ext import commands, application_checks
 
 from database import BotCollection
-from registration import TrueFalseSelect
 from constants import BOT_COLOR
 from logs import Player
 from logs.searcher import FullLog, PartialLog
 from logs.logstf_api import LogsAPI
 from logs.elo import process_elo
+from menus import BotMenu
+from menus.callbacks import action_callback
+from menus.templates import send_boolean_menu
 from pug import PugCategory, CategoryButton, CategorySelect
 from util import is_runner, get_steam64
 
@@ -67,46 +69,11 @@ class EloSettings:
         )
 
 
-class EloModeSelect(nextcord.ui.View):
-    """View to select the elo mode."""
-
-    def __init__(self):
-        super().__init__()
-        self.mode: str = "gamemode"
-
-    @nextcord.ui.button(label="Global", style=nextcord.ButtonStyle.grey)
-    async def global_mode(
-        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
-        """Select global elo mode."""
-        self.mode = "gamemode"
-        await interaction.response.edit_message(view=None)
-        self.stop()
-
-    @nextcord.ui.button(label="Server", style=nextcord.ButtonStyle.grey)
-    async def server_mode(
-        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
-        """Select server elo mode."""
-        self.mode = "server"
-        await interaction.response.edit_message(view=None)
-        self.stop()
-
-    @nextcord.ui.button(label="Category", style=nextcord.ButtonStyle.grey)
-    async def category_mode(
-        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
-        """Select category elo mode."""
-        self.mode = "category"
-        await interaction.response.edit_message(view=None)
-        self.stop()
-
-
 class EloCog(commands.Cog):
     """This cog contains the logs command and its subcommands."""
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @nextcord.slash_command(name="elo")
     async def elo(self, _interaction: nextcord.Interaction):
@@ -119,58 +86,73 @@ class EloCog(commands.Cog):
     )
     async def elo_setup(self, interaction: nextcord.Interaction):
         """Setup the elo settings for a guild."""
-        setup_embed = nextcord.Embed(
+        if interaction.guild is None:
+            return
+
+        setup_embed: nextcord.Embed = nextcord.Embed(
             title="Elo Setup",
             color=BOT_COLOR,
         )
 
         elo_settings = EloSettings(interaction.guild.id)
         await elo_settings.load()
-        print(elo_settings.__dict__)
+        menu: BotMenu = BotMenu(embed=setup_embed, user_id=interaction.user.id)
+        if menu.embed is None:
+            return
 
-        setup_embed.description = "Would you like to enable elo?\nPlease note that only players registered with the bot through pugbot.tf will be tracked in the elo system."
-        elo_enable = TrueFalseSelect()
-        await interaction.send(embed=setup_embed, view=elo_enable)
-        setup_status = await elo_enable.wait()
-        if setup_status:
+        menu.embed.description = "Would you like to enable elo?\nPlease note that only players registered with the bot through pugbot.tf will be tracked in the elo system."
+        try:
+            result: bool = await send_boolean_menu(menu, interaction)
+        except TimeoutError:
             await interaction.delete_original_message(delay=1)
             return
-        if not elo_enable.selection:
+        if result == "disable":
             elo_settings.enabled = False
             await elo_settings.save()
             setup_embed.description = "Elo has been disabled."
             await interaction.edit_original_message(embed=setup_embed, view=None)
             await interaction.delete_original_message(delay=30)
             return
-        await interaction.edit_original_message(view=None)
+
         elo_settings.enabled = True
 
-        setup_embed.description = "What type of elo would you like to use?"
-        setup_embed.add_field(
+        menu.embed.description = "What type of elo would you like to use?"
+        menu.embed.add_field(
             name="Global/Gamemode",
             value="Global elo is shared across all servers and is specific to each gamemode (6s, HL, Passtime).",
         )
-        setup_embed.add_field(
+        menu.embed.add_field(
             name="Server", value="Server elo is specific to each server."
         )
-        setup_embed.add_field(
+        menu.embed.add_field(
             name="Category",
             value="Category elo is specific to each category within the server.",
         )
-        mode_select = EloModeSelect()
-        await interaction.edit_original_message(embed=setup_embed, view=mode_select)
-        await mode_select.wait()
-        elo_settings.mode = mode_select.mode
-        await interaction.edit_original_message(view=None)
+        menu.clear_items()
+        # Why did I not just name the entry global... not worth changes all db entries to fit new name
+        menu.add_button(
+            "Global",
+            await action_callback("gamemode", interaction.user.id),
+            nextcord.ButtonStyle.grey,
+        )
+        await menu.add_action_buttons(["server", "category"], interaction.user.id)
+        await menu.edit(interaction)
+        if not await menu.wait_for_action(self.bot) or menu.action is None:
+            await interaction.delete_original_message(delay=1)
+            return
+        elo_settings.mode = menu.action
 
-        setup_embed.clear_fields()
-        setup_embed.description = (
+        menu.clear_items()
+        menu.embed.clear_fields()
+        menu.embed.description = (
             "Would you like to make the server elo visible to all users?"
         )
-        visible_select = TrueFalseSelect()
-        await interaction.edit_original_message(embed=setup_embed, view=visible_select)
-        await visible_select.wait()
-        elo_settings.visible = visible_select.selection
+        try:
+            result = await send_boolean_menu(menu, interaction)
+        except TimeoutError:
+            await interaction.delete_original_message(delay=1)
+            return
+        elo_settings.visible = result
 
         await elo_settings.save()
         setup_embed.description = f"Elo has been setup.\nEnabled: {elo_settings.enabled}\nMode: {elo_settings.mode}\nVisible: {elo_settings.visible}"

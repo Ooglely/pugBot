@@ -14,7 +14,7 @@ async def value_callback(key: str, value: Any, author: int) -> Callable:
     return callback
 
 
-async def action_callback(value: Any, author: int) -> Callable:
+async def action_callback(value: str, author: int) -> Callable:
     """Creates a callback that sets the action in the menu."""
 
     async def callback(self, interaction: Interaction) -> None:

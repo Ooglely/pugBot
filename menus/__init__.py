@@ -26,7 +26,10 @@ class BotMenu(View):
         self.user: int = user_id
 
     def add_button(
-        self, label: str, callback: Callable, style: nextcord.ButtonStyle
+        self,
+        label: str,
+        callback: Callable,
+        style: nextcord.ButtonStyle = nextcord.ButtonStyle.grey,
     ) -> None:
         """Adds a button to the menu.
 
@@ -68,7 +71,9 @@ class BotMenu(View):
         """Adds buttons for each item in the list."""
         for item in items:
             self.add_button(
-                item, await action_callback(item, author), nextcord.ButtonStyle.grey
+                item.capitalize(),
+                await action_callback(item, author),
+                nextcord.ButtonStyle.grey,
             )
 
     def get_child(self, custom_id: str) -> nextcord.ui.Item | None:
@@ -125,7 +130,7 @@ class BotMenu(View):
     def clear_entry_fields(self) -> None:
         """Clears all children of the view that are not buttons."""
         items_to_remove: list[Item] = []
-        for child in self.children:  # Skip the last two buttons (Continue and Cancel)
+        for child in self.children:  # Skip buttons
             if child.type == ComponentType.role_select:
                 items_to_remove.append(child)
 

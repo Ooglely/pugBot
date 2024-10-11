@@ -1,12 +1,13 @@
 """Cog to hold commands to set up the registration part of the bot per server."""
 import nextcord
 from nextcord.ext import commands
-from nextcord.ui import RoleSelect, ChannelSelect
+from nextcord.ui import RoleSelect
 
 from constants import BOT_COLOR
 from registration import RegistrationSettings
 from menus import BotMenu
 from menus.callbacks import action_callback
+from menus.templates import send_channel_prompt
 
 
 async def send_role_selects(
@@ -287,51 +288,37 @@ class RegistrationSetupCog(commands.Cog):
 
         # Channel select
         setup_embed.description = "Lastly, please select the channels you would like to be used for new registrations and logging of role changes.\nYou can use the same channel for both, if desired.\n\nJust like for selecting roles, you may need to search for it."
-        registration_channel_select: ChannelSelect = ChannelSelect(
-            placeholder="Registration Channel", max_values=1, custom_id="registration"
-        )
-        logs_channel_select: ChannelSelect = ChannelSelect(
-            placeholder="Logs Channel", max_values=1, custom_id="logs"
-        )
-        menu.add_item(registration_channel_select)
-        menu.add_item(logs_channel_select)
-        await menu.edit(interaction)
-        if (
-            not await menu.wait_for_action(interaction.client)
-            or menu.action == "cancel"
-        ):
+        try:
+            channels: list[nextcord.TextChannel | None] = await send_channel_prompt(
+                menu,
+                interaction,
+                ["New Registration Channel", "Update Log Channel"],
+                False,
+                [nextcord.ChannelType.text],
+            )
+        except TimeoutError:
             await interaction.delete_original_message()
             return
-        if menu.get_child("registration") is None or menu.get_child("logs") is None:
-            await interaction.edit_original_message(
-                content="There was an error grabbing channel data. Please try again."
-            )
-            return
-
         settings.channels.registration = (
-            registration_channel_select.values.channels[0].id
-            if len(registration_channel_select.values.channels) > 0
-            else None
+            channels[0].id if channels[0] is not None else None
         )
-        settings.channels.logs = (
-            logs_channel_select.values.channels[0].id
-            if len(logs_channel_select.values.channels) > 0
-            else None
-        )
+        settings.channels.logs = channels[1].id if channels[1] is not None else None
 
         # Check if bot can access and type in the channels
         if settings.channels.registration and not await check_channel_perms(
             interaction.guild, settings.channels.registration
         ):
             await interaction.edit_original_message(
-                content=f"The bot does not have permission to access and type in the registration channel (<#{settings.channels.registration}>). Please check the permissions and try again."
+                content=f"The bot does not have permission to access and type in the registration channel (<#{settings.channels.registration}>). Please check the permissions and try again.",
+                view=None,
             )
             return
         if settings.channels.logs and not await check_channel_perms(
             interaction.guild, settings.channels.logs
         ):
             await interaction.edit_original_message(
-                content=f"The bot does not have permission to access and type in the logs channel (<#{settings.channels.logs}>). Please check the permissions and try again."
+                content=f"The bot does not have permission to access and type in the logs channel (<#{settings.channels.logs}>). Please check the permissions and try again.",
+                view=None,
             )
             return
 
