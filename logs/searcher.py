@@ -5,7 +5,7 @@ import traceback
 import nextcord
 from nextcord.ext import tasks
 
-from constants import DEV_SUCCESSFUL_LOGS, DEV_FAILED_LOGS
+from constants import DEV_SUCCESSFUL_LOGS, DEV_FAILED_LOGS, DEV_ERROR_LOGS
 from pug import PugCategory
 from logs import Player, LogData
 from logs.logstf_api import LogsAPI
@@ -289,7 +289,12 @@ class LogSearcher:
             log_url = f"https://logs.tf/{log.log_id}"
 
         if logs_channel:
-            await logs_channel.send(content=f"{category_string}{log_url}")
+            try:
+                await logs_channel.send(content=f"{category_string}{log_url}")
+            except nextcord.Forbidden:
+                await self.bot.get_channel(DEV_ERROR_LOGS).send(
+                    content=f"{category_string}{log_url}\nGuild: {log.guild} | Failed to send due to perms"
+                )
 
         await self.bot.get_channel(DEV_SUCCESSFUL_LOGS).send(
             content=f"{category_string}{log_url}\nGuild: {log.guild}"
