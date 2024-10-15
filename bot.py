@@ -1,37 +1,34 @@
 """Main file for running and starting the bot, with general global commands."""
+import datetime
+import logging
 import random
 import re
 from typing import Optional
 
-import datetime
-import logging
 import nextcord
 from nextcord.ext import commands, tasks
+from nextcord.ui import RoleSelect
 
 import database
-from rglapi import RglApi, Player, Team
-from constants import (
-    BOT_COLOR,
-    NEW_COMMIT_NAME,
-    VERSION,
-    DISCORD_TOKEN,
-)
-from test_cog import TestCog
-from util import get_steam64
-from servers.servers import ServerCog
-from logs.searcher import LogSearcher
-
-from logs.logs import LogsCog
+from constants import BOT_COLOR, DISCORD_TOKEN, NEW_COMMIT_NAME, VERSION
 from logs.elo_cog import EloCog
+from logs.logs import LogsCog
+from logs.searcher import LogSearcher
 from logs.stats import StatsCog
+from menus import BotMenu
+from menus.templates import send_channel_prompt
 from pug.manual import ManualPugCog
 from pug.med_immunity import PugMedicCog
-from pug.setup import PugSetupCog
 from pug.pug import PugRunningCog
+from pug.setup import PugSetupCog
+from registration.registration import RegistrationCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
-from registration.registration import RegistrationCog
 from registration.webserver import Webserver
+from rglapi import Player, RglApi, Team
+from servers.servers import ServerCog
+from test_cog import TestCog
+from util import get_steam64
 
 intents = nextcord.Intents.default()
 intents.members = True
@@ -80,69 +77,6 @@ async def on_ready() -> None:
     log_searcher.queue.start()  # pylint: disable=no-member
 
 
-class SetupView(nextcord.ui.View):
-    """View for the 1st part of the /setup command, selecting a role."""
-
-    def __init__(self):
-        super().__init__()
-        self.role = None
-
-    @nextcord.ui.role_select(placeholder="Select a role", row=1)
-    async def role(
-        self, role: nextcord.ui.RoleSelect, interaction: nextcord.Interaction
-    ):
-        """Selects a role to be the runner role.
-
-        Args:
-            role (nextcord.ui.RoleSelect): The role to be the runner role.
-            interaction (nextcord.Interaction): The interaction to respond to.
-        """
-        await interaction.response.defer()
-        self.role = role.values[0].id
-        self.stop()
-
-
-class ChannelView(nextcord.ui.View):
-    """View for the 2nd part of the /setup command, selecting channels."""
-
-    def __init__(self):
-        super().__init__()
-        self.connect = None
-        self.rcon = None
-
-    @nextcord.ui.channel_select(
-        custom_id="connect", placeholder="Select a connect channel"
-    )
-    async def connect(
-        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
-    ):
-        """Select a channel to send connect ip/link to.
-
-        Args:
-            channel (nextcord.ui.ChannelSelect): The selected channel.
-            interaction (nextcord.Interaction): The interaction to respond to.
-        """
-        await interaction.response.defer()
-        self.connect = channel.values[0].id
-        if self.rcon is not None:
-            self.stop()
-
-    @nextcord.ui.channel_select(placeholder="Select a rcon channel")
-    async def rcon(
-        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
-    ):
-        """Select a channel to send rcon commands to.
-
-        Args:
-            channel (nextcord.ui.ChannelSelect): The selected channel.
-            interaction (nextcord.Interaction): The interaction to respond to.
-        """
-        await interaction.response.defer()
-        self.rcon = channel.values[0].id
-        if self.connect is not None:
-            self.stop()
-
-
 @bot.slash_command(
     name="setup",
     description="Setup the bot for this server.",
@@ -154,36 +88,64 @@ async def setup(interaction: nextcord.Interaction):
     Args:
         interaction (nextcord.Interaction): The interaction to respond to.
     """
-    setup_view = SetupView()
-    channel_view = ChannelView()
-    await interaction.send(
-        "Select a role to be the runner role.", view=setup_view, ephemeral=True
-    )
-    await setup_view.wait()
-    await interaction.edit_original_message(
-        content="Select channels to be used as the connect and rcon channel.",
-        view=channel_view,
-    )
-    await channel_view.wait()
+    if not isinstance(interaction.user, nextcord.Member):
+        return
+
     setup_embed = nextcord.Embed(
-        title="Setup Complete!",
-        description="Setup has been completed for this server. You can now use the bot's commands.",
-        color=nextcord.Color.green(),
+        title="Initial Bot Setup",
+        description="Select a role to be used as the Runner role. This role has permissions to generate teams, move players, and more commands with the bot.",
+        color=BOT_COLOR,
     )
-    setup_embed.add_field(
-        name="Runner Role", value=f"<@&{setup_view.role}>", inline=True
+    menu: BotMenu = BotMenu(user_id=interaction.user.id, embed=setup_embed)
+    if menu.embed is None:
+        return
+    role_select: RoleSelect = RoleSelect(max_values=1, placeholder="Select a role")
+    menu.add_item(role_select)
+    await menu.add_continue_buttons()
+    await menu.send(interaction)
+    if not await menu.wait_for_action(bot) or menu.action == "cancel":
+        await interaction.delete_original_message()
+
+    if len(role_select.values) == 0:
+        await interaction.edit_original_message(
+            content="You must select a Runner role.", embed=None, view=None
+        )
+        await interaction.delete_original_message(delay=30)
+        return
+    selected_role: nextcord.Role = role_select.values[0]
+
+    menu.embed.description = "Select channels to be used as the connect and rcon channel.\nYou do not have to select channels if you are not planning to reserve servers with the bot."
+    try:
+        selected_channels = await send_channel_prompt(
+            menu,
+            interaction,
+            ["Connect Channel", "RCON Channel"],
+            False,
+            [nextcord.ChannelType.text],
+        )
+    except TimeoutError:
+        await interaction.delete_original_message()
+        return
+
+    menu.embed.title = "Setup Complete!"
+    menu.embed.description = (
+        "Setup has been completed for this server. You can now use the bot's commands."
     )
-    setup_embed.add_field(
-        name="Connect Channel", value=f"<#{channel_view.connect}>", inline=True
+    menu.embed.color = nextcord.Color.green()
+
+    connect_id: int | None = (
+        None if selected_channels[0] is None else selected_channels[0].id
     )
-    setup_embed.add_field(
-        name="RCON Channel", value=f"<#{channel_view.rcon}>", inline=True
+    rcon_id: int | None = (
+        None if selected_channels[1] is None else selected_channels[1].id
     )
-    await interaction.edit_original_message(content=None, embed=setup_embed, view=None)
-    database.add_new_guild(
-        interaction.guild_id, setup_view.role, channel_view.connect, channel_view.rcon
+    menu.embed.add_field(
+        name="Runner Role", value=f"<@&{selected_role.id}>", inline=True
     )
-    print("New Server: " + str(interaction.guild_id))
+    menu.embed.add_field(name="Connect Channel", value=f"<#{connect_id}>", inline=True)
+    menu.embed.add_field(name="RCON Channel", value=f"<#{rcon_id}>", inline=True)
+    await interaction.edit_original_message(content=None, embed=menu.embed, view=None)
+    database.add_new_guild(interaction.guild_id, selected_role.id, connect_id, rcon_id)
 
 
 @bot.slash_command(
