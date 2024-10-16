@@ -255,7 +255,7 @@ def get_steam_from_discord(discord: int):
     return database.find_one({"discord": str(discord)})["steam"]
 
 
-def get_player_from_steam(steam: int):
+def get_player_from_steam(steam: int) -> dict:
     """Get the player from the database.
 
     Args:
@@ -265,9 +265,10 @@ def get_player_from_steam(steam: int):
         dict: Player data
     """
     database = client.players.data
-    if database.find_one({"steam": str(steam)}) is None:
+    player_data = database.find_one({"steam": str(steam)})
+    if player_data is None:
         raise LookupError
-    return database.find_one({"steam": str(steam)})
+    return player_data
 
 
 def get_player_from_discord(discord: int):

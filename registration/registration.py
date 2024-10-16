@@ -1,7 +1,9 @@
 """Contains the webserver cog, which is responsible for the webserver and registering users."""
+
 import aiohttp
 import nextcord
 from nextcord.ext.commands import Cog, Bot
+from nextcord.ext.application_checks import is_owner
 import uvicorn
 from fastapi import FastAPI
 
@@ -19,12 +21,14 @@ from database import (
     update_divisons,
     get_player_from_steam,
     get_player_from_discord,
+    BotCollection,
 )
 from registration import RegistrationSettings
 from registration.update_roles import LoadedRegSettings, update_guild_player
 from rglapi import RglApi
 
 RGL: RglApi = RglApi()
+player_db: BotCollection = BotCollection("players", "data")
 
 
 class RegistrationCog(Cog):
@@ -73,6 +77,34 @@ class RegistrationCog(Cog):
                 ephemeral=True,
             )
 
+    @nextcord.slash_command(
+        name="unregister",
+        description="Manually delete a user in the database.",
+        guild_ids=PRIVILEGED_GUILDS,
+    )
+    @is_owner()
+    async def delete_user(
+        self,
+        interaction: nextcord.Interaction,
+        steam: str | None = nextcord.SlashOption(name="steam", required=None),
+        discord: nextcord.User
+        | None = nextcord.SlashOption(name="discord", required=False),
+    ):
+        """Deletes a user from the database.
+
+        Args:
+            steam (int | None): The steam id of the user to delete if provided
+            discord (nextcord.User | None): The discord user to delete if provided
+        """
+        if not steam and not discord:
+            await interaction.send("You must provide either a steam or discord id.")
+            return
+        if steam:
+            await player_db.delete_item({"steam": str(steam)})
+        elif discord:
+            await player_db.delete_item({"discord": str(discord.id)})
+        await interaction.send("User deleted.")
+
     async def register_new_user(self, discord_id: int, steam_id: int) -> str | None:
         """Goes through the checks and registers a new user in the database.
 
@@ -95,7 +127,7 @@ class RegistrationCog(Cog):
 
         try:
             player = get_player_from_steam(steam_id)
-            if player["discord"] == str(discord_id):
+            if player is not None and player["discord"] == str(discord_id):
                 return (
                     f"Your Steam and Discord accounts are already linked to each other. If this is an error, "
                     f"please contact PugBot devs @ {DEV_DISCORD_LINK}"
@@ -126,6 +158,7 @@ class RegistrationCog(Cog):
         except aiohttp.ClientResponseError:
             return "Unable to get logs from logs.tf. Please try again."
 
+        # Add the player to the database
         await add_player(str(steam_id), str(user.id))
         await update_divisons(steam_id, player_divs)
 

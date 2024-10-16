@@ -1,4 +1,5 @@
 """Main file for running and starting the bot, with general global commands."""
+
 import datetime
 import logging
 import random
@@ -88,6 +89,11 @@ async def setup(interaction: nextcord.Interaction):
     Args:
         interaction (nextcord.Interaction): The interaction to respond to.
     """
+    if interaction.guild is None:
+        await interaction.send(
+            "This command can only be used in a server.", ephemeral=True
+        )
+        return
     if not isinstance(interaction.user, nextcord.Member):
         return
 
@@ -145,7 +151,7 @@ async def setup(interaction: nextcord.Interaction):
     menu.embed.add_field(name="Connect Channel", value=f"<#{connect_id}>", inline=True)
     menu.embed.add_field(name="RCON Channel", value=f"<#{rcon_id}>", inline=True)
     await interaction.edit_original_message(content=None, embed=menu.embed, view=None)
-    database.add_new_guild(interaction.guild_id, selected_role.id, connect_id, rcon_id)
+    database.add_new_guild(interaction.guild.id, selected_role.id, connect_id, rcon_id)
 
 
 @bot.slash_command(
@@ -160,7 +166,12 @@ async def serveme(interaction: nextcord.Interaction, api_key: str):
         interaction (nextcord.Interaction): The interaction to respond to.
         api_key (str): The api key to set.
     """
-    database.set_guild_serveme(interaction.guild_id, api_key)
+    if interaction.guild is None:
+        await interaction.send(
+            "This command can only be used in a server.", ephemeral=True
+        )
+        return
+    database.set_guild_serveme(interaction.guild.id, api_key)
     await interaction.send("Serveme API Key set!", ephemeral=True)
 
 
@@ -362,6 +373,8 @@ async def respond_to_mentions(message: nextcord.Message):
     Args:
         message (nextcord.Message): The message to check.
     """
+    if not isinstance(message.author, nextcord.Member) or not message.guild:
+        return  # Don't respond to DMs
     if "<@989250144895655966>" in message.content:
         seed = random.random()
         if message.author.voice is not None:
@@ -376,9 +389,8 @@ async def respond_to_mentions(message: nextcord.Message):
             )
             if message.guild.id == 1144719525728763915:
                 # Get member and timeout
-                member = message.guild.get_member(message.author.id)
                 timeout_time = datetime.datetime.now() + datetime.timedelta(seconds=30)
-                await member.timeout(timeout_time, reason="hahahahahaha")
+                await message.author.timeout(timeout_time, reason="hahahahahaha")
         elif seed < 0.2:
             await message.channel.send(
                 "lol what do u want dude i bet u don't even hit 200 dpm stop pinging me"
