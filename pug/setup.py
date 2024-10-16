@@ -1,19 +1,20 @@
 """Cog to set up pug categories for the server."""
 import nextcord
 from nextcord.ext import commands
+from nextcord.abc import GuildChannel
+from nextcord.enums import ChannelType
 
 from constants import BOT_COLOR
 from database import BotCollection
+from menus import BotMenu
+from menus.templates import send_channel_prompt
 from pug import (
-    PugChannelSelect,
-    FirstToChannelSelect,
-    FirstToSelect,
     PugCategory,
     CategorySelect,
     CategoryButton,
 )
 from pug.pug import PugRunningCog
-from util import is_setup, is_runner, guild_config_check
+from util import is_runner, guild_config_check
 
 category_db = BotCollection("guilds", "categories")
 config_db = BotCollection("guilds", "config")
@@ -33,7 +34,7 @@ class PugSetupCog(commands.Cog):
     async def roles(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     @category.subcommand(name="add", description="Add a pug category to the server.")
     async def pug_category_add(
@@ -58,43 +59,31 @@ class PugSetupCog(commands.Cog):
         setup_embed = nextcord.Embed(
             title="Pug Category Setup",
             color=BOT_COLOR,
-            description="Adding a pug category allows you to setup team generation and move commands.\n\nPlease select the add up/selecting channel, and the RED and BLU team channels.\nYou may need to search for them.",
+            description="Adding a pug category allows you to setup team generation and move commands.\n\nPlease select the add up/selecting channel, the RED and BLU team channels, and the 'In Next Pug' channel, which is the channel waiting players get moved to.\nYou may need to search for them.",
         )
+        menu: BotMenu = BotMenu(embed=setup_embed, user_id=interaction.user.id)
         pug_category = PugCategory(name)
 
         # Add a pug category to the server
-        channel_select_view = PugChannelSelect()
-        await interaction.send(embed=setup_embed, view=channel_select_view)
-        await channel_select_view.wait()
-        if channel_select_view.action == "cancel":
+        try:
+            channels: list[GuildChannel] = await send_channel_prompt(
+                menu,
+                interaction,
+                ["Add Up/Selecting", "RED Team", "BLU Team", "In Next Pug/Waiting"],
+                True,
+                [ChannelType.voice],
+            )
+        except ValueError:
+            await interaction.send("You must select a channel for each entry.")
+            return
+        except TimeoutError:
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
-        pug_category.add_up = channel_select_view.add_up
-        pug_category.red_team = channel_select_view.red_team
-        pug_category.blu_team = channel_select_view.blu_team
-        # First to x select
-        first_to = {
-            "enabled": False,
-            "num": 0,
-        }
-
-        first_to_channel = FirstToChannelSelect()
-        setup_embed.description = "Please select the In Next Pug channel. This is the channel that the waiting players will be moved to, and the first x players if it is enabled."
-        await interaction.edit_original_message(
-            embed=setup_embed, view=first_to_channel
-        )
-        await first_to_channel.wait()
-        pug_category.next_pug = first_to_channel.first_to
-
-        first_to_view = FirstToSelect()
-        setup_embed.description = "If you would like to use the first to x system, please select the number of players required to add up.\nThis will move the first x players to the chosen In Next Pug channel.\n\n**Not Implemented Yet**"
-        await interaction.edit_original_message(embed=setup_embed, view=first_to_view)
-        await first_to_view.wait()
-        first_to["enabled"] = first_to_view.selection
-        first_to["num"] = first_to_view.num
-
-        pug_category.first_to = first_to
+        pug_category.add_up = channels[0].id
+        pug_category.red_team = channels[1].id
+        pug_category.blu_team = channels[2].id
+        pug_category.next_pug = channels[3].id
 
         # Add the category to the database
         await pug_category.add_to_db(interaction.guild.id)
@@ -102,17 +91,13 @@ class PugSetupCog(commands.Cog):
         setup_embed.description = "Pug category setup complete! You can now use team generation and move commands in these channels."
         setup_embed.add_field(
             name="Channels",
-            value=f"Add Up: <#{pug_category.add_up}>\nRED: <#{pug_category.red_team}>\nBLU: <#{pug_category.blu_team}>",
-        )
-        setup_embed.add_field(
-            name="First To",
-            value=f"Enabled: {pug_category.first_to['enabled']}\nMode: {pug_category.first_to['num']}\nChannel: <#{pug_category.next_pug}>",
+            value=f"Add Up: <#{pug_category.add_up}>\nRED: <#{pug_category.red_team}>\nBLU: <#{pug_category.blu_team}>\nIn Next Pug: <#{pug_category.next_pug}>",
         )
 
         await interaction.edit_original_message(embed=setup_embed, view=None)
         await interaction.delete_original_message(delay=20)
 
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     @category.subcommand(
         name="remove", description="Remove a pug category from the server."

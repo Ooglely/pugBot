@@ -1,242 +1,144 @@
-"""Holds views for the registration commands."""
-import nextcord
+"""Contains classes for registration of new users."""
+import asyncio
+from dataclasses import dataclass, field
+import json
 
-from database import get_server, set_registration_settings
+from database import BotCollection
+
+guild_config_db: BotCollection = BotCollection("guilds", "config")
+
+
+@dataclass
+class DivisionRoles:
+    """Stores role IDs for each RGL division."""
+
+    noexp: int | None = None
+    newcomer: int | None = None
+    amateur: int | None = None
+    intermediate: int | None = None
+    main: int | None = None
+    advanced: int | None = None
+    invite: int | None = None
+
+    def __str__(self) -> str:
+        return f"No Experience: <@&{self.noexp}>\nNewcomer: <@&{self.newcomer}>\nAmateur: <@&{self.amateur}>\nIntermediate: <@&{self.intermediate}>\nMain: <@&{self.main}>\nAdvanced: <@&{self.advanced}>\nInvite: <@&{self.invite}>"
+
+    def get_div_list(self) -> list[int | None]:
+        """
+        Get a list of all the division roles.
+        Advanced is doubled because it also acts as the Challenger role.
+        """
+        return [
+            self.noexp,
+            self.newcomer,
+            self.amateur,
+            self.intermediate,
+            self.main,
+            self.advanced,
+            self.advanced,
+            self.invite,
+        ]
+
+
+@dataclass
+class RegistrationRoles:
+    """Stores the role IDs for registration roles."""
+
+    sixes: DivisionRoles = field(default_factory=DivisionRoles)
+    highlander: DivisionRoles = field(default_factory=DivisionRoles)
+    bypass: int | None = None
+    ban: int | None = None
+    registered: int | None = None
+
+
+@dataclass
+class RegistrationChannels:
+    """Stores the channel IDs for registration channels."""
+
+    registration: int | None = None
+    logs: int | None = None
+
+    def __str__(self) -> str:
+        return f"Registration: <#{self.registration}>\nLogs: <#{self.logs}>"
 
 
 class RegistrationSettings:
-    """A base class for registration settings for a server."""
+    """Stores the registration settings for a guild."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        self.guild_id: int = 0
         self.enabled: bool = False
         self.ban: bool = False
         self.bypass: bool = False
-        self.gamemode: str = ""
-        self.mode: str = ""
-        self.roles: dict[str, int | None] = {
-            "registered": None,
-            "noexp": None,
-            "newcomer": None,
-            "amateur": None,
-            "intermediate": None,
-            "main": None,
-            "advanced": None,
-            "invite": None,
-            "bypass": None,
-            "ban": None,
-        }
-        self.channels: dict[str, int | None] = {"registration": None, "logs": None}
+        self.gamemode: str = "None"
+        self.mode: str = "None"
+        self.roles: RegistrationRoles = RegistrationRoles()
+        self.channels: RegistrationChannels = RegistrationChannels()
 
-    def import_from_db(self, guild: int):
-        """Imports the registration settings for the server from the database.
+    def to_dict(self):
+        """Convert the settings to a dictionary.
 
-        Args:
-            guild (int): The guild ID to get.
+        Returns
+        -------
+        dict
+            The object as a dictionary
         """
-        server = get_server(guild)
-        if "registration" in server:
-            print(server["registration"])
-            self.enabled = server["registration"]["enabled"]
-            self.ban = server["registration"]["ban"]
-            self.bypass = server["registration"]["bypass"]
-            self.gamemode = server["registration"]["gamemode"]
-            self.mode = server["registration"]["mode"]
-            self.roles = server["registration"]["roles"]
-            self.channels = server["registration"]["channels"]
+        return json.loads(json.dumps(self, default=lambda o: o.__dict__))
 
-    def export_to_db(self, guild: int):
-        """Exports the registration settings for the server to the database.
+    async def load_data(self, guild_id: int) -> None:
+        """Load the registration settings from the database."""
+        try:
+            config: dict = await guild_config_db.find_item({"guild": guild_id})
+        except LookupError:
+            return
 
-        Args:
-            guild (int): The guild ID to set.
-        """
-        set_registration_settings(guild, self.__dict__)
+        self.guild_id = guild_id
 
+        if "registration" in config:
+            reg_settings: dict = config["registration"]
+            for key, value in reg_settings.items():
+                if key == "roles":
+                    # First need to check if its using the old role storage or not
+                    if (
+                        "sixes" in reg_settings["roles"]
+                        and "highlander" in reg_settings["roles"]
+                    ):
+                        # New role storage
+                        self.roles.sixes = DivisionRoles(
+                            **reg_settings["roles"]["sixes"]
+                        )
+                        self.roles.highlander = DivisionRoles(
+                            **reg_settings["roles"]["highlander"]
+                        )
+                    else:
+                        # Old role storage
+                        division_roles = DivisionRoles(
+                            reg_settings["roles"]["noexp"],
+                            reg_settings["roles"]["newcomer"],
+                            reg_settings["roles"]["amateur"],
+                            reg_settings["roles"]["intermediate"],
+                            reg_settings["roles"]["main"],
+                            reg_settings["roles"]["advanced"],
+                            reg_settings["roles"]["invite"],
+                        )
+                        setattr(self.roles, reg_settings["gamemode"], division_roles)
+                    # Then add the rest of the roles
+                    self.roles.registered = reg_settings["roles"]["registered"]
+                    self.roles.ban = reg_settings["roles"]["ban"]
+                    self.roles.bypass = reg_settings["roles"]["bypass"]
+                elif key == "channels":
+                    self.channels = RegistrationChannels(**value)
+                else:
+                    setattr(self, key, value)
 
-class SetupIntroduction(nextcord.ui.View):
-    """View to introduce the registration setup process."""
-
-    def __init__(self):
-        super().__init__()
-        self.action = None
-
-    @nextcord.ui.button(label="Setup & Enable", style=nextcord.ButtonStyle.green)
-    async def enable(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Enables registration."""
-        self.action = "enable"
-        self.stop()
-
-    @nextcord.ui.button(label="Disable", style=nextcord.ButtonStyle.red)
-    async def disable(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Disables registration."""
-        self.action = "disable"
-        self.stop()
-
-    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.grey)
-    async def cancel(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Cancels setup"""
-        self.action = "cancel"
-        self.stop()
-
-
-class RegistrationRoles(nextcord.ui.View):
-    """Set division roles in the registration process."""
-
-    def __init__(self, divisions, roles):
-        super().__init__()
-        for division in divisions:
-            self.add_item(DivisionRoleSelect(division))
-        self.action = None
-        self.roles = roles
-
-    @nextcord.ui.button(label="Continue", style=nextcord.ButtonStyle.green)
-    async def finish(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Continues setup"""
-        self.action = "continue"
-        self.stop()
-
-    @nextcord.ui.button(label="Cancel", style=nextcord.ButtonStyle.red)
-    async def cancel(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Cancels setup"""
-        self.action = "cancel"
-        self.stop()
-
-
-class DivisionRoleSelect(nextcord.ui.RoleSelect):
-    """A role select for division roles."""
-
-    def __init__(self, division: str):
-        if division == "noexp":
-            super().__init__(placeholder="No Experience", max_values=1)
-        else:
-            super().__init__(placeholder=f"{division.capitalize()} role", max_values=1)
-        self.division = division
-
-    async def callback(self, _interaction: nextcord.Interaction):
-        """Sets the role in the view to the selected role."""
-        super().view.roles[self.division] = self.values[0].id
-
-
-class GamemodeSelect(nextcord.ui.View):
-    """A view to select the gamemode for registration. This chooses the gamemode divisions to look at."""
-
-    def __init__(self):
-        super().__init__()
-        self.selection: str = ""
-
-    @nextcord.ui.button(label="6s", style=nextcord.ButtonStyle.grey)
-    async def sixes(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Selects 6s as the gamemode"""
-        self.selection = "sixes"
-        self.stop()
-
-    @nextcord.ui.button(label="Highlander", style=nextcord.ButtonStyle.grey)
-    async def highlander(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Selects HL as the gamemode"""
-        self.selection = "highlander"
-        self.stop()
-
-
-class ModeSelect(nextcord.ui.View):
-    """A view to select the mode for registration."""
-
-    def __init__(self):
-        super().__init__()
-        self.selection: str = ""
-
-    @nextcord.ui.button(label="Highest", style=nextcord.ButtonStyle.grey)
-    async def highest(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Selects highest as the mode"""
-        self.selection = "highest"
-        self.stop()
-
-    @nextcord.ui.button(label="Current", style=nextcord.ButtonStyle.grey)
-    async def current(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Selects current as the mode"""
-        self.selection = "current"
-        self.stop()
-
-
-class TrueFalseSelect(nextcord.ui.View):
-    """A view to select the ban for registration."""
-
-    def __init__(self):
-        super().__init__()
-        self.selection: bool = False
-
-    @nextcord.ui.button(label="yes", style=nextcord.ButtonStyle.green)
-    async def yes_ban(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Goes to the ban role selection menu"""
-        self.selection = True
-        await _interaction.response.edit_message(view=None)
-        self.stop()
-
-    @nextcord.ui.button(label="no", style=nextcord.ButtonStyle.red)
-    async def no_ban(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Cancels ban role setup"""
-        self.selection = False
-        await _interaction.response.edit_message(view=None)
-        self.stop()
-
-
-class ChannelSelect(nextcord.ui.View):
-    """View to select registration/logs channels."""
-
-    def __init__(self):
-        super().__init__()
-        self.registration = None
-        self.logs = None
-
-    @nextcord.ui.channel_select(
-        custom_id="registration", placeholder="Select a registration channel"
-    )
-    async def registration(
-        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
-    ):
-        """Select a channel to send new registrations to.
-
-        Args:
-            channel (nextcord.ui.ChannelSelect): The selected channel.
-            interaction (nextcord.Interaction): The interaction to respond to.
-        """
-        await interaction.response.defer()
-        self.registration = channel.values[0].id
-        if self.logs is not None:
-            self.stop()
-
-    @nextcord.ui.channel_select(placeholder="Select a logs channel")
-    async def logs(
-        self, channel: nextcord.ui.ChannelSelect, interaction: nextcord.Interaction
-    ):
-        """Select a channel to send bot logs to.
-
-        Args:
-            channel (nextcord.ui.ChannelSelect): The selected channel.
-            interaction (nextcord.Interaction): The interaction to respond to.
-        """
-        await interaction.response.defer()
-        self.logs = channel.values[0].id
-        if self.registration is not None:
-            self.stop()
+    async def upload_data(self, guild_id: int) -> None:
+        """Upload the registration settings to the database."""
+        try:
+            await guild_config_db.find_item({"guild": guild_id})
+            await guild_config_db.update_item(
+                {"guild": guild_id}, {"$set": {"registration": self.to_dict()}}
+            )
+        except LookupError:
+            await guild_config_db.add_item(
+                {"guild": guild_id, "registration": self.to_dict()}
+            )
