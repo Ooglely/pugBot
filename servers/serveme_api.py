@@ -1,4 +1,5 @@
 """Class used to interact with the serveme.tf API."""
+
 import json
 import re
 from datetime import datetime, timedelta
