@@ -4,16 +4,20 @@
 
 
 
-A discord bot for easily running Team Fortress 2 pick-up-games. Currently has 1300 unique players registered in it's database, with over 900 unique logged games played.
+A discord bot for easily running Team Fortress 2 pick-up-games. Currently has >2500 unique players registered in it's database, with over 6000 unique logged games played.
 
-Invite the bot to your own server [here.](https://discord.com/api/oauth2/authorize?client_id=989250144895655966&permissions=2147773440&scope=bot)
+Invite the bot to your own server [here.](https://pugbot.tf/invite)
+
+Join the support server for help setting up the bot and registration issues [here.](https://discord.gg/qcQBD3CAAw)
+
+Used in servers like [TF2 Coaching Central](https://discord.gg/tf2-coaching-central-tf2cc-727627956058325052) and [passtime.tf](https://passtime.tf/)
 
 ## Features ##
 - Integrates with the [na.serveme.tf](https://na.serveme.tf/) API to easily reserve a server with a single command
 - Map and config changing automatically with one command
 - Allow multiple people to control one na.serveme.tf reservation
 - Connects to a MongoDB database to store player and server data and stats
-- Keeps track of first 18 players added up for a game
+- Create balanced teams for games using RGL league experiences, the built in ELO system, and more
 - Integrates with the [pugBot](https://pugbot.tf/) website to link players discord and steam accounts
   - Allows for automatic skill/division detection
   - Allows for stat collection for each player
