@@ -1,4 +1,5 @@
 """Class used to interact with the serveme.tf API."""
+
 import json
 import re
 from datetime import datetime, timedelta
@@ -10,6 +11,13 @@ from bs4 import BeautifulSoup, Tag
 with open("maps.json", encoding="UTF-8") as json_file:
     maps_dict: dict = json.load(json_file)
     COMP_MAPS = maps_dict["sixes"] | maps_dict["hl"]
+
+
+def update_comp_maps(map_dict: dict) -> None:
+    """Update the list of comp maps for the map searcher"""
+    global COMP_MAPS
+    COMP_MAPS = map_dict["sixes"] | map_dict["hl"]
+    print(COMP_MAPS)
 
 
 class ServemeAPI:
