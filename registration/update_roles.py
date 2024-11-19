@@ -1,4 +1,5 @@
 """Contains the cog to update users roles over time."""
+
 import datetime
 import traceback
 
@@ -273,7 +274,12 @@ async def update_guild_player(
         and loaded["roles"]["registered"] not in member.roles
     ):
         # Player is registered but doesn't have the registered role
-        await member.add_roles(loaded["roles"]["registered"])
+        try:
+            await member.add_roles(loaded["roles"]["registered"])
+        except nextcord.DiscordException:
+            print(
+                f"Error adding registered role to {member.name} in guild {str(member.guild.id)}"
+            )
 
 
 async def check_player_data(player: dict, guilds: dict[str, dict | None]) -> bool:
