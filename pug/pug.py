@@ -1,6 +1,8 @@
 """Commands for generating teams in pugs."""
+
 from itertools import combinations
 import random
+import time
 from typing import Optional, Dict, List
 
 import nextcord
@@ -793,7 +795,7 @@ class PugRunningCog(commands.Cog):
             )
         except LookupError:
             last_players = []
-            timestamp = 0
+            timestamp = round(time.time()) - 7200
         print(last_players)
         for player in last_players:
             if player.discord not in [
