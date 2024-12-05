@@ -144,11 +144,11 @@ class RglApi:
         for season in all_teams:
             if season["leftAt"] is None:
                 pass
-            else:  # Check if the team lasted at least 30 days
+            else:  # Check if the team lasted at least 14 days
                 team_start = datetime.fromisoformat(season["startedAt"])
                 team_end = datetime.fromisoformat(season["leftAt"])
                 team_length = team_end - team_start
-                if team_length < timedelta(days=30):
+                if team_length < timedelta(days=14):
                     continue
             if (
                 season["formatId"] == 3 and season["regionId"] == 40

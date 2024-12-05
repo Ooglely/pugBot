@@ -1,4 +1,5 @@
 """Constants for the bot."""
+
 import json
 import os
 
@@ -28,3 +29,4 @@ BOT_COLOR = 0xF0984D
 
 GITHUB_API_KEY = os.getenv("GITHUB_API_KEY") or None
 RAILWAY_API_KEY = os.getenv("RAILWAY_API_KEY") or None
+SERVEME_API_KEY = os.getenv("serveme_key") or None
