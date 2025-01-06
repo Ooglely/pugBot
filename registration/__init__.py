@@ -1,4 +1,5 @@
 """Holds views for the registration commands."""
+
 import nextcord
 
 from database import get_server, set_registration_settings
