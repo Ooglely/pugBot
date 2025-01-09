@@ -268,7 +268,7 @@ class WebserverCog(nextcord.ext.commands.Cog):
         """Starts the uvicorn webserver with the correct config."""
         config = uvicorn.Config(
             "registration.webserver:app",
-            host="0.0.0.0",
+            host="::",
             port=PORT,
             log_level="info",
         )
