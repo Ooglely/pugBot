@@ -89,14 +89,14 @@ def is_server_setup(guild: int):
     return True
 
 
-def add_new_guild(guild: int, role: int, connect: int, rcon: int):
+def add_new_guild(guild: int, role: int, connect: int | None, rcon: int | None):
     """Add a new guild to the database.
 
     Args:
         guild (int): The guild ID to add.
         role (int): The runner role ID.
-        connect (int): The connect channel ID.
-        rcon (int): The rcon channel ID.
+        connect (int | None): The connect channel ID.
+        rcon (int | None): The rcon channel ID.
     """
     database = client.guilds.config
     database.update_one(
@@ -255,7 +255,7 @@ def get_steam_from_discord(discord: int):
     return database.find_one({"discord": str(discord)})["steam"]
 
 
-def get_player_from_steam(steam: int):
+def get_player_from_steam(steam: int) -> dict:
     """Get the player from the database.
 
     Args:
@@ -265,9 +265,10 @@ def get_player_from_steam(steam: int):
         dict: Player data
     """
     database = client.players.data
-    if database.find_one({"steam": str(steam)}) is None:
+    player_data = database.find_one({"steam": str(steam)})
+    if player_data is None:
         raise LookupError
-    return database.find_one({"steam": str(steam)})
+    return player_data
 
 
 def get_player_from_discord(discord: int):

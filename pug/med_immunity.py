@@ -15,9 +15,11 @@ from database import (
     clear_med_immunity_by_guild,
     clear_med_immunity_all_guilds,
 )
-from pug import CategorySelect, CategoryButton, PugCategory, BooleanView, PugPlayer
+from menus import BotMenu
+from menus.templates import send_boolean_menu
+from pug import CategorySelect, CategoryButton, PugCategory, PugPlayer
 from pug.pug import get_player_dict
-from util import is_setup, is_runner
+from util import is_runner, guild_config_check
 
 category_db = BotCollection("guilds", "categories")
 
@@ -43,7 +45,7 @@ class PugMedicCog(commands.Cog):
         name="roll",
         description="Randomly selects a nonimmune player to play medic.",
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def roll_medic(
         self,
@@ -61,6 +63,10 @@ class PugMedicCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction to respond to.
             team_size (int, optional): The size of the teams. Defaults to 6.
         """
+        if interaction.guild is None or not isinstance(
+            interaction.guild, nextcord.Guild
+        ):
+            return
         await interaction.response.defer()
 
         # Get a list of pug categories
@@ -171,13 +177,16 @@ class PugMedicCog(commands.Cog):
         if not immune_chosen:
             med_embed.description += "\n\nGive player medic roll immunity?"
 
-            boolean_view = BooleanView()
-
-            await interaction.edit_original_message(embed=med_embed, view=boolean_view)
-            status = await boolean_view.wait()
+            menu: BotMenu = BotMenu(interaction.user.id, med_embed)
+            try:
+                result = await send_boolean_menu(menu, interaction)
+            except TimeoutError:
+                med_embed.description = (
+                    f"<@{medic.discord}> not given med roll immunity."
+                )
 
             med_embed.clear_fields()
-            if status or not boolean_view.action:
+            if not result:
                 med_embed.description = (
                     f"<@{medic.discord}> not given med roll immunity."
                 )
@@ -193,7 +202,7 @@ class PugMedicCog(commands.Cog):
     @medic.subcommand(  # pylint: disable=no-member
         name="immune", description="Manually set a player as immune to medic roll."
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def set_med_immune(
         self,
@@ -230,7 +239,7 @@ class PugMedicCog(commands.Cog):
         name="unimmune",
         description="Manually remove a player from being immune to medic roll.",
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def remove_med_immune(
         self,
@@ -269,7 +278,7 @@ class PugMedicCog(commands.Cog):
         name="unimmune_all",
         description="Manually remove all players from being immune to medic roll.",
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def remove_all_med_immune(self, interaction: nextcord.Interaction):
         """Manually remove all players from being immune to medic roll.
@@ -285,11 +294,13 @@ class PugMedicCog(commands.Cog):
             color=BOT_COLOR,
             description="Are you certain you want to clear medic roll immunity from all players?",
         )
-        boolean_view = BooleanView()
-        await interaction.send(embed=med_embed, view=boolean_view)
-        view_status = await boolean_view.wait()
+        menu: BotMenu = BotMenu(interaction.user.id, med_embed)
+        try:
+            result: bool = await send_boolean_menu(menu, interaction)
+        except TimeoutError:
+            result = False
 
-        if view_status or not boolean_view.action:
+        if not result:
             med_embed.description = "Did not remove medic roll immunity."
         else:
             med_embed.description = "Removed medic roll immunity from all players."
@@ -300,7 +311,7 @@ class PugMedicCog(commands.Cog):
         name="view",
         description="View all current medic roll immune players.",
     )
-    @is_setup()
+    @guild_config_check()
     @is_runner()
     async def view_all_med_immune(self, interaction: nextcord.Interaction):
         """View all current medic roll immune players.

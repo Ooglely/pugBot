@@ -4,9 +4,11 @@
 
 
 
-A discord bot for easily running Team Fortress 2 pick-up-games. Currently has >2500 unique players registered in it's database, with over 6000 unique logged games played.
+A discord bot for easily running Team Fortress 2 pick-up-games. Currently has >3000 unique players registered in it's database, with over 8000 unique logged games played.
 
 Invite the bot to your own server [here.](https://pugbot.tf/invite)
+
+[Looking for the pugBot.tf source code?](https://github.com/Ooglely/pugBot.tf)
 
 Join the support server for help setting up the bot and registration issues [here.](https://discord.gg/qcQBD3CAAw)
 

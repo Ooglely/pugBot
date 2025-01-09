@@ -7,9 +7,10 @@ from nextcord.ext import commands, tasks
 
 from constants import BOT_COLOR
 from database import BotCollection
-from pug import BooleanView, FirstToSelect, ChannelSelect
 from pug.pug import PugRunningCog
-from registration import SetupIntroduction
+from menus import BotMenu
+from menus.callbacks import action_callback, value_callback
+from menus.templates import send_channel_prompt
 from util import is_runner
 
 guild_configs: BotCollection = BotCollection("guilds", "config")
@@ -33,6 +34,10 @@ def manual_check():
     """A decorator to check if the server has manual pugs enabled and setup."""
 
     async def predicate(interaction: nextcord.Interaction):
+        if interaction.guild is None or not isinstance(
+            interaction.guild, nextcord.Guild
+        ):
+            return
         try:
             guild_settings = await guild_configs.find_item(
                 {"guild": interaction.guild.id}
@@ -63,8 +68,8 @@ def manual_check():
 class ManualPugCog(commands.Cog):
     """Cog storing commands to manually add up to pugs."""
 
-    def __init__(self, bot: nextcord.Client):
-        self.bot = bot
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
         self.status_check.start()  # pylint: disable=no-member
         self.update_channel_status.start()  # pylint: disable=no-member
 
@@ -212,45 +217,87 @@ class ManualPugCog(commands.Cog):
                 "players": [],
             }
 
-        setup_embed.add_field(
+        menu: BotMenu = BotMenu(embed=setup_embed, user_id=interaction.user.id)
+        if menu.embed is None:
+            return
+        menu.embed.add_field(
             name="Current Settings",
             value=f"Enabled: {settings['enabled']}\nChannel: <#{settings['channel']}>\nPlayers: {settings['num_players']}",
         )
-        intro_view = SetupIntroduction()
-        await interaction.send(embed=setup_embed, view=intro_view)
-        await intro_view.wait()
-        if intro_view.action == "cancel":
+        menu.add_button(
+            "Enable and Setup",
+            await action_callback("enable", interaction.user.id),
+            nextcord.ButtonStyle.green,
+        )
+        menu.add_button(
+            "Disable",
+            await action_callback("disable", interaction.user.id),
+            nextcord.ButtonStyle.red,
+        )
+        menu.add_button(
+            "Cancel",
+            await action_callback("cancel", interaction.user.id),
+            nextcord.ButtonStyle.gray,
+        )
+        await menu.send(interaction)
+        if not await menu.wait_for_action(self.bot) or menu.action == "cancel":
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
-        if intro_view.action == "disable":
+        if menu.action == "disable":
             settings["enabled"] = False
             await update_guild_settings(interaction.guild.id, "manual", settings)
             return
         settings["enabled"] = True
-        setup_embed.clear_fields()
+        menu.embed.clear_fields()
 
-        setup_embed.description = "Please select the channel you would like to have the pug's add up status displayed in and players to be pinged in."
-        topic_channel_view = ChannelSelect()
-        await interaction.edit_original_message(
-            embed=setup_embed, view=topic_channel_view
-        )
-        await topic_channel_view.wait()
-        if topic_channel_view.action == "cancel":
+        menu.embed.description = "Please select the channel you would like to have the pug's add up status displayed in and players to be pinged in."
+        menu.clear_items()
+        await menu.add_continue_buttons()
+        try:
+            channels: list[nextcord.TextChannel] = await send_channel_prompt(
+                menu, interaction, ["Status Channel"], True, [nextcord.ChannelType.text]
+            )
+        except TimeoutError:
             await interaction.edit_original_message(view=None)
             await interaction.delete_original_message(delay=1)
             return
-        settings["channel"] = topic_channel_view.channel_id
+        except ValueError:
+            await interaction.edit_original_message(
+                content="No channel selected. Please try again."
+            )
+            await interaction.delete_original_message(delay=10)
+            return
+        settings["channel"] = channels[0].id
 
-        player_count_view = FirstToSelect()
-        setup_embed.description = (
-            "Please select the number of players you would like to add up to the pug."
+        menu.embed.description = "Please select the number of players / team size that you would like for the queue."
+        menu.clear_items()
+        menu.add_button(
+            "Ultiduo (4)", await value_callback("num", 4, interaction.user.id)
         )
-        await interaction.edit_original_message(
-            embed=setup_embed, view=player_count_view
+        menu.add_button(
+            "Ultitrio (6)", await value_callback("num", 6, interaction.user.id)
         )
-        await player_count_view.wait()
-        settings["num_players"] = player_count_view.num
+        menu.add_button(
+            "Passtime (8)", await value_callback("num", 8, interaction.user.id)
+        )
+        menu.add_button("6s (12)", await value_callback("num", 12, interaction.user.id))
+        menu.add_button(
+            "Highlander (18)", await value_callback("num", 18, interaction.user.id)
+        )
+        await menu.edit(interaction)
+        if not await menu.wait_for_action(self.bot):
+            await interaction.edit_original_message(view=None)
+            await interaction.delete_original_message(delay=1)
+            return
+        try:
+            settings["num_players"] = menu.values["num"]
+        except KeyError:
+            await interaction.edit_original_message(
+                content="No number selected. Please try again.", view=None
+            )
+            await interaction.delete_original_message(delay=10)
+            return
 
         setup_embed.description = f"Manual pugs have been setup.\nEnabled: {settings['enabled']}\nChannel: <#{settings['channel']}>\nPlayers: {settings['num_players']}"
         setup_embed.add_field(
@@ -338,10 +385,15 @@ class ManualPugCog(commands.Cog):
             player[0] for player in guild_settings["manual"]["players"]
         ]:
             # Update the time for the player
-            print("Updating time")
+            old_time: int = -1
             for player in guild_settings["manual"]["players"]:
                 if player[0] == interaction.user.id:
-                    old_time: int = player[1]
+                    old_time = player[1]
+            if old_time == -1:
+                await interaction.send(
+                    "Unable to find player even though first check was passed. Please report this to the pugBot support server."
+                )
+                return
             # Pull any instances of the player
             await guild_configs.update_item(
                 {"guild": interaction.guild.id},
@@ -405,9 +457,15 @@ class ManualPugCog(commands.Cog):
         if interaction.user.id not in player_ids:
             await interaction.send("You are not in the pug queue.")
             return
+        old_time: int = -1
         for player in guild_settings["manual"]["players"]:
             if player[0] == interaction.user.id:
-                old_time: int = player[1]
+                old_time = player[1]
+        if old_time == -1:
+            await interaction.send(
+                "Unable to find player even though first check was passed. Please report this to the pugBot support server."
+            )
+            return
         await guild_configs.update_item(
             {"guild": interaction.guild.id},
             {"$pull": {"manual.players": [interaction.user.id, old_time]}},
@@ -503,12 +561,16 @@ class ManualPugCog(commands.Cog):
         """
         guild_settings = await guild_configs.find_item({"guild": interaction.guild.id})
         if player is None:
-            boolean_view = BooleanView()
+            menu: BotMenu = BotMenu(interaction.user.id)
+            menu.add_button("Yes", await action_callback("clear", interaction.user.id))
+            menu.add_button("No", await action_callback("cancel", interaction.user.id))
             await interaction.send(
-                "Are you sure you want to clear the pug queue?", view=boolean_view
+                "Are you sure you want to clear the pug queue?", view=menu
             )
-            await boolean_view.wait()
-            if boolean_view.action:
+            if not await menu.wait_for_action(self.bot):
+                await interaction.delete_original_message(delay=1)
+                return
+            if menu.action == "clear":
                 await guild_configs.update_item(
                     {"guild": interaction.guild.id}, {"$set": {"manual.players": []}}
                 )
@@ -526,9 +588,15 @@ class ManualPugCog(commands.Cog):
             if player.id not in player_ids:
                 await interaction.send("The user is not in the pug queue.")
                 return
+            old_time: int = -1
             for added_player in guild_settings["manual"]["players"]:
                 if added_player[0] == player.id:
-                    old_time: int = added_player[1]
+                    old_time = added_player[1]
+            if old_time == -1:
+                await interaction.send(
+                    "Unable to find player even though first check was passed. Please report this to the pugBot support server."
+                )
+                return
             await guild_configs.update_item(
                 {"guild": interaction.guild.id},
                 {"$pull": {"manual.players": [player.id, old_time]}},
