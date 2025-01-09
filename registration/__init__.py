@@ -123,7 +123,10 @@ class RegistrationSettings:
                         )
                         setattr(self.roles, reg_settings["gamemode"], division_roles)
                     # Then add the rest of the roles
-                    self.roles.registered = reg_settings["roles"]["registered"]
+                    try:
+                        self.roles.registered = reg_settings["roles"]["registered"]
+                    except KeyError:
+                        pass
                     self.roles.ban = reg_settings["roles"]["ban"]
                     self.roles.bypass = reg_settings["roles"]["bypass"]
                 elif key == "channels":
