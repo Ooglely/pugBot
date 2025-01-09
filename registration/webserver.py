@@ -69,7 +69,7 @@ class Webserver:
                 if result:
                     response.status_code = status.HTTP_409_CONFLICT
                     return {"error": f"Unable to register user: {result}"}
-                  
+
                 return {"message": "Success"}
             response.status_code = status.HTTP_401_UNAUTHORIZED
             return {"error": "Wrong API password. Contact pugBot devs."}
