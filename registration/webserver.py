@@ -41,7 +41,10 @@ class Webserver:
         self.cog: RegistrationCog = cog
         self.router: APIRouter = APIRouter()
         self.router.add_api_route(
-            "/api/register", self.register, status_code=status.HTTP_201_CREATED
+            "/api/register",
+            self.register,
+            status_code=status.HTTP_201_CREATED,
+            methods=["POST"],
         )
         self.router.add_api_route("/api/stats", self.get_bot_stats)
         self.app.include_router(self.router)
