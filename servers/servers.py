@@ -1,4 +1,5 @@
 """Files containing the server cog with commands for reserving/managing servers."""
+
 import asyncio
 import json
 import re
@@ -19,7 +20,7 @@ from rcon.source import rcon
 import database
 import util
 from constants import VERSION
-from servers.serveme_api import ServemeAPI  # disable=attr-defined
+from servers.serveme_api import ServemeAPI, update_comp_maps  # disable=attr-defined
 from servers import Reservation, Servers, ServerButton, MapSelection
 
 
@@ -63,7 +64,7 @@ class ServerCog(commands.Cog):
                 hl_list = sixes_list.find_next_sibling("ul")
 
                 for tf_map in sixes_list.find_all("li"):
-                    SIXES_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
+                    SIXES_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text.strip()
 
                 for tf_map in hl_list.find_all("li"):
                     if "/" in tf_map.text:
@@ -71,12 +72,12 @@ class ServerCog(commands.Cog):
                         for map_version in versions:
                             HL_MAPS[map_version.strip()] = map_version.strip()
                         continue
-                    HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text
+                    HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text.strip()
 
         print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
 
         map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
-
+        update_comp_maps(map_dict)
         map_json = json.dumps(map_dict)
 
         with open("maps.json", "w", encoding="UTF-8") as outfile:

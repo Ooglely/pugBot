@@ -161,7 +161,7 @@ class LogSearcher:
                             # Check if at least half the players are in the log
                             player_count = 0
                             for player_id in log_data["players"]:
-                                if get_steam64(player_id) in steam_ids:
+                                if str(get_steam64(player_id)) in steam_ids:
                                     player_count += 1
                             if player_count < (len(steam_ids) / 2):
                                 continue

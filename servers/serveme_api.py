@@ -1,15 +1,24 @@
 """Class used to interact with the serveme.tf API."""
+
 import json
 import re
 from datetime import datetime, timedelta
-from typing import Dict, no_type_check, List
+from typing import no_type_check, Dict
 
 import aiohttp
-from bs4 import BeautifulSoup, Tag
+
+from constants import SERVEME_API_KEY
 
 with open("maps.json", encoding="UTF-8") as json_file:
     maps_dict: dict = json.load(json_file)
     COMP_MAPS = maps_dict["sixes"] | maps_dict["hl"]
+
+
+def update_comp_maps(map_dict: dict) -> None:
+    """Update the list of comp maps for the map searcher"""
+    global COMP_MAPS
+    COMP_MAPS = map_dict["sixes"] | map_dict["hl"]
+    print(COMP_MAPS)
 
 
 class ServemeAPI:
@@ -97,8 +106,8 @@ class ServemeAPI:
             async with session.get(
                 self.base_url + "new?api_key=" + serveme_key
             ) as times:
-                times_json = await times.json()
                 times_text = await times.text()
+                times_json = await times.json()
                 return times_json, times_text
 
     async def get_current_reservations(self, serveme_key: str):
@@ -134,20 +143,14 @@ class ServemeAPI:
         Returns:
             list: A list of all maps.
         """
-        all_maps: list[str] = []
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://na.serveme.tf/maps") as resp:
-                html = await resp.text()
-                soup: BeautifulSoup = BeautifulSoup(html, "html.parser")
-                table: Tag = soup.find("table")
-                maps: List[Tag] = table.find_all("tr")
-                maps.pop(0)  # Remove the first title row
-
-                row: Tag
-                for row in maps:
-                    map_name = row.find("td").text
-                    all_maps.append(map_name.strip())
-        return all_maps
+            async with session.get(
+                f"https://na.serveme.tf/api/maps?api_key={SERVEME_API_KEY}"
+            ) as resp:
+                data = await resp.json()
+                if data is None:
+                    return []
+                return list(data["maps"])
 
     @staticmethod
     @no_type_check  # LOLLLLL
@@ -218,7 +221,6 @@ if __name__ == "__main__":
 
     map_list = asyncio.run(ServemeAPI.fetch_all_maps())
     print(map_list)
-
     print(asyncio.run(ServemeAPI.check_whitelist_status()))
     print(
         f"Result: {asyncio.run(ServemeAPI.fetch_newest_version('pass_arena', map_list))}"
