@@ -259,7 +259,7 @@ class RegistrationCog(Cog):
         """Starts the uvicorn webserver with the correct config."""
         config = uvicorn.Config(
             asgi,
-            host="0.0.0.0",
+            host="",
             port=PORT,
             log_level="info",
         )
