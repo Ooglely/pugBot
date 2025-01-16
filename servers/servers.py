@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import re
 import string
 import random
@@ -74,7 +75,7 @@ class ServerCog(commands.Cog):
                         continue
                     HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text.strip()
 
-        print("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
+        logging.info("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
 
         map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
         update_comp_maps(map_dict)
@@ -87,7 +88,7 @@ class ServerCog(commands.Cog):
         self.all_maps = await ServemeAPI.fetch_all_maps()
 
         await self.bot.sync_all_application_commands(update_known=True)
-        print("All app commands synced")
+        logging.info("Map pool update complete.")
 
     @commands.Cog.listener("on_application_command_error")
     async def handle_errors(self, interaction: nextcord.Interaction, error: Exception):

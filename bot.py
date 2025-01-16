@@ -1,5 +1,6 @@
 """Main file for running and starting the bot, with general global commands."""
 
+import asyncio
 import datetime
 import logging
 import random
@@ -70,12 +71,15 @@ async def on_ready() -> None:
     registration_cog: RegistrationCog = RegistrationCog(bot)
     bot.add_cog(registration_cog)
     webserver: Webserver = Webserver(registration_cog)
-    await registration_cog.start_server(webserver.app)
+    asyncio.ensure_future(registration_cog.start_server(webserver.app))
+    logging.info("Syncing commands...")
     await bot.sync_all_application_commands()
+    logging.info("Starting bot loops...")
     update_status.start()
     log_searcher: LogSearcher = LogSearcher(bot)
     log_searcher.searcher.start()  # pylint: disable=no-member
     log_searcher.queue.start()  # pylint: disable=no-member
+    logging.info("Bot is ready.")
 
 
 @bot.slash_command(
