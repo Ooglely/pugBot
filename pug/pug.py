@@ -14,11 +14,12 @@ from logs import Player
 from logs.searcher import LogSearcher
 from logs.elo import get_elo, Elo
 from logs.elo_cog import EloSettings
+from menus import BotMenu
+from menus.callbacks import action_callback
 from menus.templates import TeamGenMenu
 from pug import (
     CategorySelect,
     CategoryButton,
-    MoveView,
     PugPlayer,
     PugCategory,
     Teams,
@@ -725,54 +726,56 @@ class PugRunningCog(commands.Cog):
                 interaction.guild.id, chosen_category, game_players, timestamp
             )
 
-        move_view = MoveView()
         pug_embed.title = "Players moved!"
         pug_embed.description = moving_string
-        await interaction.edit_original_message(embed=pug_embed, view=move_view)
-        status = await move_view.wait()
-        if status:
-            await interaction.delete_original_message(delay=5)
+        move_menu = BotMenu(interaction.user.id, pug_embed)
+        move_menu.add_button(
+            "Move Back", await action_callback("move", interaction.user.id)
+        )
+        move_menu.add_button(
+            "Done",
+            await action_callback("cancel", interaction.user.id),
+            nextcord.ButtonStyle.green,
+        )
+        await move_menu.edit(interaction)
+        menu_status = await move_menu.wait_for_action(self.bot)
+        if not menu_status or move_menu.action == "cancel":
+            await interaction.delete_original_message()
             return
+        # Move players back
+        move_menu.clear_items()
+        moving_string = f"Moving players from <#{next_pug.id}> to <#{add_up.id}>..."
+        pug_embed.title = "Moving players back..."
+        pug_embed.description = moving_string
+        await move_menu.edit(interaction)
+        for member in waiting_players:
+            try:
+                await member.move_to(add_up)
+            except nextcord.HTTPException:
+                continue
+        moving_string += (
+            f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{red_team.id}>..."
+        )
+        pug_embed.description = moving_string
+        await move_menu.edit(interaction)
+        for member in red_players:
+            try:
+                await member.move_to(red_team)
+            except nextcord.HTTPException:
+                continue
+        moving_string += (
+            f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{blu_team.id}>..."
+        )
+        pug_embed.description = moving_string
+        await move_menu.edit(interaction)
+        for member in blu_players:
+            try:
+                await member.move_to(blu_team)
+            except nextcord.HTTPException:
+                continue
+        moving_string += "\nDone!"
 
-        if move_view.action == "cancel":
-            return
-        if move_view.action == "move":
-            moving_string = f"Moving players from <#{next_pug.id}> to <#{add_up.id}>..."
-            pug_embed.title = "Moving players back..."
-            pug_embed.description = moving_string
-            await interaction.edit_original_message(embed=pug_embed, view=None)
-            for member in waiting_players:
-                try:
-                    await member.move_to(add_up)
-                except nextcord.HTTPException:
-                    continue
-            moving_string += (
-                f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{red_team.id}>..."
-            )
-            pug_embed.description = moving_string
-            await interaction.edit_original_message(embed=pug_embed, view=None)
-            for member in red_players:
-                try:
-                    await member.move_to(red_team)
-                except nextcord.HTTPException:
-                    continue
-            moving_string += (
-                f"\nDone!\n\nMoving players from <#{add_up.id}> to <#{blu_team.id}>..."
-            )
-            pug_embed.description = moving_string
-            await interaction.edit_original_message(embed=pug_embed, view=None)
-            for member in blu_players:
-                try:
-                    await member.move_to(blu_team)
-                except nextcord.HTTPException:
-                    continue
-            moving_string += "\nDone!"
-
-            pug_embed.title = "Done moving players back."
-            pug_embed.description = moving_string
-            await interaction.edit_original_message(embed=pug_embed, view=None)
-
-            await interaction.delete_original_message(delay=10)
-            return
-
+        pug_embed.title = "Done moving players back."
+        pug_embed.description = moving_string
+        await move_menu.edit(interaction)
         await interaction.delete_original_message(delay=10)

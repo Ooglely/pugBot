@@ -195,28 +195,3 @@ class Teams(TypedDict):
 
     red: List[PugPlayer]
     blu: List[PugPlayer]
-
-
-class MoveView(nextcord.ui.View):
-    """View to show moving users back."""
-
-    def __init__(self):
-        super().__init__()
-        self.action = None
-
-    @nextcord.ui.button(label="Move Back", style=nextcord.ButtonStyle.gray)
-    async def move_back(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Moves the players"""
-        self.action = "move"
-        self.stop()
-
-    @nextcord.ui.button(label="Done", style=nextcord.ButtonStyle.green)
-    async def done(
-        self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
-        """Rerolls new balanced teams"""
-        await interaction.message.delete()
-        self.action = "done"
-        self.stop()
