@@ -454,7 +454,7 @@ class PugRunningCog(commands.Cog):
             teams = await generate_role_teams(
                 await get_player_dict(next_pug, add_up), team_size, guild, roles
             )
-            mode = "role"
+            mode = "roles"
         else:
             teams = await generate_random_teams(
                 await get_player_dict(next_pug, add_up), team_size
@@ -570,9 +570,7 @@ class PugRunningCog(commands.Cog):
     )
     @guild_config_check()
     @is_runner()
-    async def move(
-        self, interaction: nextcord.Interaction
-    ):  # pylint: disable=too-many-return-statements
+    async def move(self, interaction: nextcord.Interaction):  # pylint: disable=too-many-return-statements
         """Move players back after a pug is done."""
         await interaction.response.defer()
 
