@@ -24,12 +24,14 @@ class BotMenu(View):
         self.values: dict = {}
         self.action: str | None = None
         self.user: int = user_id
+        self.message_id: int | None = None
 
     def add_button(
         self,
         label: str,
         callback: Callable,
         style: nextcord.ButtonStyle = nextcord.ButtonStyle.grey,
+        row: int | None = None,
     ) -> None:
         """Adds a button to the menu.
 
@@ -47,7 +49,7 @@ class BotMenu(View):
             """Represents a button in the menu."""
 
             def __init__(self):
-                nextcord.ui.Button.__init__(self, label=label, style=style)
+                nextcord.ui.Button.__init__(self, label=label, style=style, row=row)
 
             async def callback(self, interaction: nextcord.Interaction):
                 await callback(self, interaction)
@@ -90,6 +92,7 @@ class BotMenu(View):
             await interaction.send(embed=self.embed, view=self)
         else:
             await interaction.send(view=self)
+        self.message_id = (await interaction.original_message()).id
 
     async def wait_for_action(self, client: nextcord.Client) -> bool:
         """
@@ -98,13 +101,15 @@ class BotMenu(View):
         """
 
         def button_check(interaction: nextcord.Interaction) -> bool:
+            if not interaction.message or interaction.message.id != self.message_id:
+                # This is to prevent interactions with other menus activating the check
+                return False
             if interaction.user is None:  # No user associated with the interaction?
                 return False
             if (
                 interaction.type is not nextcord.InteractionType.component
                 or interaction.data is None
             ):  # Interaction is not a button press
-                # Interaction is not a button press
                 return False
             if (
                 interaction.user.id == self.user
@@ -123,9 +128,10 @@ class BotMenu(View):
         """Edits the menu in the interaction."""
         self.action = None
         if self.embed:
-            await interaction.edit_original_message(embed=self.embed, view=self)
+            msg = await interaction.edit_original_message(embed=self.embed, view=self)
         else:
-            await interaction.edit_original_message(view=self)
+            msg = await interaction.edit_original_message(view=self)
+        self.message_id = msg.id
 
     def clear_entry_fields(self) -> None:
         """Clears all children of the view that are not buttons."""
