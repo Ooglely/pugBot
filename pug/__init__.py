@@ -1,5 +1,5 @@
 """Holds classes for pug commands/setup"""
-from typing import Union, List, Dict
+from typing import Union, List, Dict, TypedDict
 import time
 
 import nextcord
@@ -61,6 +61,16 @@ class PugPlayer:
         self.registered: bool = registered
         self.elo: int = 0
         self.icon: str | None = None
+
+    def get_division(self, gamemode: str, mode: str) -> int:
+        """Gets the division for the player."""
+        if gamemode == "combined":
+            return max(self.division["sixes"][mode], self.division["hl"][mode])
+        if gamemode == "highlander":
+            return self.division["hl"][mode]
+        if gamemode == "sixes":
+            return self.division["sixes"][mode]
+        raise ValueError("Invalid gamemode")
 
 
 class PugCategory:
@@ -180,65 +190,11 @@ class CategoryButton(nextcord.ui.Button):
         super().view.stop()
 
 
-class TeamGenerationView(nextcord.ui.View):
-    """View to show generated teams."""
+class Teams(TypedDict):
+    """TypedDict for generated team storage."""
 
-    def __init__(
-        self, elo_disabled: bool, balancing_disabled: bool, role_disabled: bool
-    ):
-        super().__init__()
-        if elo_disabled is True:
-            self.children[1].disabled = True
-        if balancing_disabled is True:
-            self.children[2].disabled = True
-        if role_disabled is True:
-            self.children[3].disabled = True
-        self.action: str | None = None
-
-    @nextcord.ui.button(label="Move", style=nextcord.ButtonStyle.green)
-    async def move(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Moves the players"""
-        await _interaction.response.defer()
-        self.action = "move"
-        self.stop()
-
-    @nextcord.ui.button(label="🔁 ELO", style=nextcord.ButtonStyle.gray)
-    async def elo(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Moves the players"""
-        await _interaction.response.defer()
-        self.action = "elo"
-        self.stop()
-
-    @nextcord.ui.button(label="🔁 RGL Divisions", style=nextcord.ButtonStyle.gray)
-    async def balance(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Rerolls new balanced teams"""
-        await _interaction.response.defer()
-        self.action = "balance"
-        self.stop()
-
-    @nextcord.ui.button(label="🔁 Roles", style=nextcord.ButtonStyle.gray)
-    async def roles(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        """Rerolls new balanced teams"""
-        await _interaction.response.defer()
-        self.action = "roles"
-        self.stop()
-
-    @nextcord.ui.button(label="🔁 Random", style=nextcord.ButtonStyle.gray)
-    async def random(
-        self, _button: nextcord.ui.Button, _interaction: nextcord.Interaction
-    ):
-        "Rerolls new random teams"
-        await _interaction.response.defer()
-        self.action = "random"
-        self.stop()
+    red: List[PugPlayer]
+    blu: List[PugPlayer]
 
 
 class MoveView(nextcord.ui.View):

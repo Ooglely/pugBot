@@ -1,5 +1,5 @@
 """Functions to build predefined  for use around the bot."""
-from nextcord import ButtonStyle, Interaction
+from nextcord import ButtonStyle, Interaction, Embed
 from nextcord.abc import GuildChannel
 from nextcord.enums import ChannelType
 from nextcord.ui import ChannelSelect
@@ -7,6 +7,8 @@ from nextcord.utils import MISSING
 
 from menus import BotMenu
 from menus.callbacks import action_callback
+from registration import RegistrationSettings
+from pug import Teams
 
 
 async def send_boolean_menu(menu: BotMenu, interaction: Interaction) -> bool:
@@ -116,3 +118,141 @@ async def send_channel_prompt(
             selected_channels.append(channel_select.values[0])
 
     return selected_channels
+
+
+class TeamGenMenu(BotMenu):
+    """A menu for generating teams."""
+
+    def __init__(
+        self,
+        user: int,
+        embed: Embed,
+        reg_settings: RegistrationSettings,
+        elo_enabled: bool,
+        role_enabled: bool,
+    ):
+        embed.clear_fields()
+        super().__init__(user, embed)
+        self.reg_settings = reg_settings
+        self.elo_enabled = elo_enabled
+        self.role_enabled = role_enabled
+
+    async def add_gen_buttons(self) -> None:
+        """Adds move and reroll buttons for the different modes depending on the servers settings."""
+        if self.elo_enabled:
+            self.add_button(
+                "🔁 ELO", await action_callback("elo", self.user), ButtonStyle.grey, 0
+            )
+        if self.reg_settings.enabled:
+            match self.reg_settings.gamemode:
+                case "sixes" | "highlander" | "combined":
+                    self.add_button(
+                        f"🔁 {self.reg_settings.gamemode.capitalize()} Divisions",
+                        await action_callback(self.reg_settings.gamemode, self.user),
+                        ButtonStyle.grey,
+                        0,
+                    )
+                case "both":
+                    self.add_button(
+                        "🔁 6s",
+                        await action_callback("sixes", self.user),
+                        ButtonStyle.grey,
+                        0,
+                    )
+                    self.add_button(
+                        "🔁 HL",
+                        await action_callback("highlander", self.user),
+                        ButtonStyle.grey,
+                        0,
+                    )
+        if self.role_enabled:
+            self.add_button(
+                "🔁 Roles",
+                await action_callback("roles", self.user),
+                ButtonStyle.grey,
+                0,
+            )
+        self.add_button(
+            "🔁 Random", await action_callback("random", self.user), ButtonStyle.grey, 0
+        )
+        self.add_button(
+            "✅ Move", await action_callback("move", self.user), ButtonStyle.green, 1
+        )
+        self.add_button(
+            "🗑️ Cancel", await action_callback("cancel", self.user), ButtonStyle.red, 1
+        )
+
+    async def update_teams(self, teams: Teams) -> None:
+        """Update the embed with the given team list."""
+        if not self.embed:
+            return
+        self.embed.clear_fields()
+        red_team_string: str = ""
+        blu_team_string: str = ""
+        red_team_score: int = 0
+        blu_team_score: int = 0
+        team_count: int = min(len(teams["red"]), len(teams["blu"]))
+        if self.action in ("elo", "roles"):
+            for player in teams["red"]:
+                red_team_score += player.elo
+                if player.icon:
+                    red_team_string += (
+                        f"[**{player.elo}**] {player.icon} <@{player.discord}>\n"
+                    )
+                else:
+                    red_team_string += f"[**{player.elo}**] <@{player.discord}>\n"
+            for player in teams["blu"]:
+                blu_team_score += player.elo
+                if player.icon:
+                    blu_team_string += (
+                        f"[**{player.elo}**] {player.icon} <@{player.discord}>\n"
+                    )
+                else:
+                    blu_team_string += f"[**{player.elo}**] <@{player.discord}>\n"
+        elif self.action in ("sixes", "highlander", "combined"):
+            teams["red"].sort(
+                key=lambda x: x.get_division(self.action, self.reg_settings.mode)  # type: ignore
+            )
+            teams["blu"].sort(
+                key=lambda x: x.get_division(self.action, self.reg_settings.mode)  # type: ignore
+            )
+            for player in teams["red"]:
+                player_division: int = player.get_division(
+                    self.action, self.reg_settings.mode
+                )
+                if player_division != -1:
+                    red_team_score += player_division
+                player_level: str = (
+                    str(player_division) if player_division != -1 else "?"
+                )
+                red_team_string += f"[**{player_level}**] <@{player.discord}>\n"
+            for player in teams["blu"]:
+                player_division = player.get_division(
+                    self.action, self.reg_settings.mode
+                )
+                if player_division != -1:
+                    blu_team_score += player_division
+                player_level = str(player_division) if player_division != -1 else "?"
+                blu_team_string += f"[**{player_level}**] <@{player.discord}>\n"
+        elif self.action == "random":
+            for player in teams["red"]:
+                red_team_string += f"[**?**] <@{player.discord}>\n"
+            for player in teams["blu"]:
+                blu_team_string += f"[**?**] <@{player.discord}>\n"
+        else:
+            raise ValueError(f"Invalid view action: {self.action}")
+
+        if self.action == "random":
+            self.embed.add_field(name="🔴 Red Team", value=red_team_string)
+            self.embed.add_field(name="🔵 Blu Team", value=blu_team_string)
+        else:
+            self.embed.add_field(
+                name=f"🔴 Red Team\nScore: {(red_team_score / team_count):.2f}",
+                value=red_team_string,
+            )
+            self.embed.add_field(
+                name=f"🔵 Blu Team\nScore: {(blu_team_score / team_count):.2f}",
+                value=blu_team_string,
+            )
+
+        self.embed.description = f"Current generation mode: {self.action.capitalize()}"

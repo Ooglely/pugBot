@@ -14,13 +14,14 @@ from logs import Player
 from logs.searcher import LogSearcher
 from logs.elo import get_elo, Elo
 from logs.elo_cog import EloSettings
+from menus.templates import TeamGenMenu
 from pug import (
     CategorySelect,
     CategoryButton,
-    TeamGenerationView,
     MoveView,
     PugPlayer,
     PugCategory,
+    Teams,
 )
 
 from registration import RegistrationSettings
@@ -54,7 +55,7 @@ async def get_player_dict(
 
 async def generate_random_teams(
     players: Dict[str, List[PugPlayer]], team_size: int
-) -> Dict[str, list[PugPlayer]]:
+) -> Teams:
     """Generate random teams for a pug.
 
     Args:
@@ -75,7 +76,7 @@ async def generate_random_teams(
         red_team.append(all_players.pop(0))
         blu_team.append(all_players.pop(0))
 
-    teams = {"red": red_team, "blu": blu_team}
+    teams = Teams(red=red_team, blu=blu_team)
     return teams
 
 
@@ -83,7 +84,8 @@ async def generate_balanced_teams(
     players: Dict[str, List[PugPlayer]],
     team_size,
     reg_settings: RegistrationSettings,
-) -> Dict[str, List[PugPlayer]]:
+    gamemode: str,
+) -> Teams:
     """Generate balanced teams for a pug.
 
     Args:
@@ -98,25 +100,19 @@ async def generate_balanced_teams(
         teams = await generate_random_teams(players, team_size)
         return teams
 
-    gamemode: str
-    if reg_settings.gamemode == "sixes":
-        gamemode = "sixes"
-    elif reg_settings.gamemode == "highlander":
-        gamemode = "hl"
-
     random.shuffle(players["next_pug"])
     random.shuffle(players["add_up"])
     # Deprioritize players that are not registered, as their skill is unknown
     players["next_pug"].sort(
         key=lambda x: 10
-        if x.division[gamemode][reg_settings.mode] == -1
-        else x.division[gamemode][reg_settings.mode],
+        if x.get_division(gamemode, reg_settings.mode) == -1
+        else x.get_division(gamemode, reg_settings.mode),
         reverse=False,
     )
     players["add_up"].sort(
         key=lambda x: 10
-        if x.division[gamemode][reg_settings.mode] == -1
-        else x.division[gamemode][reg_settings.mode],
+        if x.get_division(gamemode, reg_settings.mode) == -1
+        else x.get_division(gamemode, reg_settings.mode),
         reverse=False,
     )
     all_players = players["next_pug"] + players["add_up"]
@@ -124,10 +120,10 @@ async def generate_balanced_teams(
     total_level: int = 0
     team_players: List[PugPlayer] = []
     for player in all_players[0 : team_size * 2]:
-        if player.division[gamemode][reg_settings.mode] == -1:
+        if player.get_division(gamemode, reg_settings.mode) == -1:
             player.elo = 0
         else:
-            player.elo = player.division[gamemode][reg_settings.mode]
+            player.elo = player.get_division(gamemode, reg_settings.mode)
         team_players.append(player)
         total_level += player.elo
 
@@ -140,7 +136,7 @@ async def generate_elo_teams(
     team_size: int,
     elo_settings: EloSettings,
     category: PugCategory,
-) -> Dict[str, List[PugPlayer]]:
+) -> Teams:
     """Generate balanced teams for a pug.
 
     Args:
@@ -179,7 +175,7 @@ async def generate_role_teams(
     team_size: int,
     guild: nextcord.Guild,
     roles: Dict[str, Dict],
-) -> Dict[str, List[PugPlayer]]:
+) -> Teams:
     """Generate balanced teams for a pug.
 
     Args:
@@ -217,7 +213,7 @@ async def generate_role_teams(
 
 async def process_players(
     players: List[PugPlayer], team_size: int, target_elo: int
-) -> Dict[str, List[PugPlayer]]:
+) -> Teams:
     """Turn a list of players into two balanced teams.
 
     Args:
@@ -238,7 +234,7 @@ async def process_players(
                 blu_team.pop(i)
                 break
 
-    return {"red": red_team, "blu": blu_team}
+    return Teams(red=red_team, blu=blu_team)
 
 
 def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
@@ -263,7 +259,7 @@ def find_subset(arr: List[PugPlayer], num: int, goal: int) -> List[PugPlayer]:
     if lowest_diff == 0:
         lowest_diff = 9999  # lol weird workaround but its needed
 
-    best_team: List[PugPlayer]
+    best_team: List[PugPlayer] = arr[0:num]
     result = combinations(arr, num)
     for combination in result:
         team_total = 0
@@ -306,6 +302,17 @@ class PugRunningCog(commands.Cog):
     ):
         """Generate teams for a pug."""
         await interaction.response.defer()
+
+        if interaction.guild is None:
+            await interaction.response.send_message(
+                "This command must be run in a server.", ephemeral=True
+            )
+            return
+        if interaction.user is None:
+            await interaction.response.send_message(
+                "This command must be run by a user.", ephemeral=True
+            )
+            return
 
         balancing_disabled: bool = False
         role_disabled: bool = False
@@ -427,13 +434,7 @@ class PugRunningCog(commands.Cog):
                 text="Elo is disabled for this server, enable using /elo setup!"
             )
 
-        gamemode: str
-        if reg_settings.gamemode == "sixes":
-            gamemode = "sixes"
-        elif reg_settings.gamemode == "highlander":
-            gamemode = "hl"
-
-        teams: Dict[str, List[PugPlayer]]
+        teams: Teams
         if not elo_disabled:
             teams = await generate_elo_teams(
                 await get_player_dict(next_pug, add_up),
@@ -443,10 +444,10 @@ class PugRunningCog(commands.Cog):
             )
             mode = "elo"
         elif not balancing_disabled:
+            mode = reg_settings.gamemode if reg_settings.gamemode != "both" else "sixes"
             teams = await generate_balanced_teams(
-                await get_player_dict(next_pug, add_up), team_size, reg_settings
+                await get_player_dict(next_pug, add_up), team_size, reg_settings, mode
             )
-            mode = "balanced"
         elif not role_disabled:
             guild = await self.bot.fetch_guild(interaction.guild.id)
             teams = await generate_role_teams(
@@ -459,177 +460,89 @@ class PugRunningCog(commands.Cog):
             )
             mode = "random"
 
-        while True:
-            team_generation_view = TeamGenerationView(
-                elo_disabled, balancing_disabled, role_disabled
-            )
+        pug_embed.title = "Generate Teams"
+        gen_menu = TeamGenMenu(
+            interaction.user.id,
+            pug_embed,
+            reg_settings,
+            not elo_disabled,
+            not role_disabled,
+        )
+        await gen_menu.add_gen_buttons()
+        gen_menu.action = mode
 
-            if mode in ("elo", "role"):
-                red_team_elo = 0
-                red_team_string = ""
-                for elo_player in teams["red"]:
-                    red_team_elo += elo_player.elo
-                    if elo_player.icon is None:
-                        red_team_string += (
-                            f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                        )
-                    else:
-                        red_team_string += f"[**{elo_player.elo}**] {elo_player.icon} <@{elo_player.discord}>\n"
-                blu_team_elo = 0
-                blu_team_string = ""
-                for elo_player in teams["blu"]:
-                    blu_team_elo += elo_player.elo
-                    if elo_player.icon is None:
-                        blu_team_string += (
-                            f"[**{elo_player.elo}**] <@{elo_player.discord}>\n"
-                        )
-                    else:
-                        blu_team_string += f"[**{elo_player.elo}**] {elo_player.icon} <@{elo_player.discord}>\n"
-                pug_embed.clear_fields()
-                pug_embed.add_field(
-                    name=f"🔴 Red Team\nRating: {round(red_team_elo/team_size)}",
-                    value=red_team_string,
-                )
-                pug_embed.add_field(
-                    name=f"🔵 Blu Team\nRating: {round(blu_team_elo/team_size)}",
-                    value=blu_team_string,
-                )
-            elif mode in ("random", "balanced"):
-                if not balancing_disabled:
-                    teams["red"].sort(
-                        key=lambda x: x.division[gamemode][reg_settings.mode],
-                        reverse=False,
+        while True:  # Loop while teams are being generated
+            await gen_menu.update_teams(teams)
+            await gen_menu.edit(interaction)
+            view_result = await gen_menu.wait_for_action(self.bot)
+            if not view_result:
+                await interaction.delete_original_message(delay=5)
+                return
+            match gen_menu.action:
+                case "move":
+                    # Move players to the correct channels
+                    pug_embed.description = "Moving players.."
+                    await interaction.edit_original_message(embed=pug_embed, view=None)
+                    pug_embed.description = ""
+
+                    for player in teams["red"]:
+                        member = await interaction.guild.fetch_member(player.discord)
+                        try:
+                            await member.move_to(red_team)
+                        except nextcord.HTTPException:
+                            pug_embed.description += f"<@{player.discord}> could not be moved to the RED team.\n"
+
+                    for player in teams["blu"]:
+                        member = await interaction.guild.fetch_member(player.discord)
+                        try:
+                            await member.move_to(blu_team)
+                        except nextcord.HTTPException:
+                            pug_embed.description += f"<@{player.discord}> could not be moved to the BLU team.\n"
+                    pug_embed.description += "Done moving players!"
+                    await interaction.edit_original_message(embed=pug_embed, view=None)
+
+                    # Add last players to db
+                    all_players = teams["red"] + teams["blu"]
+                    await chosen_category.update_last_players(
+                        interaction.guild.id, all_players
                     )
-                red_team_string = ""
-                red_level = 0
-                red_count = 0
-                for player in teams["red"]:
-                    if balancing_disabled:
-                        division = "?"
-                    else:
-                        if player.division[gamemode][reg_settings.mode] == -1:
-                            division = "?"
-                        else:
-                            division = str(player.division[gamemode][reg_settings.mode])
-                            red_level += player.division[gamemode][reg_settings.mode]
-                            red_count += 1
-                    red_team_string += f"[**{division}**] <@{player.discord}>\n"
 
-                if not balancing_disabled:
-                    teams["blu"].sort(
-                        key=lambda x: x.division[gamemode][reg_settings.mode],
-                        reverse=False,
+                    game_players = [
+                        Player(discord=player.discord) for player in all_players
+                    ]
+                    await LogSearcher.add_searcher_game(
+                        interaction.guild.id, chosen_category, game_players
                     )
-                blu_team_string = ""
-                blu_level = 0
-                blu_count = 0
-                for player in teams["blu"]:
-                    if balancing_disabled:
-                        divison = "?"
-                    else:
-                        if player.division[gamemode][reg_settings.mode] == -1:
-                            divison = "?"
-                        else:
-                            divison = str(player.division[gamemode][reg_settings.mode])
-                            blu_level += player.division[gamemode][reg_settings.mode]
-                            blu_count += 1
-                    blu_team_string += f"[**{divison}**] <@{player.discord}>\n"
 
-                pug_embed.clear_fields()
-                if red_count != 0 and blu_count != 0:
-                    pug_embed.add_field(
-                        name=f"🔴 Red Team\nLevel: {(red_level / red_count):.2f}",
-                        value=red_team_string,
+                    break
+                case "elo":
+                    teams = await generate_elo_teams(
+                        await get_player_dict(next_pug, add_up),
+                        team_size,
+                        elo_settings,
+                        chosen_category,
                     )
-                    pug_embed.add_field(
-                        name=f"🔵 Blu Team\nLevel: {(blu_level / blu_count):.2f}",
-                        value=blu_team_string,
+                case "sixes" | "highlander" | "combined":
+                    teams = await generate_balanced_teams(
+                        await get_player_dict(next_pug, add_up),
+                        team_size,
+                        reg_settings,
+                        gen_menu.action,
                     )
-                else:
-                    pug_embed.add_field(name="🔴 Red Team", value=red_team_string)
-                    pug_embed.add_field(name="🔵 Blu Team", value=blu_team_string)
-
-            await interaction.edit_original_message(
-                embed=pug_embed, view=team_generation_view
-            )
-            status = await team_generation_view.wait()
-            if status:
-                break  # Handles time outs
-            if team_generation_view.action == "move":
-                pug_embed.description = "Moving players..."
-                await interaction.edit_original_message(embed=pug_embed, view=None)
-
-                for player in teams["red"]:
-                    member = await interaction.guild.fetch_member(player.discord)
-                    try:
-                        await member.move_to(red_team)
-                    except nextcord.HTTPException:
-                        await interaction.send(
-                            f"<@{player.discord}> could not be moved to the RED team."
-                        )
-
-                for player in teams["blu"]:
-                    member = await interaction.guild.fetch_member(player.discord)
-                    try:
-                        await member.move_to(blu_team)
-                    except nextcord.HTTPException:
-                        await interaction.send(
-                            f"<@{player.discord}> could not be moved to the BLU team."
-                        )
-                pug_embed.description = "Done moving players!"
-                await interaction.edit_original_message(embed=pug_embed, view=None)
-
-                # Add last players to db
-                all_players = teams["red"] + teams["blu"]
-                await chosen_category.update_last_players(
-                    interaction.guild.id, all_players
-                )
-
-                game_players = [
-                    Player(discord=player.discord) for player in all_players
-                ]
-                await LogSearcher.add_searcher_game(
-                    interaction.guild.id, chosen_category, game_players
-                )
-
-                break
-
-            if team_generation_view.action == "random":
-                mode = "random"
-                pug_embed.clear_fields()
-                teams = await generate_random_teams(
-                    await get_player_dict(next_pug, add_up), team_size
-                )
-
-            if team_generation_view.action == "elo":
-                mode = "elo"
-                pug_embed.clear_fields()
-                teams = await generate_elo_teams(
-                    await get_player_dict(next_pug, add_up),
-                    team_size,
-                    elo_settings,
-                    chosen_category,
-                )
-
-            if team_generation_view.action == "balance":
-                mode = "balanced"
-                pug_embed.clear_fields()
-                teams = await generate_balanced_teams(
-                    await get_player_dict(next_pug, add_up),
-                    team_size,
-                    reg_settings,
-                )
-
-            if team_generation_view.action == "roles":
-                mode = "role"
-                pug_embed.clear_fields()
-                guild = await self.bot.fetch_guild(interaction.guild.id)
-                teams = await generate_role_teams(
-                    await get_player_dict(next_pug, add_up),
-                    team_size,
-                    guild,
-                    roles,
-                )
+                case "roles":
+                    teams = await generate_role_teams(
+                        await get_player_dict(next_pug, add_up),
+                        team_size,
+                        interaction.guild,
+                        roles,
+                    )
+                case "random":
+                    teams = await generate_random_teams(
+                        await get_player_dict(next_pug, add_up), team_size
+                    )
+                case "cancel":
+                    await interaction.delete_original_message()
+                    break
 
     async def get_player_list(
         self, next_pug: nextcord.VoiceChannel, add_up: nextcord.VoiceChannel
