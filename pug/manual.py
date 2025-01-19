@@ -1,4 +1,5 @@
 """Cog storing commands to manually add up to pugs."""
+
 import time
 import traceback
 
@@ -564,9 +565,12 @@ class ManualPugCog(commands.Cog):
             menu: BotMenu = BotMenu(interaction.user.id)
             menu.add_button("Yes", await action_callback("clear", interaction.user.id))
             menu.add_button("No", await action_callback("cancel", interaction.user.id))
-            await interaction.send(
-                "Are you sure you want to clear the pug queue?", view=menu
+            menu.embed = nextcord.Embed(
+                title="Clear Pug Queue",
+                description="Are you sure you want to clear the pug queue?",
+                color=BOT_COLOR,
             )
+            await menu.send(interaction)
             if not await menu.wait_for_action(self.bot):
                 await interaction.delete_original_message(delay=1)
                 return
@@ -574,13 +578,11 @@ class ManualPugCog(commands.Cog):
                 await guild_configs.update_item(
                     {"guild": interaction.guild.id}, {"$set": {"manual.players": []}}
                 )
-                await interaction.edit_original_message(
-                    content="The pug queue has been cleared.", view=None
-                )
+                menu.embed.description = "The pug queue has been cleared."
+                await interaction.edit_original_message(embed=menu.embed, view=None)
             else:
-                await interaction.edit_original_message(
-                    content="The pug queue has not been cleared.", view=None
-                )
+                menu.embed.description = "The pug queue has not been cleared."
+                await interaction.edit_original_message(embed=menu.embed, view=None)
         else:
             player_ids: list[int] = [
                 player[0] for player in guild_settings["manual"]["players"]
