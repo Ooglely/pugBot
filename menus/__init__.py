@@ -1,4 +1,5 @@
 """Adds classes and functions to easily make menus in Discord views."""
+
 import asyncio
 from typing import Callable, Optional
 
@@ -101,7 +102,9 @@ class BotMenu(View):
         """
 
         def button_check(interaction: nextcord.Interaction) -> bool:
-            if not interaction.message or interaction.message.id != self.message_id:
+            if not interaction.message or (
+                self.message_id and interaction.message.id != self.message_id
+            ):
                 # This is to prevent interactions with other menus activating the check
                 return False
             if interaction.user is None:  # No user associated with the interaction?
