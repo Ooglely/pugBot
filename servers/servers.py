@@ -75,7 +75,7 @@ class ServerCog(commands.Cog):
                         continue
                     HL_MAPS[tf_map.text.rsplit("_", 1)[0]] = tf_map.text.strip()
 
-        logging.info("Updated maps:\n" + str(SIXES_MAPS) + "\n" + str(HL_MAPS))
+        logging.info("Updated maps: %s\n%s", str(SIXES_MAPS), str(HL_MAPS))
 
         map_dict = {"sixes": SIXES_MAPS, "hl": HL_MAPS}
         update_comp_maps(map_dict)
@@ -663,7 +663,6 @@ class ServerCog(commands.Cog):
             map_search = await ServemeAPI.fetch_newest_version(
                 map_query, maps_list=self.all_maps
             )
-            print(map_search)
             if map_search is None:
                 await interaction.response.send_autocomplete(["No results."])
             elif len(map_search) > 25:
@@ -672,10 +671,12 @@ class ServerCog(commands.Cog):
                 )
             else:
                 await interaction.response.send_autocomplete(map_search)
-
-        await interaction.response.send_autocomplete(
-            ["Please type the beginning of the map name to get autocomplete results."]
-        )
+        else:
+            await interaction.response.send_autocomplete(
+                [
+                    "Please type the beginning of the map name to get autocomplete results."
+                ]
+            )
 
     @tasks.loop(minutes=1)
     async def server_status(self) -> None:
