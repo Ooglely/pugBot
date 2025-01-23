@@ -1,8 +1,8 @@
 """Contains the cog to update users roles over time."""
 
-import datetime
-
 import asyncio
+import datetime
+import logging
 import traceback
 
 import nextcord
@@ -29,7 +29,7 @@ class LoadedRegSettings:
     def __init__(self, bot: nextcord.Client, settings: RegistrationSettings) -> None:
         guild: nextcord.Guild | None = bot.get_guild(settings.guild_id)
         if guild is None:
-            raise AttributeError(
+            raise ValueError(
                 settings.guild_id, "Guild could not be found. Is the bot in the guild?"
             )
         self.guild: nextcord.Guild = guild
@@ -118,6 +118,7 @@ async def guild_log_failed(settings: LoadedRegSettings, reason: str, data: str) 
     data : str
         Any data associated with the error
     """
+    logging.info("Failed action in guild %s: %s", settings.guild.id, reason)
     embed: nextcord.Embed = nextcord.Embed(
         title=f"Error: {reason}",
         description=data,
@@ -186,7 +187,7 @@ async def update_player(
     added_role_string: str = ""
     # Remove old roles
     for role in old_roles:
-        if role not in new_roles:
+        if role not in new_roles and role is not None:
             removed_role_string += f"<@&{role.id}> "
             try:
                 await member.remove_roles(role, reason="Removing old division roles.")
@@ -199,7 +200,7 @@ async def update_player(
                 return
 
     for role in new_roles:
-        if role not in member.roles:
+        if role not in member.roles and role is not None:
             added_role_string += f"<@&{role.id}> "
             try:
                 await member.add_roles(role, reason="Adding new division roles.")
@@ -490,6 +491,7 @@ class UpdateRolesCog(commands.Cog):
         log_channel = bot.get_channel(DEV_UPDATE_LOGS)
         if isinstance(log_channel, nextcord.TextChannel):
             self.admin_log_channel = log_channel
+        logging.info("Admin log channel should be loaded: %s", self.admin_log_channel)
 
     @tasks.loop(time=update_time)
     async def update_rgl(self) -> None:
@@ -540,9 +542,11 @@ class UpdateRolesCog(commands.Cog):
         _exception : BaseException
             The exception that was raised
         """
+        trace = traceback.format_exc()
+        logging.error("Error in update_rgl loop: %s", trace)
         await self.admin_log_failed(
             "Error in update_rgl loop, updates are stopped.",
-            str(traceback.format_exc()),
+            trace,
         )
 
     async def check_player_data(
