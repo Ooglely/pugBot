@@ -46,10 +46,10 @@ async def get_player_dict(
     """
     players: Dict[str, list[PugPlayer]] = {"next_pug": [], "add_up": []}
     for member in next_pug.members:
-        player = PugPlayer(discord=member.id)
+        player = await PugPlayer.create(discord=member.id)
         players["next_pug"].append(player)
     for member in add_up.members:
-        player = PugPlayer(discord=member.id)
+        player = await PugPlayer.create(discord=member.id)
         players["add_up"].append(player)
     return players
 
@@ -558,10 +558,10 @@ class PugRunningCog(commands.Cog):
         """
         players: Dict[str, list[PugPlayer]] = {"next_pug": [], "add_up": []}
         for member in next_pug.members:
-            player = PugPlayer(discord=member.id)
+            player = await PugPlayer.create(discord=member.id)
             players["next_pug"].append(player)
         for member in add_up.members:
-            player = PugPlayer(discord=member.id)
+            player = await PugPlayer.create(discord=member.id)
             players["add_up"].append(player)
         return players
 
@@ -570,7 +570,9 @@ class PugRunningCog(commands.Cog):
     )
     @guild_config_check()
     @is_runner()
-    async def move(self, interaction: nextcord.Interaction):  # pylint: disable=too-many-return-statements
+    async def move(
+        self, interaction: nextcord.Interaction
+    ):  # pylint: disable=too-many-return-statements
         """Move players back after a pug is done."""
         await interaction.response.defer()
 

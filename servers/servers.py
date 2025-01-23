@@ -246,7 +246,7 @@ class ServerCog(commands.Cog):
                 return
             chosen_map = map_selector_view.map_chosen
 
-        guild_data = database.get_server(interaction.guild.id)
+        guild_data = await database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         servers, times = await ServemeAPI().get_server_list(
             serveme_api_key, dt_start, duration
@@ -448,7 +448,7 @@ class ServerCog(commands.Cog):
             tf_map (str): The map to set on the server
         """
         await interaction.response.defer()
-        guild_data = database.get_server(interaction.guild.id)
+        guild_data = await database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
@@ -547,7 +547,7 @@ class ServerCog(commands.Cog):
             command (str): The command to run on the TF2 server.
         """
         await interaction.response.defer()
-        guild_data = database.get_server(interaction.guild.id)
+        guild_data = await database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         reservations = (await ServemeAPI().get_current_reservations(serveme_api_key))[0]
 
@@ -594,7 +594,7 @@ class ServerCog(commands.Cog):
             interaction (nextcord.Interaction): Interaction object from invoking the command.
         """
         await interaction.response.defer()
-        guild_data = database.get_server(interaction.guild.id)
+        guild_data = await database.get_server(interaction.guild.id)
         serveme_api_key = guild_data["serveme"]
         (
             current_reservations,

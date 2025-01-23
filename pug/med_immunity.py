@@ -39,7 +39,7 @@ class PugMedicCog(commands.Cog):
 
     @tasks.loop(time=reset_time)
     async def __clear_all(self):
-        clear_med_immunity_all_guilds()
+        await clear_med_immunity_all_guilds()
 
     @medic.subcommand(  # pylint: disable=no-member
         name="roll",
@@ -145,7 +145,7 @@ class PugMedicCog(commands.Cog):
             chosen_category.next_pug
         )
 
-        server = get_server(interaction.guild.id)
+        server = await get_server(interaction.guild.id)
         immune_players: Set[int] = set(server["immune"])
 
         players = await get_player_dict(next_pug, add_up)
@@ -193,7 +193,7 @@ class PugMedicCog(commands.Cog):
             else:
                 med_embed.description = f"<@{medic.discord}> given med roll immunity."
                 if medic.discord is not None:
-                    add_med_immune_player(interaction.guild.id, medic.discord)
+                    await add_med_immune_player(interaction.guild.id, medic.discord)
         else:
             med_embed.description += "\nAll players are already immune so an already immune player was chosen."
 
@@ -220,13 +220,13 @@ class PugMedicCog(commands.Cog):
         await interaction.response.defer()
 
         # Ensure the player is not already immune
-        server = get_server(interaction.guild.id)
+        server = await get_server(interaction.guild.id)
         immune_players: Set[int] = set(server["immune"])
 
         text = f"<@{user.id}> was already immune to medic roll."
         if user.id not in immune_players:
             text = f"<@{user.id}> is now immune to medic roll."
-            add_med_immune_player(interaction.guild.id, user.id)
+            await add_med_immune_player(interaction.guild.id, user.id)
 
         med_embed = nextcord.Embed(
             title="Set User Immune to Medic Roll",
@@ -259,13 +259,13 @@ class PugMedicCog(commands.Cog):
         await interaction.response.defer()
 
         # Ensure the player is immune
-        server = get_server(interaction.guild.id)
+        server = await get_server(interaction.guild.id)
         immune_players: Set[int] = set(server["immune"])
 
         text = f"<@{user.id}> was not immune to being rolled as medic."
         if user.id in immune_players:
             text = f"<@{user.id}> is no longer immune to being rolled."
-            remove_med_immune_player(interaction.guild.id, user.id)
+            await remove_med_immune_player(interaction.guild.id, user.id)
 
         med_embed = nextcord.Embed(
             title="Removed User's Immunity to Medic Roll",
@@ -287,7 +287,7 @@ class PugMedicCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction to respond to.
         """
         await interaction.response.defer()
-        clear_med_immunity_by_guild(interaction.guild.id)
+        await clear_med_immunity_by_guild(interaction.guild.id)
 
         med_embed = nextcord.Embed(
             title="Remove Immunity From All Players",
@@ -320,7 +320,7 @@ class PugMedicCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction to respond to.
         """
         await interaction.response.defer()
-        server = get_server(interaction.guild.id)
+        server = await get_server(interaction.guild.id)
 
         immune_embed = nextcord.Embed(
             title="Immune Players",

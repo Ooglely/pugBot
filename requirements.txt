@@ -1,9 +1,8 @@
 fastapi>=0.111.1
-pymongo==4.8.0
 rcon==2.4.6
 steam==1.4.4
 uvicorn==0.30.3
-nextcord==2.6.0
+nextcord>=3.0.0
 beautifulsoup4==4.12.3
 dnspython==2.6.1
 aiohttp>=3.8.5
@@ -11,3 +10,4 @@ pydantic==2.8.2
 pytz~=2024.1
 types_pytz>=2023.3.1.0
 gql==3.5.0
+motor>=3.6.1

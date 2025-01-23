@@ -25,14 +25,32 @@ category_db = BotCollection("guilds", "categories")
 class PugPlayer:
     """Represents a player in the pug."""
 
-    def __init__(
-        self, steam: Union[int, None] = None, discord: Union[int, None] = None
+    steam: int | None
+    discord: int | None
+    division: Dict[str, Dict[str, int]]
+    registered: bool
+    elo: int
+    icon: str | None
+
+    @classmethod
+    async def create(
+        cls, steam: Union[int, None] = None, discord: Union[int, None] = None
     ):
+        """Create a player object from steam or discord
+
+        Parameters
+        ----------
+        steam : Union[int, None], optional
+            Steam ID, by default None
+        discord : Union[int, None], optional
+            Discord ID, by default None
+        """
+        self = cls()
         try:
             if steam is not None:
-                player_data = get_player_from_steam(steam)
+                player_data = await get_player_from_steam(steam)
             elif discord is not None:
-                player_data = get_player_from_discord(discord)
+                player_data = await get_player_from_discord(discord)
             else:
                 raise KeyError
             registered = True
@@ -51,16 +69,13 @@ class PugPlayer:
                 "sixes": {"highest": -1, "current": -1},
                 "hl": {"highest": -1, "current": -1},
             }
-        self.steam: int | None = (
-            int(player_data["steam"]) if player_data["steam"] else None
-        )
-        self.discord: int | None = (
-            int(player_data["discord"]) if player_data["discord"] else None
-        )
-        self.division: Dict[str, Dict[str, int]] = player_data["divison"]
-        self.registered: bool = registered
-        self.elo: int = 0
-        self.icon: str | None = None
+        self.steam = int(player_data["steam"]) if player_data["steam"] else None
+        self.discord = int(player_data["discord"]) if player_data["discord"] else None
+        self.division = player_data["divison"]
+        self.registered = registered
+        self.elo = 0
+        self.icon = None
+        return self
 
     def get_division(self, gamemode: str, mode: str) -> int:
         """Gets the division for the player."""
@@ -130,7 +145,7 @@ class PugCategory:
         players: List[PugPlayer] = []
         for player in result["categories"][self.name]["players"]:
             print(player)
-            players.append(PugPlayer(discord=player["discord"]))
+            players.append(await PugPlayer.create(discord=player["discord"]))
         timestamp: int
         try:
             timestamp = result["categories"][self.name]["timestamp"]
@@ -157,7 +172,7 @@ class PugCategory:
 class CategorySelect(nextcord.ui.View):
     """View to show all categories."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.name: str = ""
 
@@ -166,7 +181,8 @@ class CategorySelect(nextcord.ui.View):
         self, _button: nextcord.ui.Button, interaction: nextcord.Interaction
     ):
         """Cancels the view"""
-        await interaction.message.delete()
+        if interaction.message:
+            await interaction.message.delete()
         self.name = "cancel"
         self.stop()
 
@@ -186,8 +202,9 @@ class CategoryButton(nextcord.ui.Button):
 
     async def callback(self, _interaction: nextcord.Interaction):
         """Callback for when the button is pressed."""
-        super().view.name = self.name
-        super().view.stop()
+        if self.view is not None:
+            self.view.name = self.name
+            self.view.stop()
 
 
 class Teams(TypedDict):

@@ -501,9 +501,9 @@ class UpdateRolesCog(commands.Cog):
         all_servers = []
 
         # Gather all information before cursors timeout
-        for server in server_cursor:
+        async for server in server_cursor:
             all_servers.append(server)
-        for player in player_cursor:
+        async for player in player_cursor:
             all_players.append(player)
 
         # Go through all servers and add to list if registration is enabled
@@ -667,7 +667,7 @@ class UpdateRolesCog(commands.Cog):
         await interaction.response.defer()
 
         try:
-            player: dict = db.get_player_from_discord(user.id)
+            player: dict = await db.get_player_from_discord(user.id)
         except LookupError:
             await interaction.send("Player not found in database.")
             return
@@ -713,7 +713,7 @@ class UpdateRolesCog(commands.Cog):
                 continue
 
             try:
-                player: dict = db.get_player_from_discord(member.id)
+                player: dict = await db.get_player_from_discord(member.id)
             except LookupError:
                 continue
 
@@ -779,7 +779,7 @@ class UpdateRolesCog(commands.Cog):
         loaded: LoadedRegSettings = LoadedRegSettings(self.bot, settings)
 
         try:
-            player: dict = db.get_player_from_discord(member.id)
+            player: dict = await db.get_player_from_discord(member.id)
         except LookupError:
             return
 

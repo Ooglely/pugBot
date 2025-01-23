@@ -82,5 +82,5 @@ class Webserver:
     async def get_bot_stats(self, response: Response):
         """Returns the number of players in the database."""
         response.headers["Access-Control-Allow-Origin"] = "*"
-        stats = {"players": player_count(), "logs": log_count()}
+        stats = {"players": await player_count(), "logs": await log_count()}
         return stats

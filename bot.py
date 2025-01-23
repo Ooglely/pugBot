@@ -71,7 +71,7 @@ async def on_ready() -> None:
     registration_cog: RegistrationCog = RegistrationCog(bot)
     bot.add_cog(registration_cog)
     webserver: Webserver = Webserver(registration_cog)
-    asyncio.ensure_future(registration_cog.start_server(webserver.app))
+    asyncio.create_task(registration_cog.start_server(webserver.app))
     logging.info("Syncing commands...")
     await bot.sync_all_application_commands()
     logging.info("Starting bot loops...")
@@ -155,7 +155,9 @@ async def setup(interaction: nextcord.Interaction):
     menu.embed.add_field(name="Connect Channel", value=f"<#{connect_id}>", inline=True)
     menu.embed.add_field(name="RCON Channel", value=f"<#{rcon_id}>", inline=True)
     await interaction.edit_original_message(content=None, embed=menu.embed, view=None)
-    database.add_new_guild(interaction.guild.id, selected_role.id, connect_id, rcon_id)
+    await database.add_new_guild(
+        interaction.guild.id, selected_role.id, connect_id, rcon_id
+    )
 
 
 @bot.slash_command(
@@ -175,7 +177,7 @@ async def serveme(interaction: nextcord.Interaction, api_key: str):
             "This command can only be used in a server.", ephemeral=True
         )
         return
-    database.set_guild_serveme(interaction.guild.id, api_key)
+    await database.set_guild_serveme(interaction.guild.id, api_key)
     await interaction.send("Serveme API Key set!", ephemeral=True)
 
 
@@ -328,8 +330,7 @@ async def search(
     """
     await interaction.response.defer()
     if discord_user is not None:
-        steam_id = database.get_steam_from_discord(discord_user.id)
-        print(steam_id)
+        steam_id = await database.get_steam_from_discord(discord_user.id)
         if steam_id is None:
             await interaction.send(
                 "User is not registered in the bot's database.",
@@ -417,9 +418,9 @@ async def update_status():
         "pugBot.tf :3",
         f"{len(bot.users)} users",
         "sea otters :D",
-        f"{database.player_count()} registered players",
+        f"{await database.player_count()} registered players",
         "meds drop :(",
-        f"{database.log_count()} recorded logs",
+        f"{await database.log_count()} recorded logs",
     ]
     await bot.change_presence(
         activity=nextcord.Activity(

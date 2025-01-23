@@ -69,12 +69,16 @@ def is_runner():
     """A decorator to check if the user has the runner role for the guild."""
 
     async def predicate(interaction: nextcord.Interaction):
-        if not is_server_setup(interaction.guild.id):
+        if not interaction.guild or not isinstance(interaction.user, nextcord.Member):
+            raise application_checks.ApplicationNoPrivateMessage(
+                "This command must be run in a server."
+            )
+        if not await is_server_setup(interaction.guild.id):
             raise ServerNotSetupError(
                 "Guild id: " + str(interaction.guild.id) + " is not setup."
             )
         try:
-            required_role = get_server(interaction.guild.id)["role"]
+            required_role = (await get_server(interaction.guild.id))["role"]
         except KeyError:
             await interaction.send(
                 "A runner role could not be found for this server. Please run /setup."
@@ -91,12 +95,16 @@ def is_runner():
 def is_setup():
     """A decorator to check if the server has gone through the setup process."""
 
-    def predicate(interaction: nextcord.Interaction):
-        if not is_server_setup(interaction.guild.id):
+    async def predicate(interaction: nextcord.Interaction):
+        if not interaction.guild or not isinstance(interaction.user, nextcord.Member):
+            raise application_checks.ApplicationNoPrivateMessage(
+                "This command must be run in a server."
+            )
+        if not await is_server_setup(interaction.guild.id):
             raise ServerNotSetupError(
                 "Guild id: " + str(interaction.guild.id) + " is not setup."
             )
-        if get_server(interaction.guild.id).get("serveme") is None:
+        if (await get_server(interaction.guild.id)).get("serveme") is None:
             raise NoServemeKey(
                 f"Guild id: {str(interaction.guild.id)}  does not have a serveme key setup."
             )
@@ -110,6 +118,10 @@ def guild_config_check():
     """A decorator to check if the server has guild configs setup."""
 
     async def predicate(interaction: nextcord.Interaction):
+        if not interaction.guild:
+            raise application_checks.ApplicationNoPrivateMessage(
+                "This command must be run in a server."
+            )
         try:
             await config_db.find_item({"guild": interaction.guild.id})
         except LookupError:

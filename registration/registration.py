@@ -126,7 +126,7 @@ class RegistrationCog(Cog):
             return "Bot was unable to find discord user."
 
         try:
-            player = get_player_from_steam(steam_id)
+            player = await get_player_from_steam(steam_id)
             if player is not None and player["discord"] == str(discord_id):
                 return (
                     f"Your Steam and Discord accounts are already linked to each other. If this is an error, "
@@ -138,7 +138,7 @@ class RegistrationCog(Cog):
             pass
 
         try:
-            get_player_from_discord(discord_id)
+            await get_player_from_discord(discord_id)
             return f"Discord is already linked. Please contact PugBot devs {DEV_DISCORD_LINK}"
         except LookupError:
             # pass is not a mistake or incomplete implementation, this means the steam is unique and we can proceed
@@ -209,7 +209,7 @@ class RegistrationCog(Cog):
 
         # Avoid cursor timeout
         all_servers = []
-        for server in get_all_servers():
+        async for server in get_all_servers():
             all_servers.append(server)
 
         for server in all_servers:

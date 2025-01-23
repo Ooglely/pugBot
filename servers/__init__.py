@@ -37,8 +37,9 @@ class ServerButton(nextcord.ui.Button):
 
     async def callback(self, _interaction: nextcord.Interaction):
         """Callback for when the button is pressed."""
-        super().view.server_chosen = self.num
-        super().view.stop()
+        if self.view is not None:
+            self.view.server_chosen = self.num
+            self.view.stop()
 
 
 class Reservation:
@@ -132,5 +133,6 @@ class MapButton(nextcord.ui.Button):
 
     async def callback(self, _interaction: nextcord.Interaction):
         """Callback for when the button is pressed."""
-        super().view.map_chosen = self.map
-        super().view.stop()
+        if self.view is not None:
+            self.view.map_chosen = self.map
+            self.view.stop()
