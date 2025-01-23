@@ -1,5 +1,6 @@
 """Cog storing commands to manually add up to pugs."""
 
+import asyncio
 import time
 import traceback
 
@@ -153,6 +154,7 @@ class ManualPugCog(commands.Cog):
                     "HTTP Exception when editing channel topic. Likely inappropriate username.\nGuild: ",
                     guild,
                 )
+            await asyncio.sleep(20)
 
     @status_check.error
     @update_channel_status.error
@@ -371,6 +373,7 @@ class ManualPugCog(commands.Cog):
             interaction (nextcord.Interaction): The interaction that triggered the command.
             time (int, optional): The hours to add up for. Defaults to 2.
         """
+        await interaction.response.defer()
         guild_settings = await guild_configs.find_item({"guild": interaction.guild.id})
         if add_time is None:
             if "default" not in guild_settings["manual"]:
@@ -449,6 +452,7 @@ class ManualPugCog(commands.Cog):
         Args:
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
+        await interaction.response.defer()
         guild_settings = await guild_configs.find_item({"guild": interaction.guild.id})
         player_ids: list[int] = [
             player[0] for player in guild_settings["manual"]["players"]
@@ -479,6 +483,7 @@ class ManualPugCog(commands.Cog):
         Args:
             interaction (nextcord.Interaction): The interaction that triggered the command.
         """
+        await interaction.response.defer()
         try:
             guild_settings = await guild_configs.find_item(
                 {"guild": interaction.guild.id}
