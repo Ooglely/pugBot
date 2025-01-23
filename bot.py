@@ -44,7 +44,6 @@ bot.add_cog(
     TestCog(bot)
 )  # Keep this Cog at the top as the test command might need to be loaded first
 bot.add_cog(ServerCog(bot))
-bot.add_cog(UpdateRolesCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
@@ -52,7 +51,6 @@ bot.add_cog(PugMedicCog(bot))
 bot.add_cog(LogsCog(bot))
 bot.add_cog(EloCog(bot))
 bot.add_cog(StatsCog(bot))
-bot.add_cog(ManualPugCog(bot))
 bot.remove_command("help")
 
 RGL: RglApi = RglApi()
@@ -72,10 +70,16 @@ async def on_ready() -> None:
     bot.add_cog(registration_cog)
     webserver: Webserver = Webserver(registration_cog)
     asyncio.create_task(registration_cog.start_server(webserver.app))
+    logging.info("Adding delayed cogs...")
+    manual_cog: ManualPugCog = ManualPugCog(bot)
+    bot.add_cog(manual_cog)
+    bot.add_cog(UpdateRolesCog(bot))
     logging.info("Syncing commands...")
     await bot.sync_all_application_commands()
     logging.info("Starting bot loops...")
     update_status.start()
+    manual_cog.status_check.start()  # pylint: disable=no-member
+    manual_cog.update_channel_status.start()  # pylint: disable=no-member
     log_searcher: LogSearcher = LogSearcher(bot)
     log_searcher.searcher.start()  # pylint: disable=no-member
     log_searcher.queue.start()  # pylint: disable=no-member

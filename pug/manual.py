@@ -71,8 +71,6 @@ class ManualPugCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
-        self.status_check.start()  # pylint: disable=no-member
-        self.update_channel_status.start()  # pylint: disable=no-member
 
     @tasks.loop(minutes=1)
     async def status_check(self):
