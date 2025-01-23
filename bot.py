@@ -1,6 +1,5 @@
 """Main file for running and starting the bot, with general global commands."""
 
-import asyncio
 import datetime
 import logging
 import random
@@ -65,11 +64,10 @@ async def on_ready() -> None:
         logging.info("Logged in as %s (ID: %d)", bot.user.name, bot.user.id)
         logging.info("Running: %s", NEW_COMMIT_NAME)
         logging.info("------")
-    logging.info("Starting webserver...")
+    logging.info("Creating webserver...")
     registration_cog: RegistrationCog = RegistrationCog(bot)
     bot.add_cog(registration_cog)
     webserver: Webserver = Webserver(registration_cog)
-    asyncio.create_task(registration_cog.start_server(webserver.app))
     logging.info("Adding delayed cogs...")
     manual_cog: ManualPugCog = ManualPugCog(bot)
     bot.add_cog(manual_cog)
@@ -83,7 +81,8 @@ async def on_ready() -> None:
     log_searcher: LogSearcher = LogSearcher(bot)
     log_searcher.searcher.start()  # pylint: disable=no-member
     log_searcher.queue.start()  # pylint: disable=no-member
-    logging.info("Bot is ready.")
+    logging.info("Starting webserver. Bot is ready!")
+    await registration_cog.start_server(webserver.app)
 
 
 @bot.slash_command(
