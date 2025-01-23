@@ -518,9 +518,12 @@ class UpdateRolesCog(commands.Cog):
                     guilds.append(LoadedRegSettings(self.bot, settings))
                 except AttributeError as err:
                     await self.admin_log_failed(
-                        f"Could not load settings for guild {server['guild']}.",
+                        f"Loading data for guild {server['guild']} failed.",
                         str(err),
                     )
+                    continue
+                except ValueError:
+                    # Bot is not in the guild it is trying to load, don't bother logging
                     continue
 
         # Run the update function for each player
