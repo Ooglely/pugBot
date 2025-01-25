@@ -222,6 +222,8 @@ class RegistrationCog(Cog):
                 loaded: LoadedRegSettings = LoadedRegSettings(self.bot, settings)
             except AttributeError:
                 continue
+            except ValueError:
+                continue
 
             # If member is not in server, skip
             member: nextcord.Member | None = loaded.guild.get_member(discord_id)
