@@ -1,6 +1,7 @@
 """Cog storing commands to manually add up to pugs."""
 
 import asyncio
+import logging
 import time
 import traceback
 
@@ -93,7 +94,7 @@ class ManualPugCog(commands.Cog):
                         {"$pull": {"manual.players": player}},
                     )
 
-    @tasks.loop(minutes=15)
+    @tasks.loop()
     async def update_channel_status(self):
         """Update the channel status for the guild."""
         print("Updating channel statuses")
@@ -125,6 +126,15 @@ class ManualPugCog(commands.Cog):
                 guild["manual"]["channel"]
             )
 
+            if channel is None:
+                continue
+            permissions = channel.permissions_for(guild_obj.me)
+            if not permissions.manage_channels:
+                logging.warning(
+                    "Missing permissions to edit channel topic in guild: %s", guild
+                )
+                continue
+
             player_string: str = ""
             for player in guild["manual"]["players"]:
                 player_id = player[0]
@@ -154,7 +164,7 @@ class ManualPugCog(commands.Cog):
                     "HTTP Exception when editing channel topic. Likely inappropriate username.\nGuild: ",
                     guild,
                 )
-            await asyncio.sleep(20)
+            await asyncio.sleep(360)
 
     @status_check.error
     @update_channel_status.error
