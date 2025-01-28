@@ -118,6 +118,7 @@ async def setup(interaction: nextcord.Interaction):
     await menu.send(interaction)
     if not await menu.wait_for_action(bot) or menu.action == "cancel":
         await interaction.delete_original_message()
+        return
 
     if len(role_select.values) == 0:
         await interaction.edit_original_message(

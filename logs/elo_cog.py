@@ -106,7 +106,7 @@ class EloCog(commands.Cog):
         except TimeoutError:
             await interaction.delete_original_message(delay=1)
             return
-        if result == "disable":
+        if not result:
             elo_settings.enabled = False
             await elo_settings.save()
             setup_embed.description = "Elo has been disabled."
