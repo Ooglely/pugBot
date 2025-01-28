@@ -78,18 +78,22 @@ def setup_reg_embed(embed: nextcord.Embed, settings: RegistrationSettings) -> No
         value=f"Registered: <@&{settings.roles.registered}>\nBypass: <@&{settings.roles.bypass}>\nBan: <@&{settings.roles.ban}>",
         inline=True,
     )
-    embed.add_field(name="Channels", value=settings.channels, inline=True)
+    embed.add_field(name="Channels", value=str(settings.channels), inline=True)
     match settings.gamemode:
         case "sixes" | "combined":
-            embed.add_field(name="Roles", value=settings.roles.sixes, inline=False)
+            embed.add_field(name="Roles", value=str(settings.roles.sixes), inline=False)
         case "highlander":
-            embed.add_field(name="Roles", value=settings.roles.highlander, inline=False)
+            embed.add_field(
+                name="Roles", value=str(settings.roles.highlander), inline=False
+            )
         case "both":
             embed.add_field(
-                name="Sixes Roles", value=settings.roles.sixes, inline=False
+                name="Sixes Roles", value=str(settings.roles.sixes), inline=False
             )
             embed.add_field(
-                name="Highlander Roles", value=settings.roles.highlander, inline=True
+                name="Highlander Roles",
+                value=str(settings.roles.highlander),
+                inline=True,
             )
 
 
