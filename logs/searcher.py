@@ -240,13 +240,7 @@ class LogSearcher:
         """Log a failed log to the database"""
         print(f"Logging failed log... {reason}")
         print(log.export())
-        guild_settings = await guild_settings_db.find_item({"guild": log.guild})
 
-        if "logs" in guild_settings:
-            if not guild_settings["logs"]["enabled"]:
-                return
-        else:
-            return
         player_string = ""
         for player in log.players:
             player_string += f"<@{player.discord}>\n"
@@ -264,15 +258,13 @@ class LogSearcher:
         """Log a completed log to the database"""
         guild_settings = await guild_settings_db.find_item({"guild": log.guild})
 
+        guild_logs_enabled = False
+        logs_channel: nextcord.abc.GuildChannel | None = None
         if "logs" in guild_settings:
-            if not guild_settings["logs"]["enabled"]:
-                return
-            logs_channel_id: int = guild_settings["logs"]["channel"]
-            logs_channel: nextcord.abc.GuildChannel = self.bot.get_channel(
-                logs_channel_id
-            )
-        else:
-            return
+            if guild_settings["logs"]["enabled"]:
+                logs_channel_id: int = guild_settings["logs"]["channel"]
+                logs_channel = self.bot.get_channel(logs_channel_id)
+                guild_logs_enabled = True
 
         try:
             guild_categories = await guild_categories_db.find_item({"_id": log.guild})
@@ -283,14 +275,15 @@ class LogSearcher:
         except LookupError:
             category_string = ""
 
-        if guild_settings["logs"]["loogs"]:
+        if guild_logs_enabled and guild_settings["logs"]["loogs"]:
             log_url = f"https://loogs.tf/{log.log_id}"
         else:
             log_url = f"https://logs.tf/{log.log_id}"
 
-        if logs_channel:
+        if guild_logs_enabled:
             try:
-                await logs_channel.send(content=f"{category_string}{log_url}")
+                if logs_channel:
+                    await logs_channel.send(content=f"{category_string}{log_url}")
             except nextcord.Forbidden:
                 await self.bot.get_channel(DEV_ERROR_LOGS).send(
                     content=f"{category_string}{log_url}\nGuild: {log.guild} | Failed to send due to perms"
