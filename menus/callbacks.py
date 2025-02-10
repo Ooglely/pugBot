@@ -1,4 +1,5 @@
 """This module contains some useful callbacks for menus."""
+
 from typing import Callable, Any
 
 from nextcord import Interaction
