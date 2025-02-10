@@ -1,4 +1,5 @@
 """Implements the log searcher file, which takes the players from a team generation or moved back and searches for the log associated with the game that was played/being played."""
+
 import time
 import traceback
 
