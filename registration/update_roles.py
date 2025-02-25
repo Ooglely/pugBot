@@ -466,9 +466,16 @@ async def update_guild_player(
             return
         if old_ban and banned:
             # Player is still banned, if there are division roles, remove them
-            await member.remove_roles(
-                *current_roles, reason="Removing division roles as part of RGL ban."
-            )
+            try:
+                await member.remove_roles(
+                    *current_roles, reason="Removing division roles as part of RGL ban."
+                )
+            except nextcord.Forbidden as err:
+                await guild_log_failed(
+                    settings,
+                    f"Could not remove role {ban_role} from <@{member.id}>.",
+                    err.text,
+                )
             return
         if old_ban and not banned:
             # Player was recently unbanned from RGL
