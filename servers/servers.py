@@ -702,12 +702,13 @@ class ServerCog(commands.Cog):
             else:
                 print("Successful removed the server")
 
+    @map_updater.error
     @server_status.error
-    async def server_status_error_handler(self, _exception: Exception):
+    async def error_handler(self, _exception: Exception):
         """Handles printing errors to console for the loop
 
         Args:
             exception (Exception): The exception that was raised
         """
-        print("Error in server_status loop:\n")
+        print("Error in server_status or map_updater loop:\n")
         print(traceback.format_exc())

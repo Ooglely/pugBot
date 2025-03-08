@@ -42,7 +42,6 @@ bot: commands.Bot = commands.Bot(intents=intents, activity=activity)
 bot.add_cog(
     TestCog(bot)
 )  # Keep this Cog at the top as the test command might need to be loaded first
-bot.add_cog(ServerCog(bot))
 bot.add_cog(RegistrationSetupCog(bot))
 bot.add_cog(PugSetupCog(bot))
 bot.add_cog(PugRunningCog(bot))
@@ -72,6 +71,7 @@ async def on_ready() -> None:
     webserver: Webserver = Webserver(registration_cog)
     logging.info("Adding delayed cogs...")
     bot.add_cog(UpdateRolesCog(bot))
+    bot.add_cog(ServerCog(bot))
     logging.info("Syncing commands...")
     await bot.sync_all_application_commands()
     logging.info("Starting bot loops...")
