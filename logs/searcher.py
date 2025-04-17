@@ -294,7 +294,13 @@ class LogSearcher:
         )
 
         # Process elo changes
-        await process_elo(log)
+        try:
+            await process_elo(log)
+        except Exception as error:
+            await self.bot.get_channel(DEV_ERROR_LOGS).send(
+                content=f"{category_string}{log_url}\nGuild: {log.guild} | Failed to process elo changes due to {error}"
+            )
+            return
         await logs_list_db.add_item(log.export())
 
     @staticmethod
