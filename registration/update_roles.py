@@ -790,7 +790,24 @@ class UpdateRolesCog(commands.Cog):
         await settings.load_data(member.guild.id)
         if not settings.enabled:
             return
-        loaded: LoadedRegSettings = LoadedRegSettings(self.bot, settings)
+
+        try:
+            loaded: LoadedRegSettings = LoadedRegSettings(self.bot, settings)
+        except AttributeError as error:
+            embed: nextcord.Embed = nextcord.Embed(
+                title="Error: Unable to load registration settings",
+                description=f"Error details: {error}",
+                color=BOT_COLOR,
+            )
+            if settings.channels.logs is not None:
+                try:
+                    log_channel_id: int = settings.channels.logs
+                    log_channel = member.guild.get_channel(log_channel_id)
+                    if isinstance(log_channel, nextcord.TextChannel):
+                        await log_channel.send(embed=embed)
+                except nextcord.Forbidden:
+                    pass
+            return
 
         try:
             player: dict = await db.get_player_from_discord(member.id)
