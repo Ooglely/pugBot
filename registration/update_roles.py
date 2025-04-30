@@ -353,9 +353,10 @@ async def unban_player(
                 return
 
     try:
-        await member.add_roles(
-            *new_roles, reason="Adding new division roles as part of unban."
-        )
+        if new_roles:
+            await member.add_roles(
+                *new_roles, reason="Adding new division roles as part of unban."
+            )
     except nextcord.Forbidden as err:
         await guild_log_failed(
             settings, "Could not change roles for unbanned player.", err.text
