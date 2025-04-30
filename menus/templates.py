@@ -10,6 +10,8 @@ from menus.callbacks import action_callback
 from registration import RegistrationSettings
 from pug import Teams
 
+# pylint: disable=too-many-positional-arguments
+
 
 async def send_boolean_menu(menu: BotMenu, interaction: Interaction) -> bool:
     """Creates and sends a boolean menu.
@@ -243,16 +245,16 @@ class TeamGenMenu(BotMenu):
             raise ValueError(f"Invalid view action: {self.action}")
 
         if self.action == "random":
-            self.embed.add_field(name="🔴 Red Team", value=red_team_string)
             self.embed.add_field(name="🔵 Blu Team", value=blu_team_string)
+            self.embed.add_field(name="🔴 Red Team", value=red_team_string)
         else:
-            self.embed.add_field(
-                name=f"🔴 Red Team\nScore: {(red_team_score / team_count):.2f}",
-                value=red_team_string,
-            )
             self.embed.add_field(
                 name=f"🔵 Blu Team\nScore: {(blu_team_score / team_count):.2f}",
                 value=blu_team_string,
+            )
+            self.embed.add_field(
+                name=f"🔴 Red Team\nScore: {(red_team_score / team_count):.2f}",
+                value=red_team_string,
             )
 
         self.embed.description = f"Current generation mode: {self.action.capitalize()}"
