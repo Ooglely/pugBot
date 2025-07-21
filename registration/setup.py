@@ -1,4 +1,5 @@
 """Cog to hold commands to set up the registration part of the bot per server."""
+
 import nextcord
 from nextcord.ext import commands
 from nextcord.ui import RoleSelect
