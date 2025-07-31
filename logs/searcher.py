@@ -113,13 +113,6 @@ class LogSearcher:
                 searcher_log["timestamp"],
             )
 
-            if round(time.time()) - partial_log.timestamp > 21600:
-                await LogSearcher._delete_searcher_game(searcher_log["_id"])
-                await self.log_failed_log(
-                    partial_log, "Searcher timed out (6 hours without finding a log)"
-                )
-                continue
-
             steam_ids = []
             for player in partial_log.players:
                 if player.steam_64 is not None:
@@ -179,6 +172,13 @@ class LogSearcher:
                             break
                 except KeyError:
                     continue
+
+            if round(time.time()) - partial_log.timestamp > 21600:
+                await LogSearcher._delete_searcher_game(searcher_log["_id"])
+                await self.log_failed_log(
+                    partial_log, "Searcher timed out (6 hours without finding a log)"
+                )
+                continue
 
     @tasks.loop(minutes=1)
     async def queue(self) -> None:
