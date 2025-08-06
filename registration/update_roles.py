@@ -501,22 +501,14 @@ class UpdateRolesCog(commands.Cog):
             self.admin_log_channel = log_channel
         logging.info("Admin log channel should be loaded: %s", self.admin_log_channel)
 
-    @tasks.loop(time=update_time)
-    async def update_rgl(self) -> None:
-        """Updates RGL divisions and roles for all registered players in all guilds."""
-        # Get all players and servers from DB
-        player_cursor = db.get_all_players()
-        server_cursor = db.get_all_servers()
-        all_players = []
+    async def _get_loaded_servers(self) -> list[LoadedRegSettings]:
+        """Get all loaded registration settings for all servers the bot is in."""
         all_servers = []
+        server_cursor = db.get_all_servers()
 
-        # Gather all information before cursors timeout
         async for server in server_cursor:
             all_servers.append(server)
-        async for player in player_cursor:
-            all_players.append(player)
 
-        # Go through all servers and add to list if registration is enabled
         guilds: list[LoadedRegSettings] = []
         for server in all_servers:
             settings: RegistrationSettings = RegistrationSettings()
@@ -533,6 +525,22 @@ class UpdateRolesCog(commands.Cog):
                 except ValueError:
                     # Bot is not in the guild it is trying to load, don't bother logging
                     continue
+
+        return guilds
+
+    @tasks.loop(time=update_time)
+    async def update_rgl(self) -> None:
+        """Updates RGL divisions and roles for all registered players in all guilds."""
+        # Get all players and servers from DB
+        player_cursor = db.get_all_players()
+        all_players = []
+
+        # Gather all information before cursors timeout
+        async for player in player_cursor:
+            all_players.append(player)
+
+        # Go through all servers and add to list if registration is enabled
+        guilds: list[LoadedRegSettings] = await self._get_loaded_servers()
 
         # Run the update function for each player
         for player in all_players:
@@ -887,3 +895,49 @@ class UpdateRolesCog(commands.Cog):
             await self.admin_log_channel.send(
                 "Update loop from /test updateall complete."
             )
+
+    @TestCog.test.subcommand(  # pylint: disable=no-member
+        name="update",
+        description="For testing/admin only. Updates a single member's roles in ALL SERVERS.",
+    )
+    async def admin_update_member(
+        self,
+        interaction: nextcord.Interaction,
+        user: nextcord.User = nextcord.SlashOption(
+            name="discord", description="The user to update.", required=True
+        ),
+    ) -> None:
+        """
+        Updates RGL divisions and roles for the given player in all guilds they are in.
+        """
+        if interaction.user is None or isinstance(interaction.user, nextcord.User):
+            await interaction.send("This command must be run in a guild.")
+            return
+        if interaction.guild is None:
+            await interaction.send("This command must be run in a guild.")
+            return
+
+        if interaction.user.get_role(DEV_CONTRIBUTOR_ROLE) is None:
+            await interaction.send(
+                "You do not have the Contributors role and cannot run this command.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer()
+
+        # Go through all servers and add to list if registration is enabled
+        guilds: list[LoadedRegSettings] = await self._get_loaded_servers()
+
+        try:
+            player: dict = await db.get_player_from_discord(user.id)
+        except LookupError:
+            await interaction.send("Player not found in database.")
+            return
+
+        result: bool = await self.check_player_data(player, guilds)
+        if not result:
+            await self.admin_log_failed("Skipping player, update failed.", str(player))
+            await interaction.send("Update failed for player.")
+        else:
+            await interaction.send("Player updated successfully.")
