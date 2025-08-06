@@ -595,6 +595,13 @@ class UpdateRolesCog(commands.Cog):
             )
             return False
 
+        # Get the current player data from the database to fall back on if RGL fails
+        current_player: dict = {}
+        try:
+            current_player = await db.get_player_from_steam(steam_id)
+        except LookupError:
+            pass
+
         # Get updated information from RGL
         player_divs: dict[str, dict[str, int]] = {}
         while not player_divs and attempts < 3:
@@ -610,10 +617,24 @@ class UpdateRolesCog(commands.Cog):
                 )
                 return False
         if player_divs == {}:
-            return False
-        await db.update_divisons(steam_id, player_divs)
+            if current_player:
+                # Fall back on current data
+                await self.admin_log_failed(
+                    "Fell back on current db data for player.", str(player)
+                )
+                player_divs = current_player
+            else:
+                await self.admin_log_failed(
+                    "Player not found in RGL database and no current player data.",
+                    str(player),
+                )
+                return False
+        else:
+            # only update the database if we got new data from RGL
+            await db.update_divisons(steam_id, player_divs)
+
         ban_check: bool = False
-        new_ban: bool
+        new_ban: bool = False
         while not ban_check and attempts < 3:
             try:
                 new_ban = await RGL.check_banned(steam_id)
@@ -628,10 +649,14 @@ class UpdateRolesCog(commands.Cog):
                 )
                 return False
         if not ban_check:
-            await self.admin_log_failed(
-                f"Could not check if player {steam_id} is banned.", str(player)
-            )
-            return False
+            if current_player:
+                new_ban = current_player["rgl_ban"]
+            else:
+                # If we can't get the ban status from RGL, we can't update the player
+                await self.admin_log_failed(
+                    f"Could not check if player {steam_id} is banned.", str(player)
+                )
+                return False
 
         # Attempt to update this player in every guild they are in
         for reg_settings in guilds:
