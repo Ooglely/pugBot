@@ -104,6 +104,10 @@ class RglApi:
             ) as player_data:
                 if player_data.status == 429:
                     raise RateLimitException("Rate limited by the RGL API")
+                if player_data.status == 500:
+                    raise LookupError(
+                        "RGL API is currently down. Please try again later."
+                    )
                 if player_data.status != 200:
                     raise LookupError("Player does not exist in RGL")
                 return await player_data.json()
