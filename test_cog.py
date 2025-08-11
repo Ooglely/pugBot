@@ -1,4 +1,5 @@
 """Contains all of the commands for the test bot."""
+
 import gql
 import nextcord
 from gql.transport.aiohttp import AIOHTTPTransport
