@@ -171,7 +171,7 @@ class ServerCog(commands.Cog):
             max_value=14,
             required=False,
         ),
-    ):
+    ):  # pylint: disable=too-many-positional-arguments
         """Reserves a server for the user to use.
 
         Args:
@@ -686,7 +686,7 @@ class ServerCog(commands.Cog):
         """
         print("Searching for inactive servers")
         inactive = []
-        for server in self.servers:
+        for server in self.servers.copy():
             active: bool | None = await server.is_active()
             if not active:
                 if not None:
