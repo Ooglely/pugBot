@@ -194,6 +194,11 @@ class TeamGenMenu(BotMenu):
         red_team_score: int = 0
         blu_team_score: int = 0
         team_count: int = min(len(teams["red"]), len(teams["blu"]))
+
+        if team_count == 0:
+            print("Teams: ", teams["red"], teams["blu"])
+            raise ValueError("No players in one of the teams. Cannot generate teams.")
+
         if self.action in ("elo", "roles"):
             for player in teams["red"]:
                 red_team_score += player.elo
