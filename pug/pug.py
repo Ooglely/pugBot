@@ -73,6 +73,12 @@ async def generate_random_teams(
     red_team: list[PugPlayer] = []
     blu_team: list[PugPlayer] = []
 
+    if len(all_players) < team_size * 2:
+        raise ValueError(
+            "Not enough players to generate teams. "
+            f"Required: {team_size * 2}, Available: {len(all_players)}"
+        )
+
     while len(red_team) < team_size and len(blu_team) < team_size:
         red_team.append(all_players.pop(0))
         blu_team.append(all_players.pop(0))
@@ -118,6 +124,12 @@ async def generate_balanced_teams(
     )
     all_players = players["next_pug"] + players["add_up"]
 
+    if len(all_players) < team_size * 2:
+        raise ValueError(
+            "Not enough players to generate teams. "
+            f"Required: {team_size * 2}, Available: {len(all_players)}"
+        )
+
     total_level: int = 0
     team_players: List[PugPlayer] = []
     for player in all_players[0 : team_size * 2]:
@@ -151,6 +163,12 @@ async def generate_elo_teams(
     random.shuffle(players["next_pug"])
     random.shuffle(players["add_up"])
     all_players = players["next_pug"] + players["add_up"]
+
+    if len(all_players) < team_size * 2:
+        raise ValueError(
+            "Not enough players to generate teams. "
+            f"Required: {team_size * 2}, Available: {len(all_players)}"
+        )
 
     total_elo: int = 0
     elo_players: List[PugPlayer] = []
@@ -190,6 +208,13 @@ async def generate_role_teams(
     random.shuffle(players["next_pug"])
     random.shuffle(players["add_up"])
     all_players = players["next_pug"] + players["add_up"]
+
+    if len(all_players) < team_size * 2:
+        raise ValueError(
+            "Not enough players to generate teams. "
+            f"Required: {team_size * 2}, Available: {len(all_players)}"
+        )
+
     total_value: int = 0
     processed_players: List[PugPlayer] = []
 
