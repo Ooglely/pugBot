@@ -33,7 +33,6 @@ from util import get_steam64
 
 intents = nextcord.Intents.default()
 intents.members = True
-intents.message_content = True
 intents.voice_states = True
 
 activity = nextcord.Activity(name="pugBot.tf :3", type=nextcord.ActivityType.watching)
