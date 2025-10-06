@@ -1,4 +1,5 @@
 """Cog that handles stats and showing stats to players."""
+
 from typing import Optional
 import nextcord
 from nextcord.ext import commands

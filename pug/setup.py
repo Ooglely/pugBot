@@ -1,4 +1,5 @@
 """Cog to set up pug categories for the server."""
+
 import nextcord
 from nextcord.ext import commands
 from nextcord.abc import GuildChannel
@@ -171,8 +172,7 @@ class PugSetupCog(commands.Cog):
         value: int = nextcord.SlashOption(
             name="value", description="The point value to give the role.", required=True
         ),
-        emote: str
-        | None = nextcord.SlashOption(
+        emote: str | None = nextcord.SlashOption(
             name="emote", description="The emote to use for the role.", required=False
         ),
     ):

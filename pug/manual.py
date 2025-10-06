@@ -367,8 +367,7 @@ class ManualPugCog(commands.Cog):
     async def manual_add(
         self,
         interaction: nextcord.Interaction,
-        add_time: int
-        | None = nextcord.SlashOption(
+        add_time: int | None = nextcord.SlashOption(
             name="time",
             description="The hours to add up for.",
             required=False,

@@ -1,4 +1,5 @@
 """Contains classes for registration of new users."""
+
 import asyncio
 from dataclasses import dataclass, field
 import json
