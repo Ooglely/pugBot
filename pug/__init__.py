@@ -1,4 +1,5 @@
 """Holds classes for pug commands/setup"""
+
 from typing import Union, List, Dict, TypedDict
 import time
 
