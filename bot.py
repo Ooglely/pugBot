@@ -22,6 +22,7 @@ from pug.manual import ManualPugCog
 from pug.med_immunity import PugMedicCog
 from pug.pug import PugRunningCog
 from pug.setup import PugSetupCog
+from pug.tf2cc_whitelisted_pugs import PugWhitelistedPugs
 from registration.registration import RegistrationCog
 from registration.setup import RegistrationSetupCog
 from registration.update_roles import UpdateRolesCog
@@ -48,6 +49,8 @@ bot.add_cog(PugMedicCog(bot))
 bot.add_cog(LogsCog(bot))
 bot.add_cog(EloCog(bot))
 bot.add_cog(StatsCog(bot))
+bot.add_cog(PugWhitelistedPugs(bot))
+bot.add_cog(ServerCog(bot))
 manual_cog: ManualPugCog = ManualPugCog(bot)
 bot.add_cog(manual_cog)
 bot.remove_command("help")

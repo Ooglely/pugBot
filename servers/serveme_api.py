@@ -135,6 +135,22 @@ class ServemeAPI:
                         future_servers.append(reservation)
                 active_servers.reverse()
                 return active_servers, future_servers
+            
+    async def get_reservation_by_id(self, serveme_key: str, id: int):
+        """Gets the current reservations from na.serveme.tf.
+
+        Args:
+            serveme_key (str): The serveme.tf API key.
+
+        Returns:
+            dict: The current reservations.
+        """
+        headers = {"Content-type": "application/json"}
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(self.base_url + f"{id}?api_key={serveme_key}") as times:
+                reservation = (await times.json())["reservations"]
+
+                return reservation
 
     @staticmethod
     async def fetch_all_maps() -> list[str]:

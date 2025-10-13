@@ -45,6 +45,12 @@ class BotCollection:
         if result is None:
             raise LookupError
         return result
+    
+    async def aggregate(self, search: list[dict]) -> list:
+        result = await self.database.aggregate(search)
+        if result is None:
+            raise LookupError
+        return result
 
     async def delete_item(self, search: dict):
         """Delete an item from the collection.

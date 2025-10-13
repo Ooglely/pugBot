@@ -20,7 +20,7 @@ from rcon.source import rcon
 
 import database
 import util
-from constants import VERSION
+from constants import VERSION, TF2CC_GUILD
 from servers.serveme_api import ServemeAPI, update_comp_maps  # disable=attr-defined
 from servers import Reservation, Servers, ServerButton, MapSelection
 
@@ -36,6 +36,20 @@ PT_MAPS: dict = {
     "pass_stonework": "pass_stonework_a24",
 }
 
+SERVERS: Set[Reservation] = set()
+
+
+async def get_servers_by_guild_and_category(guild_id: int, category: str) -> list[Reservation]:
+    results = []
+    for res in SERVERS:
+        if res.guild != guild_id:
+            continue
+        if res.category == None or res.category != category:
+            continue
+        results.append(res)
+
+    return results
+
 
 class ServerCog(commands.Cog):
     """A cog that holds all the commands for reserving/managing servers.
@@ -45,7 +59,6 @@ class ServerCog(commands.Cog):
     """
 
     def __init__(self, bot: nextcord.Client):
-        self.servers: Set[Reservation] = set()
         self.bot = bot
         self.all_maps: list[str] = []
         self.map_updater.start()  # pylint: disable=no-member
@@ -412,7 +425,7 @@ class ServerCog(commands.Cog):
         connect_embed.add_field(name="Connect Link", value=connect_link, inline=False)
 
         connect_channel = self.bot.get_channel(guild_data["connect"])
-        if interaction.guild_id == 727627956058325052:  # TF2CC
+        if interaction.guild_id == TF2CC_GUILD:
             if interaction.user.voice is not None:
                 category = interaction.user.voice.channel.category
 
@@ -426,7 +439,7 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
         message_list.append((connect_channel.id, connect_msg.id))
 
-        self.servers.add(
+        SERVERS.add(
             Reservation(server_id, serveme_api_key, interaction.guild.id, message_list)
         )
 
@@ -686,7 +699,7 @@ class ServerCog(commands.Cog):
         """
         print("Searching for inactive servers")
         inactive = []
-        for server in self.servers.copy():
+        for server in SERVERS.copy():
             active: bool | None = await server.is_active()
             if not active:
                 if not None:
@@ -696,7 +709,7 @@ class ServerCog(commands.Cog):
         for server in inactive:
             try:
                 print("Attempting to remove a server from being tracked")
-                self.servers.remove(server)
+                SERVERS.remove(server)
             except KeyError:
                 print("Server already removed")
             else:

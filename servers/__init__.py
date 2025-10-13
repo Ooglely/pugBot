@@ -5,6 +5,10 @@ from typing import Optional
 import nextcord
 import pytz
 import aiohttp
+from rcon.source import rcon
+
+from database import get_steam_from_discord
+from servers.serveme_api import ServemeAPI
 
 
 class Servers(nextcord.ui.View):
@@ -50,14 +54,17 @@ class Reservation:
     Attributes:
         reservation_id (int): The ID of the reservation
         api_key (str): The API key associated with the reservation
+        guild (int): The associated guild id
         messages (list[tuple[int]]): List of the channel and message ids associated with this reservation
+        category (Optional[str]): The associated category name
     """
 
-    def __init__(self, reservation_id: int, api_key: str, guild: int, messages) -> None:
+    def __init__(self, reservation_id: int, api_key: str, guild: int, messages, category: Optional[str] = None) -> None:
         self.reservation_id = reservation_id
         self.api_key = api_key
         self.messages = messages
         self.guild: int = guild
+        self.category = category
 
     def __hash__(self):
         return hash(self.reservation_id)
@@ -107,6 +114,36 @@ class Reservation:
                         )
             except nextcord.HTTPException as err:
                 print(f"Couldn't delete reservation message: {err}\n{message}")
+
+    async def add_to_whitelist(self, api_key, member: nextcord.Member):
+        steam_id = await get_steam_from_discord(member.id)
+
+        command = f"sm_game_player_add {steam_id}"
+        reservation = (await ServemeAPI().get_reservation_by_id(api_key, self.reservation_id))
+
+        response = await rcon(
+            command=command,
+            host=reservation["server"]["ip"],
+            port=int(reservation["server"]["port"]),
+            passwd=reservation["rcon"],
+        )
+
+        print(f"Added member {member} to reservation {self.reservation_id}")
+
+    async def remove_from_whitelist(self, api_key, member: nextcord.Member):
+        steam_id = await get_steam_from_discord(member.id)
+
+        command = f"sm_game_player_del {steam_id}"
+        reservation = (await ServemeAPI().get_reservation_by_id(api_key, self.reservation_id))
+
+        response = await rcon(
+            command=command,
+            host=reservation["server"]["ip"],
+            port=int(reservation["server"]["port"]),
+            passwd=reservation["rcon"],
+        )
+
+        print(f"Removed member {member} to reservation {self.reservation_id}")
 
 
 class MapSelection(nextcord.ui.View):
