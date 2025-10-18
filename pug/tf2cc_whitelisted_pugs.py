@@ -59,8 +59,6 @@ class PugWhitelistedPugs(commands.Cog):
             # Whitelisted pugs are not set up for other guilds ATM
             return
 
-        self.tf2cc_serveme_key = (await database.get_server(TF2CC_GUILD))["serveme"]
-
         before_category: int = self.get_connect_channel(before.channel) if before.channel else None
         after_category: int = self.get_connect_channel(after.channel) if after.channel else None
         print(before_category, after_category)
@@ -74,11 +72,11 @@ class PugWhitelistedPugs(commands.Cog):
             after_reservations = await get_servers_by_guild_and_category(TF2CC_GUILD, after_category)
             print(after_reservations)
             for res in after_reservations:
-                await res.add_to_whitelist(self.tf2cc_serveme_key, member)
+                await res.add_to_whitelist(member)
 
         if before_category is not None:
             before_reservations = await get_servers_by_guild_and_category(TF2CC_GUILD, before_category)
             print(before_reservations)
             for res in before_reservations:
-                await res.remove_from_whitelist(self.tf2cc_serveme_key, member)
+                await res.remove_from_whitelist(member)
 

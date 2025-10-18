@@ -115,11 +115,11 @@ class Reservation:
             except nextcord.HTTPException as err:
                 print(f"Couldn't delete reservation message: {err}\n{message}")
 
-    async def add_to_whitelist(self, api_key, member: nextcord.Member):
+    async def add_to_whitelist(self, member: nextcord.Member):
         steam_id = await get_steam_from_discord(member.id)
 
         command = f"sm_game_player_add {steam_id}"
-        reservation = (await ServemeAPI().get_reservation_by_id(api_key, self.reservation_id))
+        reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
 
         response = await rcon(
             command=command,
@@ -130,11 +130,11 @@ class Reservation:
 
         print(f"Added member {member} to reservation {self.reservation_id}")
 
-    async def remove_from_whitelist(self, api_key, member: nextcord.Member):
+    async def remove_from_whitelist(self, member: nextcord.Member):
         steam_id = await get_steam_from_discord(member.id)
 
         command = f"sm_game_player_del {steam_id}"
-        reservation = (await ServemeAPI().get_reservation_by_id(api_key, self.reservation_id))
+        reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
 
         response = await rcon(
             command=command,
