@@ -59,12 +59,12 @@ class Reservation:
         category (Optional[str]): The associated category name
     """
 
-    def __init__(self, reservation_id: int, api_key: str, guild: int, messages, category: Optional[str] = None) -> None:
+    def __init__(self, reservation_id: int, api_key: str, guild: int, messages, connect_channel_id = None) -> None:
         self.reservation_id = reservation_id
         self.api_key = api_key
         self.messages = messages
         self.guild: int = guild
-        self.category = category
+        self.connect_channel_id = connect_channel_id
 
     def __hash__(self):
         return hash(self.reservation_id)
