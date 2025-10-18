@@ -44,7 +44,7 @@ async def get_servers_by_guild_and_category(guild_id: int, category: str) -> lis
     for res in SERVERS:
         if res.guild != guild_id:
             continue
-        if res.category == None or res.category != category:
+        if res.connect_channel_id != category:
             continue
         results.append(res)
 
@@ -440,7 +440,7 @@ class ServerCog(commands.Cog):
         message_list.append((connect_channel.id, connect_msg.id))
 
         SERVERS.add(
-            Reservation(server_id, serveme_api_key, interaction.guild.id, message_list)
+            Reservation(server_id, serveme_api_key, interaction.guild.id, message_list, connect_channel.id)
         )
 
     @util.is_setup()

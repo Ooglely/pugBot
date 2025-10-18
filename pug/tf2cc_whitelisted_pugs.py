@@ -21,71 +21,29 @@ class PugWhitelistedPugs(commands.Cog):
 
     def __init__(self, bot: nextcord.Client):
         self.bot = bot
-        self.tf2cc_serveme_key = asyncio.run(database.get_server(TF2CC_GUILD))["serveme"]
 
     @nextcord.slash_command()  # pylint: disable=no-member
     async def whitelist(self, interaction: nextcord.Interaction):
         """Never gets called, just a placeholder for the subcommand."""
 
-    async def get_category_by_channel_id(self, channel_id: int):
-        """Search for a pug catergory in TF2CC associated with the channel_id and return all known info
+    def get_connect_channel(self, vc: VoiceChannel):
+        """Search for a connect channel associated with the voice channel and return it's id
+        Currently only works for TF2CC's categories
 
         Args: 
-            channel_id (int): channel_id to search for
+            vc (VoiceChannel): VoiceChannel to search for a associated connect channel for
 
         Returns:
-            dict: all information related to TF2CC the found pug category
+            int: id of
         """
-        query = [
-            {
-                "$match": {
-                    "_id": TF2CC_GUILD
-                }
-            },
-            {
-                "$project": {
-                    "categoriesArray": {
-                        "$map": {
-                            "input": {"$objectToArray": "$categories"},
-                            "as": "category",
-                            "in": {
-                                "parentKey": "$$category.k",
-                                "children": "$$category.v"
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                "$project": {
-                    "categoriesArray": {
-                        "$filter": {
-                        "input": "$categoriesArray",
-                        "cond": {"$eq": ["$$this.children.add_up", channel_id]}
-                        }
-                    }
-                }
-            },
-            {
-                "$unwind": "$categoriesArray"
-            },
-            {
-                "$replaceRoot": {
-                    "newRoot": {
-                        "parentKey": "$categoriesArray.parentKey",
-                        "children": "$categoriesArray.children"
-                    }
-                }
-            }
-        ]
+        category = vc.category
 
-        try:
-            result = await category_db.aggregate()
-        except LookupError as exc:
-            return None
-        
-        return result[0]
+        connect_channel = None
+        for channel in category.channels:
+            if "connect" in channel.name:
+                connect_channel = channel.id
 
+        return connect_channel
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
@@ -101,22 +59,26 @@ class PugWhitelistedPugs(commands.Cog):
             # Whitelisted pugs are not set up for other guilds ATM
             return
 
-        before_channel: Optional[Union[VoiceChannel, StageChannel]] = before.channel.id
-        after_channel: Optional[Union[VoiceChannel, StageChannel]] = after.channel.id
+        self.tf2cc_serveme_key = (await database.get_server(TF2CC_GUILD))["serveme"]
 
-        before_category: Optional[list] = await self.get_category_by_channel_id(before_channel)
-        after_category: Optional[list] = await self.get_category_by_channel_id(after_channel)
+        before_category: int = self.get_connect_channel(before.channel) if before.channel else None
+        after_category: int = self.get_connect_channel(after.channel) if after.channel else None
+        print(before_category, after_category)
 
-        if before_category is None and after_category is None or before_category["parentKey"] == after_category["parentKey"]:
+        if before_category is None and after_category is None:
+            return
+        if before_category and after_category and before_category == after_category:
             return
 
         if after_category is not None:
-            after_reservations = get_servers_by_guild_and_category(TF2CC_GUILD, after_category["parentKey"])
+            after_reservations = await get_servers_by_guild_and_category(TF2CC_GUILD, after_category)
+            print(after_reservations)
             for res in after_reservations:
-                res.add_to_whitelist(self.tf2cc_serveme_key, member)
+                await res.add_to_whitelist(self.tf2cc_serveme_key, member)
 
         if before_category is not None:
-            before_reservations = get_servers_by_guild_and_category(TF2CC_GUILD, before_category["parentKey"])
+            before_reservations = await get_servers_by_guild_and_category(TF2CC_GUILD, before_category)
+            print(before_reservations)
             for res in before_reservations:
-                res.remove_from_whitelist(self.tf2cc_serveme_key, member)
+                await res.remove_from_whitelist(self.tf2cc_serveme_key, member)
 

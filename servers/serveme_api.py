@@ -148,7 +148,7 @@ class ServemeAPI:
         headers = {"Content-type": "application/json"}
         async with aiohttp.ClientSession(headers=headers) as session:
             async with session.get(self.base_url + f"{id}?api_key={serveme_key}") as times:
-                reservation = (await times.json())["reservations"]
+                reservation = (await times.json())["reservation"]
 
                 return reservation
 

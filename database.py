@@ -47,7 +47,9 @@ class BotCollection:
         return result
     
     async def aggregate(self, search: list[dict]) -> list:
-        result = await self.database.aggregate(search)
+        result = []
+        async for doc in self.database.aggregate(search):
+            result.append(doc)
         if result is None:
             raise LookupError
         return result
