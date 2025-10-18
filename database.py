@@ -152,6 +152,20 @@ async def set_guild_serveme(guild: int, serveme: str):
         upsert=True,
     )
 
+async def set_guild_whitelist_state(guild: int, whitelist_state: bool):
+    """Set the whitelist state for a guild.
+
+    Args:
+        guild (int): The guild ID to set.
+        whitelist_state (bool): The state of player whitelist.
+    """
+    database = db_client.guilds.config
+    await database.update_one(
+        {"guild": guild},
+        {"$set": {"whitelist": whitelist_state}},
+        upsert=True,
+    )
+
 
 async def add_player(steam: str, discord: str):
     """Add a new player to the database.

@@ -1,10 +1,12 @@
 """Classes for use in the servers cog."""
+import asyncio
 from datetime import datetime
 from typing import Optional
 
 import nextcord
 import pytz
 import aiohttp
+from rcon import WrongPassword
 from rcon.source import rcon
 
 from database import get_steam_from_discord
@@ -115,11 +117,63 @@ class Reservation:
             except nextcord.HTTPException as err:
                 print(f"Couldn't delete reservation message: {err}\n{message}")
 
+    async def toggle_player_whitelist(self, enabled: bool):
+        command = f"sm_game_player_whitelist {1 if enabled else 0}"
+    
+        retries = 50
+        timeout = 2
+        count = 0
+
+        while count < retries:
+            await asyncio.sleep(timeout)
+            reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
+            count += 1
+
+            print(reservation['status'])
+
+            try:
+                response = await rcon(
+                    command=command,
+                    host=reservation["server"]["ip"],
+                    port=int(reservation["server"]["port"]),
+                    passwd=reservation["rcon"],
+                )
+                break
+            except (ConnectionRefusedError, WrongPassword) as e:
+                pass
+        else:
+            print(f"Player whitelist not able to be started for reservation {self.reservation_id}: Server Status {reservation['status']}")
+            return
+
+        print(f"{"Enabled" if enabled else "Disabled"} player whitelist for reservation {self.reservation_id}")
+
     async def add_to_whitelist(self, member: nextcord.Member):
         steam_id = await get_steam_from_discord(member.id)
 
         command = f"sm_game_player_add {steam_id}"
-        reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
+
+        retries = 50
+        timeout = 2
+        count = 0
+
+        while count < retries:
+            await asyncio.sleep(timeout)
+            reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
+            count += 1
+
+            try:
+                response = await rcon(
+                    command=command,
+                    host=reservation["server"]["ip"],
+                    port=int(reservation["server"]["port"]),
+                    passwd=reservation["rcon"],
+                )
+                break
+            except (ConnectionRefusedError, WrongPassword) as e:
+                pass
+        else:
+            print(f"Player not able to be added to whitelist for reservation {self.reservation_id}: Server Status {reservation['status']}")
+            return
 
         response = await rcon(
             command=command,
@@ -134,7 +188,29 @@ class Reservation:
         steam_id = await get_steam_from_discord(member.id)
 
         command = f"sm_game_player_del {steam_id}"
-        reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
+        
+        retries = 50
+        timeout = 2
+        count = 0
+
+        while count < retries:
+            await asyncio.sleep(timeout)
+            reservation = (await ServemeAPI().get_reservation_by_id(self.api_key, self.reservation_id))
+            count += 1
+
+            try:
+                response = await rcon(
+                    command=command,
+                    host=reservation["server"]["ip"],
+                    port=int(reservation["server"]["port"]),
+                    passwd=reservation["rcon"],
+                )
+                break
+            except (ConnectionRefusedError, WrongPassword) as e:
+                pass
+        else:
+            print(f"Player not able to be added to whitelist for reservation {self.reservation_id}: Server Status {reservation['status']}")
+            return
 
         response = await rcon(
             command=command,

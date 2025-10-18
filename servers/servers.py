@@ -50,6 +50,12 @@ async def get_servers_by_guild_and_category(guild_id: int, category: str) -> lis
 
     return results
 
+async def toggle_whitelist_by_guild(guild_id: int, enabled: bool):
+    for res in SERVERS:
+        if res.guild != guild_id:
+            continue
+        await res.toggle_player_whitelist(enabled)
+
 
 class ServerCog(commands.Cog):
     """A cog that holds all the commands for reserving/managing servers.
@@ -439,9 +445,13 @@ class ServerCog(commands.Cog):
         connect_msg = await connect_channel.send(embed=connect_embed)
         message_list.append((connect_channel.id, connect_msg.id))
 
-        SERVERS.add(
-            Reservation(server_id, serveme_api_key, interaction.guild.id, message_list, connect_channel.id)
-        )
+        res = Reservation(server_id, serveme_api_key, interaction.guild.id, message_list, connect_channel.id)
+        SERVERS.add(res)
+
+        guild = await database.get_server(interaction.guild_id)
+        whitelist_state = guild["whitelist"] if "whitelist" in guild else False
+        if whitelist_state:
+            await res.toggle_player_whitelist(whitelist_state)
 
     @util.is_setup()
     @util.is_runner()
