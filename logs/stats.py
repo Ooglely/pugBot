@@ -29,7 +29,7 @@ class StatsCog(commands.Cog):
             description="Fetching stats...",
             color=BOT_COLOR,
         )
-        stats_embed.set_thumbnail(url=interaction.user.avatar.url)
+        stats_embed.set_thumbnail(url=interaction.user.display_avatar.url)
         await interaction.send(embed=stats_embed)
         try:
             player = await player_db.find_item({"discord": str(interaction.user.id)})
@@ -117,7 +117,7 @@ class StatsCog(commands.Cog):
             description="Fetching stats...",
             color=BOT_COLOR,
         )
-        stats_embed.set_thumbnail(url=user.avatar.url)
+        stats_embed.set_thumbnail(url=user.display_avatar.url)
         await interaction.send(embed=stats_embed)
 
         elo_ratings: Elo = await get_elo(steam=int(steam_id))
