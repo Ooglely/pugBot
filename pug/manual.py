@@ -6,14 +6,15 @@ import time
 import traceback
 
 import nextcord
+import pymongo.errors
 from nextcord.ext import commands, tasks
 
 from constants import BOT_COLOR
 from database import BotCollection
-from pug.pug import PugRunningCog
 from menus import BotMenu
 from menus.callbacks import action_callback, value_callback
 from menus.templates import send_channel_prompt
+from pug.pug import PugRunningCog
 from util import is_runner
 
 guild_configs: BotCollection = BotCollection("guilds", "config")
@@ -77,8 +78,12 @@ class ManualPugCog(commands.Cog):
     @tasks.loop(minutes=1)
     async def status_check(self):
         """Check the status of all players added up."""
-        print("Checking status")
-        guilds = await guild_configs.find_all_items()
+        try:
+            guilds = await guild_configs.find_all_items()
+        except pymongo.errors.PyMongoError as error:
+            logging.warning("Error fetching guilds in status check loop: %s", error)
+            return
+
         for guild in guilds:
             if "manual" not in guild:
                 continue

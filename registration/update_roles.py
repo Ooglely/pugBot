@@ -6,13 +6,13 @@ import logging
 import traceback
 
 import nextcord
-from nextcord.ext import tasks, commands
+from nextcord.ext import commands, tasks
 
 import database as db
-from test_cog import TestCog
-from constants import BOT_COLOR, DEV_UPDATE_LOGS, DEV_CONTRIBUTOR_ROLE
+from constants import BOT_COLOR, DEV_CONTRIBUTOR_ROLE, DEV_UPDATE_LOGS
 from registration import RegistrationSettings
-from rglapi import RglApi, RateLimitException
+from rglapi import RateLimitException, RglApi
+from test_cog import TestCog
 
 RGL: RglApi = RglApi()
 
@@ -457,6 +457,13 @@ async def update_guild_player(
                 settings, "Could not add registered role.", str(member.id)
             )
             return
+        except nextcord.errors.NotFound:
+            await guild_log_failed(
+                settings,
+                "Guild or user was unable to found even though guild was loaded. Might be on Discord's side.",
+                f"Member: {member.id}, guild: {settings.guild.id}",
+            )
+            return
 
     if settings.ban is not None:
         ban_role: nextcord.Role = settings.ban
@@ -544,7 +551,6 @@ class UpdateRolesCog(commands.Cog):
 
         # Run the update function for each player
         for player in all_players:
-            print(player)
             result: bool = await self.check_player_data(player, guilds)
             if not result:
                 await self.admin_log_failed(
