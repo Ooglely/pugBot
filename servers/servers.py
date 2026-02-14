@@ -24,7 +24,6 @@ from constants import VERSION
 from servers.serveme_api import ServemeAPI, update_comp_maps  # disable=attr-defined
 from servers import Reservation, Servers, ServerButton, MapSelection
 
-
 with open("maps.json", encoding="UTF-8") as json_file:
     maps: dict = json.load(json_file)
     SIXES_MAPS: dict = maps["sixes"]

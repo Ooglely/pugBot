@@ -111,15 +111,19 @@ async def generate_balanced_teams(
     random.shuffle(players["add_up"])
     # Deprioritize players that are not registered, as their skill is unknown
     players["next_pug"].sort(
-        key=lambda x: 10
-        if x.get_division(gamemode, reg_settings.mode) == -1
-        else x.get_division(gamemode, reg_settings.mode),
+        key=lambda x: (
+            10
+            if x.get_division(gamemode, reg_settings.mode) == -1
+            else x.get_division(gamemode, reg_settings.mode)
+        ),
         reverse=False,
     )
     players["add_up"].sort(
-        key=lambda x: 10
-        if x.get_division(gamemode, reg_settings.mode) == -1
-        else x.get_division(gamemode, reg_settings.mode),
+        key=lambda x: (
+            10
+            if x.get_division(gamemode, reg_settings.mode) == -1
+            else x.get_division(gamemode, reg_settings.mode)
+        ),
         reverse=False,
     )
     all_players = players["next_pug"] + players["add_up"]
