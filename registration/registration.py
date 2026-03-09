@@ -87,8 +87,9 @@ class RegistrationCog(Cog):
         self,
         interaction: nextcord.Interaction,
         steam: str | None = nextcord.SlashOption(name="steam", required=None),
-        discord: nextcord.User
-        | None = nextcord.SlashOption(name="discord", required=False),
+        discord: nextcord.User | None = nextcord.SlashOption(
+            name="discord", required=False
+        ),
     ):
         """Deletes a user from the database.
 
