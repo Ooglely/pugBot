@@ -3,9 +3,9 @@
 import asyncio
 import json
 import logging
+import random
 import re
 import string
-import random
 import traceback
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Set
@@ -15,15 +15,14 @@ import nextcord
 import pytz
 from aiohttp import ContentTypeError
 from bs4 import BeautifulSoup
-from nextcord.ext import tasks, commands, application_checks
+from nextcord.ext import application_checks, commands, tasks
 from rcon.source import rcon
 
 import database
 import util
 from constants import VERSION
+from servers import MapSelection, Reservation, ServerButton, Servers
 from servers.serveme_api import ServemeAPI, update_comp_maps  # disable=attr-defined
-from servers import Reservation, Servers, ServerButton, MapSelection
-
 
 with open("maps.json", encoding="UTF-8") as json_file:
     maps: dict = json.load(json_file)
@@ -345,25 +344,26 @@ class ServerCog(commands.Cog):
 
         connect_command = (
             "connect "
-            + reserve["ip_and_port"]
+            + server_data["reservation"]["server"]["ip_and_port"]
             + '; password "'
             + connect_password
             + '"'
         )
         rcon_command = (
             "rcon_address "
-            + reserve["ip_and_port"]
+            + server_data["reservation"]["server"]["ip_and_port"]
             + '; rcon_password "'
             + rcon_password
             + '"'
         )
         connect_link = (
-            "steam://connect/" + reserve["ip_and_port"] + "/" + connect_password
+            "steam://connect/"
+            + server_data["reservation"]["server"]["ip_and_port"]
+            + "/"
+            + connect_password
         )
 
-        tf_oog_pw_link = (
-            f"https://pugBot.tf/connect/{reserve['ip_and_port']}/{connect_password}"
-        )
+        tf_oog_pw_link = f"https://pugBot.tf/connect/{server_data['reservation']['server']['ip_and_port']}/{connect_password}"
 
         embed = nextcord.Embed(title="Server reserved!", color=0xF0984D)
         embed.add_field(
