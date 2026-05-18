@@ -1,4 +1,5 @@
 """File storing the LogsAPI class, which is used to interact with the Logs.tf API."""
+
 import asyncio
 
 import aiohttp
