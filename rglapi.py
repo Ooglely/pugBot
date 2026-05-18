@@ -1,8 +1,8 @@
 """File containing the rglAPI class, which is used to interact with the RGL API."""
+
 from datetime import datetime, timedelta
 
 import aiohttp
-
 
 divs = {
     "Newcomer": 1,
