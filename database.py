@@ -1,4 +1,5 @@
 """Functions for interacting with the database throughout the bot."""
+
 import motor.motor_asyncio
 
 import constants
