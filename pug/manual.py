@@ -174,13 +174,18 @@ class ManualPugCog(commands.Cog):
     @status_check.error
     @update_channel_status.error
     async def server_check_error_handler(self, _exception: Exception):
-        """Handles printing errors to console for the loop
+        """
+        Handles printing errors to console for the loop, then restarts both loops
 
         Args:
             exception (Exception): The exception that was raised
         """
         print("Error in manual status check loop:\n")
         print(traceback.format_exc())
+        if not self.status_check.is_running():
+            self.status_check.restart()
+        if not self.update_channel_status.is_running():
+            self.update_channel_status.restart()
 
     @PugRunningCog.pug.subcommand(name="manual")  # pylint: disable=no-member
     async def manual_group(self, interaction: nextcord.Interaction):

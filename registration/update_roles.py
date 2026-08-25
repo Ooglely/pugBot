@@ -560,7 +560,8 @@ class UpdateRolesCog(commands.Cog):
 
     @update_rgl.error
     async def error_handler(self, _exception: BaseException) -> None:
-        """Handles errors from the update_rgl loop.
+        """
+        Handles errors from the update_rgl loop, then restarts it
 
         Parameters
         ----------
@@ -570,9 +571,11 @@ class UpdateRolesCog(commands.Cog):
         trace = traceback.format_exc()
         logging.error("Error in update_rgl loop: %s", trace)
         await self.admin_log_failed(
-            "Error in update_rgl loop, updates are stopped.",
+            "Error in update_rgl loop, restarting loop.",
             trace,
         )
+        if not self.update_rgl.is_running():
+            self.update_rgl.restart()
 
     async def check_player_data(
         self, player: dict, guilds: list[LoadedRegSettings]

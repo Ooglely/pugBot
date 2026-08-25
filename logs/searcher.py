@@ -225,7 +225,8 @@ class LogSearcher:
     @searcher.error
     @queue.error
     async def loop_error_handler(self, _exception: Exception):
-        """Handles printing errors to console for the loop
+        """
+        Handles printing errors to console for the loop, then restarts both loops
 
         Args:
             exception (Exception): The exception that was raised
@@ -235,6 +236,10 @@ class LogSearcher:
         await self.bot.get_channel(1259641880015147028).send(
             f"Error in log loop: {traceback.format_exc()}"
         )
+        if not self.searcher.is_running():
+            self.searcher.restart()
+        if not self.queue.is_running():
+            self.queue.restart()
 
     async def log_failed_log(self, log: PartialLog, reason: str):
         """Log a failed log to the database"""
