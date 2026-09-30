@@ -659,7 +659,14 @@ class UpdateRolesCog(commands.Cog):
                 return False
         if not ban_check:
             if current_player:
-                new_ban = current_player["rgl_ban"]
+                if "rgl_ban" in current_player:
+                    new_ban = current_player["rgl_ban"]
+                else:
+                    await self.admin_log_failed(
+                        f"RGL ban status is not stored for {steam_id} and was not able to be retrieved, skipping",
+                        str(player),
+                    )
+                    return False
             else:
                 # If we can't get the ban status from RGL, we can't update the player
                 await self.admin_log_failed(
