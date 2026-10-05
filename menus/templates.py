@@ -1,4 +1,5 @@
 """Functions to build predefined  for use around the bot."""
+
 from nextcord import ButtonStyle, Interaction, Embed
 from nextcord.abc import GuildChannel
 from nextcord.enums import ChannelType
@@ -81,9 +82,9 @@ async def send_channel_prompt(
     ValueError
         If required is True and no channel is selected for a entry.
     """
-    channel_selects: list[
-        ChannelSelect
-    ] = []  # We'll go through this later to get the values
+    channel_selects: list[ChannelSelect] = (
+        []
+    )  # We'll go through this later to get the values
     menu.clear_items()
     if interaction.response.is_done():
         await menu.edit(interaction)

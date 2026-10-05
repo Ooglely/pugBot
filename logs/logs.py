@@ -1,4 +1,5 @@
 """This cog contains the logs command and its subcommands."""
+
 import nextcord
 from nextcord.ext import commands, application_checks
 from nextcord.enums import ChannelType
