@@ -1,4 +1,5 @@
 """Commands for randomly rolling medics in pugs."""
+
 import datetime
 import random
 from typing import Set

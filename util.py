@@ -1,4 +1,5 @@
 """Utility functions for use throughout the code."""
+
 import aiohttp
 import nextcord
 from steam import steamid
