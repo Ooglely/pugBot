@@ -1,16 +1,17 @@
 """Implements the log searcher file, which takes the players from a team generation or moved back and searches for the log associated with the game that was played/being played."""
+
 import time
 import traceback
 
 import nextcord
 from nextcord.ext import tasks
 
-from constants import DEV_SUCCESSFUL_LOGS, DEV_FAILED_LOGS, DEV_ERROR_LOGS
-from pug import PugCategory
-from logs import Player, LogData
-from logs.logstf_api import LogsAPI
-from logs.elo import process_elo
+from constants import DEV_ERROR_LOGS, DEV_FAILED_LOGS, DEV_SUCCESSFUL_LOGS
 from database import BotCollection
+from logs import LogData, Player
+from logs.elo import process_elo
+from logs.logstf_api import LogsAPI
+from pug import PugCategory
 from util import get_steam64
 
 queue_db = BotCollection("logs", "queue")
@@ -154,7 +155,11 @@ class LogSearcher:
                             # Check if at least half the players are in the log
                             player_count = 0
                             for player_id in log_data["players"]:
-                                if str(get_steam64(player_id)) in steam_ids:
+                                try:
+                                    steam64 = str(get_steam64(player_id))
+                                except ValueError:
+                                    continue
+                                if steam64 in steam_ids:
                                     player_count += 1
                             if player_count < (len(steam_ids) / 2):
                                 continue
