@@ -551,7 +551,17 @@ class UpdateRolesCog(commands.Cog):
 
         # Run the update function for each player
         for player in all_players:
-            result: bool = await self.check_player_data(player, guilds)
+            try:
+                result: bool = await self.check_player_data(player, guilds)
+            except Exception:  # pylint: disable=broad-exception-caught
+                trace = traceback.format_exc()
+                logging.error("Error updating player %s: %s", player, trace)
+                await self.admin_log_failed(
+                    "Exception while updating player, skipping.",
+                    f"{player}\n```{trace}```",
+                )
+                await asyncio.sleep(3)
+                continue
             if not result:
                 await self.admin_log_failed(
                     "Skipping player, update failed.", str(player)
@@ -570,11 +580,12 @@ class UpdateRolesCog(commands.Cog):
         """
         trace = traceback.format_exc()
         logging.error("Error in update_rgl loop: %s", trace)
-        await self.admin_log_failed(
-            "Error in update_rgl loop, restarting loop.",
-            trace,
-        )
-        if not self.update_rgl.is_running():
+        try:
+            await self.admin_log_failed(
+                "Error in update_rgl loop, restarting loop.",
+                f"```{trace}```",
+            )
+        finally:
             self.update_rgl.restart()
 
     async def check_player_data(
