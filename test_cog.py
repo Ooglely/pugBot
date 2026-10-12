@@ -1,4 +1,5 @@
 """Contains all of the commands for the test bot."""
+
 import gql
 import nextcord
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -71,8 +72,7 @@ class TestCog(commands.Cog):
             transport=github_api,
             fetch_schema_from_transport=False,
         ) as session:
-            list_branches = gql.gql(
-                """
+            list_branches = gql.gql("""
                 query getBranches {
                     repository(name: "pugBot", owner: "Ooglely") {
                         refs(first: 25, refPrefix: "refs/heads/") {
@@ -84,8 +84,7 @@ class TestCog(commands.Cog):
                         }
                     }
                 }
-                """
-            )
+                """)
 
             result = await session.execute(list_branches)
             for branch in result["repository"]["refs"]["edges"]:
@@ -106,8 +105,7 @@ class TestCog(commands.Cog):
                 transport=railway_api,
                 fetch_schema_from_transport=False,
             ) as session:
-                set_deployment_trigger = gql.gql(
-                    f"""
+                set_deployment_trigger = gql.gql(f"""
                     mutation setDeploymentTrigger {{
                         deploymentTriggerUpdate(
                             id: "275e3203-4ac7-4ada-84de-1c11f8b9b124",
@@ -120,11 +118,9 @@ class TestCog(commands.Cog):
                             id
                         }}
                     }}
-                    """
-                )
+                    """)
 
-                redeploy_environment = gql.gql(
-                    """
+                redeploy_environment = gql.gql("""
                     mutation deployNewDeployment {
                         environmentTriggersDeploy(
                             input: {
@@ -134,8 +130,7 @@ class TestCog(commands.Cog):
                             }
                         )
                     }
-                    """
-                )
+                    """)
 
                 await session.execute(set_deployment_trigger)
                 await session.execute(redeploy_environment)
