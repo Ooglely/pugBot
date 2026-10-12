@@ -1,4 +1,5 @@
 """This cog contains the elo cog with commands to configure elo and add missing logs."""
+
 import asyncio
 import time
 
