@@ -1,4 +1,5 @@
 """File holding the actual FastAPI webserver for use with the registration cog."""
+
 import logging
 
 from fastapi import FastAPI, APIRouter, Request, Response, status

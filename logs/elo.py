@@ -1,4 +1,5 @@
 """Elo calculations, storage and utilities."""
+
 from difflib import SequenceMatcher
 import math
 from typing import Any

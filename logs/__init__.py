@@ -1,4 +1,5 @@
 """Stores classes for storing log data and player stats"""
+
 from steam.steamid import SteamID
 
 from database import BotCollection
